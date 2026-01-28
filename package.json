@@ -21,7 +21,9 @@
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.0",
     "@prisma/adapter-better-sqlite3": "^7.3.0",
+    "@prisma/adapter-libsql": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "@prisma/extension-accelerate": "^3.0.1",
     "bcryptjs": "^3.0.3",
