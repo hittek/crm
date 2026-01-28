@@ -11,7 +11,8 @@ export default function ContactList({
   onSelect, 
   onNewContact,
   searchQuery = '',
-  statusFilter = '' 
+  statusFilter = '',
+  refreshKey = 0
 }) {
   const [contacts, setContacts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -42,7 +43,7 @@ export default function ContactList({
 
   useEffect(() => {
     fetchContacts()
-  }, [fetchContacts])
+  }, [fetchContacts, refreshKey])
 
   if (isLoading && contacts.length === 0) {
     return (

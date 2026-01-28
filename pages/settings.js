@@ -86,12 +86,6 @@ export default function SettingsPage() {
   
   const [dealStages, setDealStages] = useState([])
   const [contactStatuses, setContactStatuses] = useState([])
-  const [notifications, setNotifications] = useState({
-    taskReminders: true,
-    newContacts: false,
-    dealWon: true,
-    dailyDigest: false,
-  })
   
   // User management state
   const [users, setUsers] = useState([])
@@ -122,7 +116,6 @@ export default function SettingsPage() {
     { id: 'users', label: 'Usuarios', icon: Icons.contacts, adminOnly: true },
     { id: 'pipeline', label: 'Pipeline', icon: Icons.trending },
     { id: 'contacts', label: 'Contactos', icon: Icons.contacts },
-    { id: 'notifications', label: 'Notificaciones', icon: Icons.alert },
     { id: 'integrations', label: 'Integraciones', icon: Icons.link },
   ].filter(tab => !tab.adminOnly || isAdmin)
 
@@ -365,30 +358,30 @@ export default function SettingsPage() {
         <title>Configuración | CRM</title>
       </Head>
 
-      <div className="flex h-full">
+      <div className="flex flex-col lg:flex-row h-full">
         {/* Settings Sidebar */}
-        <div className="w-64 border-r border-gray-200 bg-gray-50 p-4">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Configuración</h2>
-          <nav className="space-y-1">
+        <div className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-gray-200 bg-gray-50 p-4">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 hidden lg:block">Configuración</h2>
+          <nav className="flex lg:flex-col gap-1 lg:gap-0 lg:space-y-1 overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex-shrink-0 lg:w-full flex items-center gap-2 lg:gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'bg-primary-50 text-primary-700'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 <tab.icon className="w-5 h-5" />
-                {tab.label}
+                <span className="whitespace-nowrap">{tab.label}</span>
               </button>
             ))}
           </nav>
         </div>
 
         {/* Settings Content */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-8">
           {/* Save Message */}
           {saveMessage && (
             <div className={`mb-4 p-3 rounded-lg text-sm ${
@@ -938,89 +931,6 @@ export default function SettingsPage() {
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => saveSettings('contactStatuses', contactStatuses)}
-                  disabled={isSaving}
-                  className="btn btn-primary"
-                >
-                  {isSaving ? 'Guardando...' : 'Guardar cambios'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Notifications Settings */}
-          {activeTab === 'notifications' && (
-            <div className="max-w-2xl">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">Notificaciones</h3>
-              
-              <div className="card divide-y divide-gray-200">
-                <div className="p-6 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">Recordatorios de tareas</p>
-                    <p className="text-sm text-gray-500">Recibir notificación cuando una tarea esté próxima a vencer</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={notifications.taskReminders}
-                      onChange={(e) => setNotifications({ ...notifications, taskReminders: e.target.checked })}
-                    />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-primary-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                  </label>
-                </div>
-
-                <div className="p-6 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">Nuevos contactos</p>
-                    <p className="text-sm text-gray-500">Notificar cuando se agregue un nuevo contacto</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={notifications.newContacts}
-                      onChange={(e) => setNotifications({ ...notifications, newContacts: e.target.checked })}
-                    />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-primary-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                  </label>
-                </div>
-
-                <div className="p-6 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">Negocios ganados</p>
-                    <p className="text-sm text-gray-500">Notificar cuando se cierre un negocio como ganado</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={notifications.dealWon}
-                      onChange={(e) => setNotifications({ ...notifications, dealWon: e.target.checked })}
-                    />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-primary-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                  </label>
-                </div>
-
-                <div className="p-6 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">Resumen diario</p>
-                    <p className="text-sm text-gray-500">Recibir un resumen diario de actividades por email</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={notifications.dailyDigest}
-                      onChange={(e) => setNotifications({ ...notifications, dailyDigest: e.target.checked })}
-                    />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-primary-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                  </label>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => saveSettings('notifications', notifications)}
                   disabled={isSaving}
                   className="btn btn-primary"
                 >

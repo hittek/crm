@@ -77,9 +77,15 @@ const methods = {
     if (timezone !== undefined) updateData.timezone = timezone
     if (locale !== undefined) updateData.locale = locale
     if (preferences !== undefined) {
-      updateData.preferences = typeof preferences === 'string' 
-        ? preferences 
-        : JSON.stringify(preferences)
+      // Merge new preferences with existing ones
+      const existingPrefs = existingUser.preferences 
+        ? JSON.parse(existingUser.preferences) 
+        : {}
+      const newPrefs = typeof preferences === 'string' 
+        ? JSON.parse(preferences) 
+        : preferences
+      const mergedPrefs = { ...existingPrefs, ...newPrefs }
+      updateData.preferences = JSON.stringify(mergedPrefs)
     }
     
     // Hash new password if provided

@@ -18,6 +18,7 @@ export default function ContactsPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [showForm, setShowForm] = useState(false)
   const [editingContact, setEditingContact] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const fetchContacts = useCallback(async () => {
     setIsLoading(true)
@@ -36,8 +37,9 @@ export default function ContactsPage() {
       setContacts(data.contacts)
       setTotalPages(data.pagination.pages)
       
-      // Select first contact if none selected
-      if (!selectedContact && data.contacts.length > 0) {
+      // Select first contact if none selected (desktop only)
+      // On mobile, we want to show the list first
+      if (!selectedContact && data.contacts.length > 0 && window.innerWidth >= 1024) {
         setSelectedContact(data.contacts[0])
       }
     } catch (error) {
@@ -84,39 +86,29 @@ export default function ContactsPage() {
     if (selectedContact?.id === updatedContact.id) {
       setSelectedContact(prev => ({ ...prev, ...updatedContact }))
     }
+    // Refresh list to ensure sync
+    setRefreshKey(k => k + 1)
   }, [selectedContact])
 
   const handleContactDelete = useCallback(async () => {
     setSelectedContact(null)
+    setRefreshKey(k => k + 1)
     fetchContacts()
   }, [fetchContacts])
 
-  const handleFormSubmit = useCallback(async (data) => {
-    try {
-      const url = editingContact 
-        ? `/api/contacts/${editingContact.id}`
-        : '/api/contacts'
-      
-      const res = await fetch(url, {
-        method: editingContact ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-
-      if (res.ok) {
-        const contact = await res.json()
-        if (editingContact) {
-          handleContactUpdate(contact)
-        } else {
-          setContacts(prev => [contact, ...prev])
-          setSelectedContact(contact)
-        }
-        setShowForm(false)
-        setEditingContact(null)
-      }
-    } catch (error) {
-      console.error('Error saving contact:', error)
+  // Handle when ContactForm successfully saves a contact
+  // ContactForm does the API call, this just updates local state
+  const handleFormSubmit = useCallback((savedContact) => {
+    if (editingContact) {
+      handleContactUpdate(savedContact)
+    } else {
+      // New contact was created
+      setContacts(prev => [savedContact, ...prev])
+      setSelectedContact(savedContact)
+      setRefreshKey(k => k + 1)
     }
+    setShowForm(false)
+    setEditingContact(null)
   }, [editingContact, handleContactUpdate])
 
   const handleNewContact = useCallback(() => {
@@ -137,9 +129,9 @@ export default function ContactsPage() {
         <title>Contactos | CRM</title>
       </Head>
 
-      <div className="flex h-full">
+      <div className="flex flex-col lg:flex-row h-full">
         {/* Left: Contact List */}
-        <div className="w-96 border-r border-gray-200 flex flex-col">
+        <div className={`w-full lg:w-96 border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col ${selectedContact ? 'hidden lg:flex' : 'flex'}`}>
           <ContactList
             contacts={contacts}
             selectedId={selectedContact?.id}
@@ -153,11 +145,12 @@ export default function ContactsPage() {
             totalPages={totalPages}
             onPageChange={setPage}
             isLoading={isLoading}
+            refreshKey={refreshKey}
           />
         </div>
 
         {/* Right: Contact Detail */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className={`flex-1 flex flex-col min-w-0 ${selectedContact ? 'flex' : 'hidden lg:flex'}`}>
           {isLoading && !selectedContact ? (
             <div className="flex-1 flex items-center justify-center">
               <Spinner size="lg" />
@@ -175,6 +168,7 @@ export default function ContactsPage() {
                 setEditingContact(selectedContact)
                 setShowForm(true)
               }}
+              showBackButton={true}
             />
           ) : (
             <EmptyState

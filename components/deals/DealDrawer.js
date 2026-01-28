@@ -109,10 +109,10 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
             </div>
 
             {/* Value and stage */}
-            <div className="flex items-center gap-6 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-4 sm:gap-6 p-4 bg-gray-50 rounded-lg">
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Valor</label>
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-xl sm:text-2xl font-bold text-gray-900">
                   <InlineEdit
                     value={localDeal.value?.toString() || '0'}
                     onSave={(value) => updateField('value', parseFloat(value) || 0)}
@@ -125,12 +125,12 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
                 </div>
               </div>
               
-              <div className="border-l border-gray-200 pl-6">
+              <div className="sm:border-l sm:border-gray-200 sm:pl-6">
                 <label className="text-xs font-medium text-gray-500 uppercase">Etapa</label>
                 <select
                   value={localDeal.stage}
                   onChange={(e) => updateField('stage', e.target.value)}
-                  className="block mt-1 input py-1 px-2 text-sm w-auto"
+                  className="block mt-1 input py-1 px-2 text-sm w-full sm:w-auto"
                 >
                   {dealStages.map(s => (
                     <option key={s.id} value={s.id}>{s.label}</option>
@@ -138,7 +138,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
                 </select>
               </div>
 
-              <div className="border-l border-gray-200 pl-6">
+              <div className="col-span-2 sm:col-span-1 sm:border-l sm:border-gray-200 sm:pl-6">
                 <label className="text-xs font-medium text-gray-500 uppercase">Probabilidad</label>
                 <div className="flex items-center gap-2 mt-1">
                   <input
@@ -147,7 +147,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
                     max="100"
                     value={localDeal.probability}
                     onChange={(e) => updateField('probability', parseInt(e.target.value))}
-                    className="w-20"
+                    className="flex-1 sm:w-20"
                   />
                   <span className="text-sm font-medium">{localDeal.probability}%</span>
                 </div>
@@ -156,7 +156,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
           </div>
 
           {/* Stage progress */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 lg:mx-0 lg:px-0">
             {dealStages.filter(s => !['won', 'lost'].includes(s.id)).map((stage, index) => {
               const isActive = stage.id === localDeal.stage
               const isPast = dealStages.findIndex(s => s.id === localDeal.stage) > index
@@ -165,7 +165,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
                 <button
                   key={stage.id}
                   onClick={() => updateField('stage', stage.id)}
-                  className={`flex-1 py-2 text-xs font-medium text-center rounded transition-colors ${
+                  className={`flex-shrink-0 sm:flex-1 px-3 sm:px-0 py-2 text-xs font-medium text-center rounded transition-colors whitespace-nowrap ${
                     isActive 
                       ? 'bg-primary-600 text-white' 
                       : isPast 
@@ -203,7 +203,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
           {/* Tab content */}
           {activeTab === 'details' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase">Fecha de cierre esperada</label>
                   <input

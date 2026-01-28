@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // Organization model - multi-tenancy support
@@ -23,13 +23,14 @@ model Organization {
   updatedAt   DateTime  @updatedAt
 
   // Relations
-  users       User[]
-  contacts    Contact[]
-  deals       Deal[]
-  tasks       Task[]
-  activities  Activity[]
-  savedViews  SavedView[]
-  auditLogs   AuditLog[]
+  users         User[]
+  contacts      Contact[]
+  deals         Deal[]
+  tasks         Task[]
+  activities    Activity[]
+  savedViews    SavedView[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
 }
 
 // Contact model - the core entity in a contacts-first CRM
@@ -191,11 +192,12 @@ model User {
   updatedAt   DateTime  @updatedAt
 
   // Relations
-  assignedTasks   Task[]      @relation("TaskAssignee")
-  ownedTasks      Task[]      @relation("TaskOwner")
-  ownedContacts   Contact[]   @relation("ContactOwner")
-  ownedDeals      Deal[]      @relation("DealOwner")
+  assignedTasks   Task[]          @relation("TaskAssignee")
+  ownedTasks      Task[]          @relation("TaskOwner")
+  ownedContacts   Contact[]       @relation("ContactOwner")
+  ownedDeals      Deal[]          @relation("DealOwner")
   auditLogs       AuditLog[]
+  notifications   Notification[]
 
   @@unique([email, organizationId]) // Email unique per organization
   @@index([organizationId])
@@ -240,6 +242,27 @@ model AuditLog {
 
   @@index([entity, entityId])
   @@index([userId])
+  @@index([organizationId])
+  @@index([createdAt])
+}
+
+// Notification model - in-app notifications
+model Notification {
+  id            Int       @id @default(autoincrement())
+  type          String    // task_reminder, new_contact, deal_won, deal_lost, task_assigned, mention, etc.
+  title         String
+  message       String?
+  link          String?   // URL to navigate when clicked (e.g., /tasks?id=123)
+  isRead        Boolean   @default(false)
+  readAt        DateTime?
+  metadata      String?   // JSON for extra data (entityType, entityId, etc.)
+  userId        Int       // User to notify
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId Int      // Organization context
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, isRead])
   @@index([organizationId])
   @@index([createdAt])
 }

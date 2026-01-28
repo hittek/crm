@@ -47,6 +47,15 @@ export default function ProfilePage() {
     confirmPassword: '',
   })
   const [showPasswordSection, setShowPasswordSection] = useState(false)
+  
+  // Notification preferences
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    newContacts: true,
+    taskAssigned: true,
+    taskReminders: true,
+    dealUpdates: true,
+    mentions: true,
+  })
 
   // Fetch profile data
   useEffect(() => {
@@ -63,6 +72,22 @@ export default function ProfilePage() {
             timezone: data.timezone || 'America/Mexico_City',
             locale: data.locale || 'es-MX',
           })
+          // Load notification preferences from user.preferences
+          if (data.preferences) {
+            try {
+              const prefs = typeof data.preferences === 'string' 
+                ? JSON.parse(data.preferences) 
+                : data.preferences
+              if (prefs.notifications) {
+                setNotificationPrefs(prev => ({
+                  ...prev,
+                  ...prefs.notifications,
+                }))
+              }
+            } catch (e) {
+              console.error('Error parsing preferences:', e)
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching profile:', error)
@@ -127,6 +152,9 @@ export default function ProfilePage() {
         avatar: profile.avatar,
         timezone: profile.timezone,
         locale: profile.locale,
+        preferences: {
+          notifications: notificationPrefs,
+        },
       }
 
       // Add password if changing
@@ -219,10 +247,10 @@ export default function ProfilePage() {
           {/* Profile Form */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             {/* Avatar Section */}
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-4 lg:p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('profile.photo')}</h2>
               
-              <div className="flex items-center gap-6">
+              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
                 <div className="relative group">
                   <div 
                     className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden cursor-pointer border-2 border-gray-200 hover:border-primary-400 transition-colors"
@@ -286,7 +314,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Basic Info Section */}
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-4 lg:p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('profile.basicInfo')}</h2>
               
               <div className="space-y-4">
@@ -354,6 +382,128 @@ export default function ProfilePage() {
                     ))}
                   </select>
                 </div>
+              </div>
+            </div>
+
+            {/* Notification Preferences Section */}
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                {t('profile.notifications') || 'Notificaciones'}
+              </h2>
+              <p className="text-sm text-gray-500 mb-4">
+                {t('profile.notificationsHint') || 'Elige qué notificaciones quieres recibir'}
+              </p>
+              
+              <div className="space-y-4">
+                <label className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">
+                      {t('profile.notif.newContacts') || 'Nuevos contactos'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {t('profile.notif.newContactsDesc') || 'Cuando se agregue un nuevo contacto'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationPrefs(p => ({ ...p, newContacts: !p.newContacts }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      notificationPrefs.newContacts ? 'bg-primary-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      notificationPrefs.newContacts ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </label>
+
+                <label className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">
+                      {t('profile.notif.taskAssigned') || 'Tareas asignadas'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {t('profile.notif.taskAssignedDesc') || 'Cuando te asignen una nueva tarea'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationPrefs(p => ({ ...p, taskAssigned: !p.taskAssigned }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      notificationPrefs.taskAssigned ? 'bg-primary-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      notificationPrefs.taskAssigned ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </label>
+
+                <label className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">
+                      {t('profile.notif.taskReminders') || 'Recordatorios de tareas'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {t('profile.notif.taskRemindersDesc') || 'Recordatorios antes del vencimiento'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationPrefs(p => ({ ...p, taskReminders: !p.taskReminders }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      notificationPrefs.taskReminders ? 'bg-primary-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      notificationPrefs.taskReminders ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </label>
+
+                <label className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">
+                      {t('profile.notif.dealUpdates') || 'Actualizaciones de negocios'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {t('profile.notif.dealUpdatesDesc') || 'Cuando un negocio se gane o pierda'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationPrefs(p => ({ ...p, dealUpdates: !p.dealUpdates }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      notificationPrefs.dealUpdates ? 'bg-primary-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      notificationPrefs.dealUpdates ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </label>
+
+                <label className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">
+                      {t('profile.notif.mentions') || 'Menciones'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {t('profile.notif.mentionsDesc') || 'Cuando te mencionen en notas o comentarios'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationPrefs(p => ({ ...p, mentions: !p.mentions }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      notificationPrefs.mentions ? 'bg-primary-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      notificationPrefs.mentions ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </label>
               </div>
             </div>
 

@@ -2,6 +2,7 @@ import prisma from '../../../lib/prisma'
 import { createHandler, success, created, parseFilters } from '../../../lib/api'
 import { logAudit, AuditActions, AuditEntities } from '../../../lib/audit'
 import { getSession } from '../../../lib/auth'
+import { notifications } from '../../../lib/notifications'
 
 const methods = {
   GET: async (req, res) => {
@@ -87,42 +88,80 @@ const methods = {
       return res.status(401).json({ error: 'No autenticado' })
     }
     
-    const { ownerId, visibility, visibleTo, ...rest } = req.body
+    // Destructure to exclude relation fields and id that shouldn't be in create data
+    const { id, ownerId, visibility, visibleTo, owner, deals, tasks, activities, _count, createdAt, updatedAt, organization, organizationId: bodyOrgId, ...rest } = req.body
     
-    const contact = await prisma.contact.create({
-      data: {
-        ...rest,
-        organizationId,
-        ownerId: ownerId ? parseInt(ownerId) : null,
-        visibility: visibility || 'org',
-        visibleTo: visibleTo ? JSON.stringify(visibleTo) : null,
-        createdBy: 'system',
-        updatedBy: 'system',
-      },
-      include: {
-        owner: {
-          select: { id: true, name: true }
-        }
+    // Convert empty strings to null for optional fields (especially email for unique constraint)
+    const cleanData = Object.fromEntries(
+      Object.entries(rest).map(([key, value]) => [key, value === '' ? null : value])
+    )
+    
+    // Check for duplicate email manually (SQLite doesn't handle NULL in unique constraints well)
+    if (cleanData.email) {
+      const existingContact = await prisma.contact.findFirst({
+        where: { email: cleanData.email, organizationId }
+      })
+      if (existingContact) {
+        return res.status(409).json({ 
+          error: 'Ya existe un contacto con este email',
+          field: 'email'
+        })
       }
-    })
+    }
+    
+    // Remove email from data if null to avoid SQLite unique constraint issues
+    if (cleanData.email === null) {
+      delete cleanData.email
+    }
+    
+    try {
+      const contact = await prisma.contact.create({
+        data: {
+          ...cleanData,
+          organizationId,
+          owner: ownerId ? { connect: { id: parseInt(ownerId) } } : undefined,
+          visibility: visibility || 'org',
+          visibleTo: visibleTo ? JSON.stringify(visibleTo) : null,
+          createdBy: 'system',
+          updatedBy: 'system',
+        },
+        include: {
+          owner: {
+            select: { id: true, name: true }
+          }
+        }
+      })
 
-    // Log the action
-    await logAudit({
-      action: AuditActions.CREATED,
-      entity: AuditEntities.CONTACT,
-      entityId: contact.id,
-      entityName: `${contact.firstName} ${contact.lastName}`,
-      details: { 
-        email: contact.email,
-        company: contact.company,
-      },
-      userId: session?.user?.id,
-      userName: session?.user?.name,
-      organizationId,
-      req,
-    })
+      // Log the action
+      await logAudit({
+        action: AuditActions.CREATED,
+        entity: AuditEntities.CONTACT,
+        entityId: contact.id,
+        entityName: `${contact.firstName} ${contact.lastName}`,
+        details: { 
+          email: contact.email,
+          company: contact.company,
+        },
+        userId: session?.user?.id,
+        userName: session?.user?.name,
+        organizationId,
+        req,
+      })
 
-    created(res, contact)
+      // Send notification about new contact to org (excludes creator)
+      notifications.newContact(contact, session?.user?.id, organizationId).catch(console.error)
+
+      created(res, contact)
+    } catch (error) {
+      // Handle unique constraint violation (duplicate email)
+      if (error.code === 'P2002') {
+        return res.status(409).json({ 
+          error: 'Ya existe un contacto con este email',
+          field: 'email'
+        })
+      }
+      throw error
+    }
   },
 }
 

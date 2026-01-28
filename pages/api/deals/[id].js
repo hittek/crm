@@ -2,6 +2,7 @@ import prisma from '../../../lib/prisma'
 import { createHandler, success, notFound, noContent } from '../../../lib/api'
 import { logAudit, AuditActions, AuditEntities } from '../../../lib/audit'
 import { getSession, hasMinRole } from '../../../lib/auth'
+import { notifications } from '../../../lib/notifications'
 
 const methods = {
   GET: async (req, res) => {
@@ -119,6 +120,13 @@ const methods = {
           organizationId,
           req,
         })
+
+        // Send notifications for won/lost deals
+        if (deal.stage === 'won') {
+          notifications.dealWon(deal, organizationId, session?.user?.id).catch(console.error)
+        } else if (deal.stage === 'lost') {
+          notifications.dealLost(deal, organizationId, session?.user?.id).catch(console.error)
+        }
       } else {
         // Log general update
         await logAudit({

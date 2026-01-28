@@ -21,10 +21,13 @@
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
+    "@prisma/adapter-better-sqlite3": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "@prisma/extension-accelerate": "^3.0.1",
     "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.6.2",
     "date-fns": "^3.0.0",
+    "dotenv": "^17.2.3",
     "iron-session": "^8.0.4",
     "next": "14.0.4",
     "react": "^18.2.0",

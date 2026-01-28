@@ -11,7 +11,7 @@ import { getFullName, formatPhone, formatCurrency, formatSmartDate } from '../..
 import { useContactStatuses, useOrganization } from '../../lib/SettingsContext'
 import { useAuth } from '../../lib/AuthContext'
 
-export default function ContactDetail({ contactId, onClose, onUpdate, onDelete }) {
+export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, showBackButton = false }) {
   const contactStatuses = useContactStatuses()
   const organization = useOrganization()
   const currency = organization?.currency || 'USD'
@@ -84,11 +84,20 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete }
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-white border-l border-gray-200 overflow-hidden">
+    <div className="flex-1 flex flex-col bg-white lg:border-l border-gray-200 overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
+      <div className="px-4 lg:px-6 py-4 border-b border-gray-200">
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 lg:gap-4">
+            {showBackButton && (
+              <button
+                onClick={onClose}
+                className="lg:hidden p-2 -ml-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+                aria-label="Back to list"
+              >
+                <Icons.arrowLeft className="w-5 h-5" />
+              </button>
+            )}
             <Avatar 
               firstName={contact.firstName} 
               lastName={contact.lastName}
@@ -181,7 +190,7 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete }
       </div>
 
       {/* Contact info */}
-      <div className="px-6 py-4 border-b border-gray-200 grid grid-cols-2 gap-4">
+      <div className="px-4 lg:px-6 py-4 border-b border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="text-xs font-medium text-gray-500 uppercase">Email</label>
           <InlineEdit

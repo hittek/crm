@@ -65,14 +65,21 @@ const methods = {
     })
     if (!existingContact) return notFound(res, 'Contact not found')
     
-    const { ownerId, visibility, visibleTo, ...rest } = req.body
+    const { id: bodyId, ownerId, visibility, visibleTo, owner, deals, tasks, activities, _count, createdAt, updatedAt, organization, organizationId: bodyOrgId, ...rest } = req.body
+    
+    // Convert empty strings to null for optional fields
+    const cleanData = Object.fromEntries(
+      Object.entries(rest).map(([key, value]) => [key, value === '' ? null : value])
+    )
     
     try {
       const contact = await prisma.contact.update({
         where: { id: contactId },
         data: {
-          ...rest,
-          ownerId: ownerId !== undefined ? (ownerId ? parseInt(ownerId) : null) : undefined,
+          ...cleanData,
+          owner: ownerId !== undefined 
+            ? (ownerId ? { connect: { id: parseInt(ownerId) } } : { disconnect: true })
+            : undefined,
           visibility: visibility || undefined,
           visibleTo: visibleTo !== undefined ? JSON.stringify(visibleTo) : undefined,
           updatedBy: 'system',

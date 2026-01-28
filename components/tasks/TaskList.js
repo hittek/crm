@@ -125,24 +125,24 @@ export default function TaskList({ onNewTask }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 bg-white">
+      <div className="px-4 lg:px-6 py-4 border-b border-gray-200 bg-white">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Tareas</h1>
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Tareas</h1>
           <button onClick={onNewTask} className="btn-primary">
-            <Icons.add className="w-4 h-4 mr-2" />
-            Nueva tarea
+            <Icons.add className="w-4 h-4 lg:mr-2" />
+            <span className="hidden lg:inline">Nueva tarea</span>
           </button>
         </div>
 
         {/* Quick add */}
-        <form onSubmit={handleQuickAdd} className="flex gap-2">
+        <form onSubmit={handleQuickAdd} className="flex flex-col sm:flex-row gap-2">
           <div className="flex-1 relative">
             <Icons.add className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               value={quickAddText}
               onChange={(e) => setQuickAddText(e.target.value)}
-              placeholder='Agregar tarea rápida... (ej: "Llamar a Juan mañana")'
+              placeholder='Agregar tarea...'
               className="input pl-10"
               disabled={isAdding}
             />
@@ -158,7 +158,7 @@ export default function TaskList({ onNewTask }) {
       </div>
 
       {/* Filters */}
-      <div className="px-6 py-3 border-b border-gray-200 bg-gray-50 flex gap-2">
+      <div className="px-4 lg:px-6 py-3 border-b border-gray-200 bg-gray-50 flex gap-2 overflow-x-auto scrollbar-hide">
         {filters.map((filter) => {
           const count = counts[filter.id] || 0
           const isActive = activeFilter === filter.id
@@ -196,7 +196,7 @@ export default function TaskList({ onNewTask }) {
             {tasks.map((task) => (
               <div
                 key={task.id}
-                className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 cursor-pointer ${
+                className={`flex items-start sm:items-center gap-3 lg:gap-4 px-4 lg:px-6 py-4 hover:bg-gray-50 cursor-pointer ${
                   task.status === 'completed' ? 'opacity-60' : ''
                 }`}
                 onClick={() => handleTaskSelect(task)}

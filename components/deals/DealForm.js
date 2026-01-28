@@ -129,8 +129,8 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
           </div>
 
           {/* Value and Currency */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Valor
               </label>
@@ -164,7 +164,7 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
           </div>
 
           {/* Stage and Probability */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Etapa
@@ -195,7 +195,7 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
           </div>
 
           {/* Expected Close and Priority */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Fecha de cierre esperada

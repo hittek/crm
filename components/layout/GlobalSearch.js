@@ -91,8 +91,8 @@ export default function GlobalSearch({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black bg-opacity-25" onClick={onClose} />
-      <div className="flex justify-center pt-24 px-4">
-        <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl">
+      <div className="flex justify-center pt-4 sm:pt-24 px-2 sm:px-4">
+        <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           {/* Search input */}
           <div className="flex items-center px-4 border-b border-gray-200">
             <Icons.search className="w-5 h-5 text-gray-400" />

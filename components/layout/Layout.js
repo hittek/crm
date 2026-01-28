@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Icons from '../ui/Icons'
 import GlobalSearch from './GlobalSearch'
 import QuickAddMenu from './QuickAddMenu'
+import NotificationBell from './NotificationBell'
 import { useOrganization } from '../../lib/SettingsContext'
 import { useAuth } from '../../lib/AuthContext'
 import { useI18n } from '../../lib/i18n'
@@ -16,6 +17,12 @@ export default function Layout({ children }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+  }, [router.pathname])
 
   // Navigation items using translations
   const baseNavigation = [
@@ -59,8 +66,16 @@ export default function Layout({ children }) {
 
   return (
     <div className="h-screen flex bg-gray-50">
+      {/* Mobile menu overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Logo */}
         <div className="h-16 flex items-center px-6 border-b border-gray-200">
           <Link href="/" className="flex items-center gap-2">
@@ -118,10 +133,10 @@ export default function Layout({ children }) {
         </nav>
 
         {/* Quick add button */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-gray-200 flex items-center gap-2">
           <button
             onClick={() => setIsAddMenuOpen(true)}
-            className="w-full btn-primary"
+            className="flex-1 btn-primary"
           >
             <Icons.add className="w-4 h-4 mr-2" />
             {t('nav.quickAdd')}
@@ -129,6 +144,7 @@ export default function Layout({ children }) {
               N
             </kbd>
           </button>
+          <NotificationBell />
         </div>
 
         {/* User menu */}
@@ -191,6 +207,26 @@ export default function Layout({ children }) {
 
       {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Mobile header */}
+        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 -ml-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+            aria-label="Open menu"
+          >
+            <Icons.menu className="w-6 h-6" />
+          </button>
+          <span className="text-lg font-semibold text-gray-900">{organization.name || 'CRM'}</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+            >
+              <Icons.search className="w-5 h-5" />
+            </button>
+            <NotificationBell />
+          </div>
+        </div>
         {children}
       </main>
 

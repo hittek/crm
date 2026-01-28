@@ -1,7 +1,30 @@
 const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcryptjs')
+require('dotenv').config()
 
-const prisma = new PrismaClient()
+// Create Prisma client based on DATABASE_URL
+function createPrismaClient() {
+  const databaseUrl = process.env.DATABASE_URL || ''
+  
+  // SQLite for local development
+  if (databaseUrl.startsWith('file:')) {
+    const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3')
+    const adapter = new PrismaBetterSqlite3({ url: databaseUrl })
+    
+    return new PrismaClient({ adapter })
+  }
+  
+  // PostgreSQL - requires accelerateUrl for Prisma 7
+  const accelerateUrl = process.env.PRISMA_DATABASE_URL
+  if (accelerateUrl) {
+    const { withAccelerate } = require('@prisma/extension-accelerate')
+    return new PrismaClient().$extends(withAccelerate())
+  }
+  
+  throw new Error('DATABASE_URL must be SQLite (file:) or set PRISMA_DATABASE_URL for PostgreSQL')
+}
+
+const prisma = createPrismaClient()
 
 // Hash password function
 async function hashPassword(password) {

@@ -30,6 +30,9 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
     if (!formData.firstName.trim()) {
       newErrors.firstName = 'El nombre es requerido'
     }
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'El apellido es requerido'
+    }
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email inválido'
     }
@@ -52,14 +55,22 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
         body: JSON.stringify(formData),
       })
       
-      if (!res.ok) throw new Error('Error saving contact')
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        if (res.status === 409 && errorData.field === 'email') {
+          setErrors({ email: errorData.error || 'Ya existe un contacto con este email' })
+          setIsSubmitting(false)
+          return
+        }
+        throw new Error(errorData.error || 'Error saving contact')
+      }
       
       const saved = await res.json()
       onSave(saved)
       onClose()
     } catch (error) {
       console.error('Error saving contact:', error)
-      setErrors({ submit: 'Error al guardar el contacto' })
+      setErrors({ submit: error.message || 'Error al guardar el contacto' })
     }
     setIsSubmitting(false)
   }
@@ -79,7 +90,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
       size="lg"
     >
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Basic fields */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -100,15 +111,18 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Apellido
+              Apellido <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={formData.lastName}
               onChange={(e) => handleChange('lastName', e.target.value)}
-              className="input"
+              className={`input ${errors.lastName ? 'input-error' : ''}`}
               placeholder="Pérez"
             />
+            {errors.lastName && (
+              <p className="text-xs text-red-500 mt-1">{errors.lastName}</p>
+            )}
           </div>
 
           <div>

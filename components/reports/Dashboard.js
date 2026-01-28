@@ -69,13 +69,13 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Reportes</h1>
+    <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+      <h1 className="text-xl lg:text-2xl font-bold text-gray-900 mb-4 lg:mb-6">Reportes</h1>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
         {/* Pipeline Value */}
-        <div className="card p-6">
+        <div className="card p-4 lg:p-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-500">Pipeline Total</span>
             <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
@@ -151,9 +151,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Pipeline by Stage */}
-        <div className="card col-span-2">
+        <div className="card lg:col-span-2">
           <div className="card-header">
             <h3 className="font-semibold text-gray-900">Pipeline por etapa</h3>
           </div>
@@ -244,7 +244,7 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Activity */}
-        <div className="card col-span-3">
+        <div className="card lg:col-span-3">
           <div className="card-header flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">Actividad reciente</h3>
             <button 
