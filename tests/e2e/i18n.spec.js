@@ -1,18 +1,5 @@
 import { test, expect } from '@playwright/test'
-const { testUser } = require('./test.config')
-
-// Helper function to login before tests
-async function login(page) {
-  await page.goto('/login', { waitUntil: 'networkidle' })
-  
-  await page.fill('input[name="email"], input[type="email"]', testUser.email)
-  await page.fill('input[name="password"], input[type="password"]', testUser.password)
-  
-  await page.click('button[type="submit"]')
-  
-  await page.waitForURL('/', { timeout: 10000 })
-  await page.waitForSelector('nav', { timeout: 10000 })
-}
+const { login } = require('./helpers/login')
 
 // Helper to ensure Spanish locale is set
 async function ensureSpanishLocale(page) {

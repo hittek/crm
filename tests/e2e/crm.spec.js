@@ -1,25 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { testUser } = require('./test.config')
-
-// Helper function to login before tests
-/**
- * @param {import("@playwright/test").Page} page
- */
-async function login(page) {
-  await page.goto('/login', { waitUntil: 'networkidle' })
-  
-  // Fill in login form using test configuration
-  await page.fill('input[name="email"], input[type="email"]', testUser.email)
-  await page.fill('input[name="password"], input[type="password"]', testUser.password)
-  
-  // Click login button
-  await page.click('button[type="submit"]')
-  
-  // Wait for navigation to complete
-  await page.waitForURL('/', { timeout: 10000 })
-  await page.waitForSelector('nav', { timeout: 10000 })
-}
+const { login } = require('./helpers/login')
 
 // ==========================================
 // CONTACTS PAGE TESTS
