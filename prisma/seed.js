@@ -14,14 +14,23 @@ function createPrismaClient() {
     return new PrismaClient({ adapter })
   }
   
-  // PostgreSQL - requires accelerateUrl for Prisma 7
+  // Direct PostgreSQL connection (mirrors lib/prisma.js)
+  if (databaseUrl.startsWith('postgres://') || databaseUrl.startsWith('postgresql://')) {
+    const { PrismaPg } = require('@prisma/adapter-pg')
+    const { Pool } = require('pg')
+    const pool = new Pool({ connectionString: databaseUrl })
+    const adapter = new PrismaPg(pool)
+    return new PrismaClient({ adapter })
+  }
+
+  // PostgreSQL via Prisma Accelerate
   const accelerateUrl = process.env.PRISMA_DATABASE_URL
   if (accelerateUrl) {
     const { withAccelerate } = require('@prisma/extension-accelerate')
     return new PrismaClient().$extends(withAccelerate())
   }
   
-  throw new Error('DATABASE_URL must be SQLite (file:) or set PRISMA_DATABASE_URL for PostgreSQL')
+  throw new Error('DATABASE_URL must be SQLite (file:), postgres://, or set PRISMA_DATABASE_URL for Prisma Accelerate')
 }
 
 const prisma = createPrismaClient()
