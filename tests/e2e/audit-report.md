@@ -1,9 +1,9 @@
 # E2E Audit Report — Baseline Pass/Fail State
 
-**Last updated:** 2026-04-30 (after S04 — 96 tests)
+**Last updated:** 2026-04-30 (after S05 — 96 tests, 96/96 passing)
 **Environment:** Local dev (Next.js 14, PostgreSQL), single Playwright worker
 **Node:** v24.14.0 | **Playwright:** 1.57.0
-**Total tests:** 96 | **Passed:** 86 | **Failed:** 10 | **Skipped:** 0
+**Total tests:** 96 | **Passed:** 96 | **Failed:** 0 | **Skipped:** 0
 **Run conditions:** Sequential (--workers=1)
 
 ---
@@ -16,6 +16,7 @@
 | S02 | Contacts CRUD, kanban selectors, notifications UI | 57/88 | 57/88 |
 | S03 | BUG-7 locale fix, Deals CRUD tests (+3), deals.js fix | 57/88 | **81/91** |
 | S04 | Tasks CRUD (+2), quick-add nav (+3), URL param auto-open | 81/91 | **86/96** |
+| S05 | BUG-3 profile locale, BUG-5 Notificaciones tab | 86/96 | **96/96 ✅** |
 
 ---
 

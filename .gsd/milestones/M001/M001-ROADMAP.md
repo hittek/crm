@@ -25,7 +25,7 @@
 - [x] **S04: Tasks & Modal Forms Fix & Verification** `risk:medium` `depends:[S01]`
   > After this: After this: create a task (appears in list), mark it complete (moves to completed filter), use quick-add menu to create a contact/deal/task, and open/submit every modal form in the app without any broken submit buttons
 
-- [ ] **S05: Settings, Reports & Mobile Polish** `risk:low` `depends:[S01]`
+- [x] **S05: Settings, Reports & Mobile Polish** `risk:low` `depends:[S01]`
   > After this: After this: save organization name, switch currency, add a pipeline stage, toggle a notification — all persist on reload. Reports page shows real data. All pages render correctly at 375px and 768px.
 
 ## Boundary Map
