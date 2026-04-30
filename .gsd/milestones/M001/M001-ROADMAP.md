@@ -19,7 +19,7 @@
 - [x] **S02: S02** `risk:high` `depends:[]`
   > After this: After this: create a contact via the form (record appears in list), edit it (changes persist on reload), change status (updates in list and detail), delete it (removed from list) — all verified by Playwright
 
-- [ ] **S03: S03** `risk:high` `depends:[]`
+- [x] **S03: S03** `risk:high` `depends:[]`
   > After this: After this: create a deal (appears in correct kanban column), drag it to a new stage (DB updated), open the deal drawer (all fields load), and mark it won — all verified by Playwright including the drag-drop
 
 - [ ] **S04: Tasks & Modal Forms Fix & Verification** `risk:medium` `depends:[S01]`
