@@ -30,7 +30,7 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 
 ## Milestone Sequence
 
-- [ ] M001: UI/UX Validation & Stabilization — Discover and fix all broken CRM interactions, full Playwright e2e coverage
+- [x] M001: UI/UX Validation & Stabilization — 96/96 tests passing, all CRM interactions verified (2026-04-30)
 - [ ] M002: SaaS Foundation — Self-signup, tiered billing, white-label, super-admin, subdomain routing
 - [ ] M003: Chatbot Platform Core — Knowledge bases, RAG engine, chatbot config, conversation management
 - [ ] M004: Channel Integrations — Facebook Messenger, WhatsApp Business, Telegram live
