@@ -12,36 +12,42 @@ test.describe('Notifications', () => {
 
   test('should display notification bell in sidebar', async ({ page }) => {
     // The notification bell should be visible in the layout
-    const bellButton = page.locator('button[aria-label*="Notificaciones"], button[aria-label*="notification"]').first()
+    const bellButton = page.locator('button[aria-label*="Notificaciones"], button[aria-label*="Notification"]').first()
     await expect(bellButton).toBeVisible({ timeout: 5000 })
   })
 
   test('should open notification dropdown when clicking bell', async ({ page }) => {
     // Click the notification bell
-    const bellButton = page.locator('button[aria-label*="Notificaciones"], button[aria-label*="notification"]').first()
+    const bellButton = page.locator('button[aria-label*="Notificaciones"], button[aria-label*="Notification"]').first()
     await bellButton.click()
     
-    // Dropdown should appear with notifications header
-    await expect(page.locator('text=Notificaciones').first()).toBeVisible({ timeout: 5000 })
+    // Dropdown should appear with notifications header (Spanish or English locale)
+    await expect(
+      page.locator('text=Notificaciones').first().or(page.locator('text=Notifications').first())
+    ).toBeVisible({ timeout: 5000 })
   })
 
   test('should show empty state when no notifications', async ({ page }) => {
     // Click the notification bell
-    const bellButton = page.locator('button[aria-label*="Notificaciones"], button[aria-label*="notification"]').first()
+    const bellButton = page.locator('button[aria-label*="Notificaciones"], button[aria-label*="Notification"]').first()
     await bellButton.click()
     
-    // Should show empty message or notifications list
-    const dropdown = page.locator('text=No tienes notificaciones, text=Notificaciones').first()
-    await expect(dropdown).toBeVisible({ timeout: 5000 })
+    // Should show empty message or notification header (dropdown opened successfully)
+    await expect(
+      page.locator('text=No tienes notificaciones, text="No notifications"').first()
+        .or(page.locator('h3:has-text("Notificaciones"), h3:has-text("Notifications")').first())
+    ).toBeVisible({ timeout: 5000 })
   })
 
   test('should close dropdown when clicking outside', async ({ page }) => {
     // Click the notification bell to open
-    const bellButton = page.locator('button[aria-label*="Notificaciones"], button[aria-label*="notification"]').first()
+    const bellButton = page.locator('button[aria-label*="Notificaciones"], button[aria-label*="Notification"]').first()
     await bellButton.click()
     
-    // Wait for dropdown to be visible
-    await expect(page.locator('h3:has-text("Notificaciones")')).toBeVisible({ timeout: 5000 })
+    // Wait for dropdown to be visible (Spanish or English)
+    await expect(
+      page.locator('h3:has-text("Notificaciones")').or(page.locator('h3:has-text("Notifications")'))
+    ).toBeVisible({ timeout: 5000 })
     
     // Click outside (on the main content area)
     await page.locator('main').click()
@@ -52,36 +58,26 @@ test.describe('Notifications', () => {
   })
 
   test('notification appears after creating a contact', async ({ page }) => {
-    // Create a new contact which should trigger a notification
-    // Click quick add button
-    const addButton = page.locator('button:has-text("Agregar")').first()
-    await addButton.click()
+    // Create a new contact via the Nuevo button on the contacts page
+    await page.waitForSelector('text=/\\d+ contactos?/', { timeout: 10000 })
+    await page.locator('button:has-text("Nuevo")').first().click()
     
-    // Wait for quick add menu
-    await page.waitForTimeout(500)
+    // Wait for the contact form modal to open
+    await expect(page.locator('input[placeholder="Juan"]').first()).toBeVisible({ timeout: 5000 })
     
-    // Click on "Contacto" option
-    const contactOption = page.locator('button:has-text("Contacto")').first()
-    if (await contactOption.isVisible()) {
-      await contactOption.click()
-      
-      // Fill in contact form
-      const timestamp = Date.now()
-      await page.fill('input[name="firstName"]', `Test${timestamp}`)
-      await page.fill('input[name="lastName"]', 'Notification')
-      await page.fill('input[name="email"]', `test${timestamp}@notification.com`)
-      
-      // Save the contact
-      const saveButton = page.locator('button:has-text("Guardar")').first()
-      await saveButton.click()
-      
-      // Wait for save to complete
-      await page.waitForTimeout(1000)
-      
-      // Notification bell may show unread count badge
-      // This depends on whether the notification was created for the current user
-      // (notifications are sent to OTHER users, not the creator)
-    }
+    // Fill in contact form
+    const timestamp = Date.now()
+    await page.locator('input[placeholder="Juan"]').first().fill(`Test${timestamp}`)
+    await page.locator('input[placeholder="Pérez"]').first().fill('Notification')
+    await page.locator('input[type="email"]').first().fill(`test${timestamp}@notification.com`)
+    
+    // Save the contact
+    await page.locator('button:has-text("Crear contacto")').click()
+    
+    // Modal closes and contact appears in list
+    await expect(page.locator('button:has-text("Crear contacto")')).not.toBeVisible({ timeout: 5000 })
+    // New contact should appear in list
+    await expect(page.locator(`text=Test${timestamp}`).first()).toBeVisible({ timeout: 8000 })
   })
 })
 

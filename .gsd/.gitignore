@@ -6,6 +6,9 @@ runtime/
 worktrees/
 browser-state/
 browser-baselines/
+graphs/
+journal/
+*.db
 *.db-shm
 *.db-wal
 *.jsonl
@@ -13,3 +16,5 @@ last-snapshot.md
 metrics.json
 repo-meta.json
 state-manifest.json
+STATE.md
+milestones/**/anchors/

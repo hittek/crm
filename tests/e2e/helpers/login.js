@@ -21,4 +21,32 @@ async function login(page) {
   await page.waitForSelector('nav', { timeout: 10000 })
 }
 
-module.exports = { login }
+/**
+ * Reset the app locale in localStorage and reload so the app picks it up.
+ * Call this in beforeEach when the previous test (or spec file) may have changed locale.
+ * @param {import("@playwright/test").Page} page
+ * @param {string} locale - locale code, defaults to 'es'
+ */
+/**
+ * Reset the app locale to Spanish by updating the user profile via API.
+ * The app reads locale from user?.locale (priority over localStorage), so
+ * localStorage alone isn't enough when i18n tests have saved a different locale.
+ * @param {import("@playwright/test").Page} page
+ * @param {string} locale - locale code, defaults to 'es-MX'
+ */
+async function resetLocale(page, locale = 'es-MX') {
+  // Update user locale via fetch (carries session cookies unlike page.request in some setups)
+  await page.evaluate(async (loc) => {
+    await fetch('/api/auth/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locale: loc }),
+      credentials: 'include',
+    })
+    localStorage.setItem('crm_locale', loc)
+  }, locale)
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.waitForSelector('nav', { timeout: 10000 })
+}
+
+module.exports = { login, resetLocale }
