@@ -116,6 +116,14 @@ export default function ContactsPage() {
     setShowForm(true)
   }, [])
 
+  // Auto-open form when navigated here via quick-add (?new=contact)
+  useEffect(() => {
+    if (router.query.new === 'contact') {
+      handleNewContact()
+      router.replace({ pathname: '/' }, undefined, { shallow: true })
+    }
+  }, [router.query.new, handleNewContact, router])
+
   // Listen for global add contact event
   useEffect(() => {
     const handleAddContact = () => handleNewContact()

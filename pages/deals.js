@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Pipeline from '../components/deals/Pipeline'
 import DealForm from '../components/deals/DealForm'
 
 export default function DealsPage() {
+  const router = useRouter()
   const [showForm, setShowForm] = useState(false)
   const [editingDeal, setEditingDeal] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -20,6 +22,14 @@ export default function DealsPage() {
     setEditingDeal(null)
     setShowForm(true)
   }, [])
+
+  // Auto-open form when navigated here via quick-add (?new=deal)
+  useEffect(() => {
+    if (router.query.new === 'deal') {
+      handleNewDeal()
+      router.replace({ pathname: '/deals' }, undefined, { shallow: true })
+    }
+  }, [router.query.new, handleNewDeal, router])
 
   // Listen for global add deal event
   useEffect(() => {

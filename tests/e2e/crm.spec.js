@@ -533,6 +533,139 @@ test.describe('Deals Pipeline CRUD', () => {
 })
 
 // ==========================================
+// TASKS CRUD TESTS
+// ==========================================
+test.describe('Tasks CRUD', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page)
+    await resetLocale(page)
+    await page.goto('/tasks', { waitUntil: 'networkidle' })
+    await page.waitForSelector('main', { timeout: 10000 })
+  })
+
+  test('creates a task and it appears in the list', async ({ page }) => {
+    const taskTitle = `Test Task ${Date.now()}`
+
+    // Click "Nueva tarea" button
+    await page.locator('button:has-text("Nueva tarea")').click()
+    await page.waitForSelector('[role="dialog"]', { timeout: 10000 })
+
+    // Fill in title
+    await page.locator('input[placeholder*="Llamar"]').fill(taskTitle)
+
+    // Submit — scope to dialog to avoid matching the list's "Nueva tarea" button
+    await page.locator('[role="dialog"] button[type="submit"]').click()
+    await page.waitForTimeout(1500)
+
+    // Task may appear in any filter tab depending on timezone offset (dueDate=today UTC
+    // may fall in Vencidas on servers in negative UTC offsets). Check all tabs.
+    const tabs = ['Hoy', 'Próximas', 'Vencidas']
+    let found = false
+    for (const tab of tabs) {
+      const isVisible = await page.locator(`text=${taskTitle}`).first().isVisible().catch(() => false)
+      if (isVisible) { found = true; break }
+      await page.locator(`button:has-text("${tab}")`).first().click()
+      await page.waitForTimeout(500)
+      const isVisibleNow = await page.locator(`text=${taskTitle}`).first().isVisible().catch(() => false)
+      if (isVisibleNow) { found = true; break }
+    }
+    expect(found).toBe(true)
+  })
+
+  test('marks a task complete and it moves to Completadas', async ({ page }) => {
+    const taskTitle = `Complete Task ${Date.now()}`
+
+    // Create a task first
+    await page.locator('button:has-text("Nueva tarea")').click()
+    await page.waitForSelector('[role="dialog"]', { timeout: 10000 })
+    await page.locator('input[placeholder*="Llamar"]').fill(taskTitle)
+    await page.locator('[role="dialog"] button[type="submit"]').click()
+    await page.waitForTimeout(1500)
+
+    // Find the task across all filter tabs
+    const tabs = ['Hoy', 'Próximas', 'Vencidas']
+    for (const tab of tabs) {
+      const isVisible = await page.locator(`text=${taskTitle}`).first().isVisible().catch(() => false)
+      if (isVisible) break
+      await page.locator(`button:has-text("${tab}")`).first().click()
+      await page.waitForTimeout(500)
+    }
+    await expect(page.locator(`text=${taskTitle}`).first()).toBeVisible({ timeout: 5000 })
+
+    // Click the task row to open the drawer
+    await page.locator(`p:has-text("${taskTitle}")`).first().click()
+    await page.waitForTimeout(500)
+
+    // Click "Completar" button in the task drawer
+    await page.locator('button:has-text("Completar")').first().click()
+    await page.waitForTimeout(1500)
+
+    // Navigate fresh to /tasks (clears drawer state and any overlays)
+    await page.goto('/tasks', { waitUntil: 'networkidle' })
+
+    // Switch to Completadas and verify it appears there
+    await page.locator('button:has-text("Completadas")').first().click()
+    await page.waitForTimeout(500)
+    await expect(page.locator(`text=${taskTitle}`).first()).toBeVisible({ timeout: 10000 })
+  })
+})
+
+// ==========================================
+// QUICK ADD NAVIGATION TESTS
+// ==========================================
+test.describe('Quick Add Navigation', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page)
+    await resetLocale(page)
+  })
+
+  test('quick-add Tarea navigates to /tasks with TaskForm open', async ({ page }) => {
+    await page.keyboard.press('n')
+    await page.waitForSelector('text=Crear nuevo', { timeout: 5000 })
+
+    // Use description text to uniquely identify the Tarea option (avoids matching "Tareas" tab)
+    await page.locator('button:has-text("Crear una nueva tarea")').click()
+
+    // Should land on /tasks
+    await page.waitForURL('**/tasks', { timeout: 10000 })
+    await page.waitForSelector('main', { timeout: 10000 })
+
+    // TaskForm modal should be open
+    await expect(page.locator('[role="dialog"]:has-text("Nueva tarea")')).toBeVisible({ timeout: 10000 })
+  })
+
+  test('quick-add Oportunidad navigates to /deals with DealForm open', async ({ page }) => {
+    await page.keyboard.press('n')
+    await page.waitForSelector('text=Crear nuevo', { timeout: 5000 })
+
+    // Use description text to uniquely identify the Oportunidad option
+    await page.locator('button:has-text("Crear una nueva oportunidad")').click()
+
+    // Should land on /deals
+    await page.waitForURL('**/deals', { timeout: 10000 })
+    await page.waitForSelector('main', { timeout: 10000 })
+
+    // DealForm modal should be open
+    await expect(page.locator('[role="dialog"]').first()).toBeVisible({ timeout: 10000 })
+  })
+
+  test('quick-add Contacto navigates to / with ContactForm open', async ({ page }) => {
+    await page.keyboard.press('n')
+    await page.waitForSelector('text=Crear nuevo', { timeout: 5000 })
+
+    // Use description text to uniquely identify the Contacto option
+    await page.locator('button:has-text("Agregar un nuevo contacto")').click()
+
+    // Should land on / (contacts page)
+    await page.waitForURL('**/', { timeout: 10000 })
+    await page.waitForSelector('main', { timeout: 10000 })
+
+    // ContactForm modal should be open
+    await expect(page.locator('[role="dialog"]').first()).toBeVisible({ timeout: 10000 })
+  })
+})
+
+// ==========================================
 // UI COMPONENTS TESTS
 // ==========================================
 test.describe('UI Components', () => {
