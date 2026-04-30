@@ -86,6 +86,14 @@ export default function SettingsPage() {
   
   const [dealStages, setDealStages] = useState([])
   const [contactStatuses, setContactStatuses] = useState([])
+  const [notifications, setNotifications] = useState({
+    taskReminders: true,
+    newContacts: true,
+    dealsWon: true,
+    emailEnabled: true,
+    dealUpdates: true,
+    dailyDigest: false,
+  })
   
   // User management state
   const [users, setUsers] = useState([])
@@ -116,6 +124,7 @@ export default function SettingsPage() {
     { id: 'users', label: 'Usuarios', icon: Icons.contacts, adminOnly: true },
     { id: 'pipeline', label: 'Pipeline', icon: Icons.trending },
     { id: 'contacts', label: 'Contactos', icon: Icons.contacts },
+    { id: 'notifications', label: 'Notificaciones', icon: Icons.bell },
     { id: 'integrations', label: 'Integraciones', icon: Icons.link },
   ].filter(tab => !tab.adminOnly || isAdmin)
 
@@ -933,6 +942,51 @@ export default function SettingsPage() {
                   onClick={() => saveSettings('contactStatuses', contactStatuses)}
                   disabled={isSaving}
                   className="btn btn-primary"
+                >
+                  {isSaving ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Notifications Settings */}
+          {activeTab === 'notifications' && (
+            <div className="max-w-2xl">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">Notificaciones</h3>
+
+              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                <div className="space-y-4">
+                  {[
+                    { key: 'taskReminders', label: 'Recordatorios de tareas', description: 'Recibe alertas antes de que venza una tarea' },
+                    { key: 'newContacts', label: 'Nuevos contactos', description: 'Notificación cuando se agrega un nuevo contacto' },
+                    { key: 'dealsWon', label: 'Negocios ganados', description: 'Celebra cuando un negocio pasa a Ganado' },
+                    { key: 'dealUpdates', label: 'Actualizaciones de negocios', description: 'Cambios de etapa en el pipeline' },
+                    { key: 'dailyDigest', label: 'Resumen diario', description: 'Recibe un resumen de actividad cada día' },
+                  ].map(({ key, label, description }) => (
+                    <div key={key} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{label}</p>
+                        <p className="text-xs text-gray-500">{description}</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={notifications[key] ?? false}
+                          onChange={(e) => setNotifications(prev => ({ ...prev, [key]: e.target.checked }))}
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => saveSettings('notifications', notifications)}
+                  disabled={isSaving}
+                  className="btn-primary"
                 >
                   {isSaving ? 'Guardando...' : 'Guardar cambios'}
                 </button>

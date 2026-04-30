@@ -242,10 +242,11 @@ test.describe('Settings Page', () => {
   })
 
   test('should display settings sidebar tabs', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /General/ })).toBeVisible({ timeout: 10000 })
-    await expect(page.getByRole('button', { name: /Pipeline/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Notificaciones/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Integraciones/ })).toBeVisible()
+    const main = page.locator('main')
+    await expect(main.getByRole('button', { name: /General/ })).toBeVisible({ timeout: 10000 })
+    await expect(main.getByRole('button', { name: /Pipeline/ })).toBeVisible()
+    await expect(main.getByRole('button', { name: /Notificaciones/ })).toBeVisible()
+    await expect(main.getByRole('button', { name: /Integraciones/ })).toBeVisible()
   })
 
   test('should show General settings by default', async ({ page }) => {

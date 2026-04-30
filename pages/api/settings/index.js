@@ -35,6 +35,8 @@ const DEFAULT_SETTINGS = {
   notifications: {
     emailEnabled: true,
     taskReminders: true,
+    newContacts: true,
+    dealsWon: true,
     dealUpdates: true,
     dailyDigest: false,
   },

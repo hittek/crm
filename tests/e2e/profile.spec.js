@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test'
 const { testUser } = require('./test.config')
-const { login } = require('./helpers/login')
+const { login, resetLocale } = require('./helpers/login')
 
 test.describe('Profile Page', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
+    await resetLocale(page)
     await page.goto('/profile')
   })
 
@@ -109,18 +110,18 @@ test.describe('Profile Page', () => {
     // Change locale
     await localeSelect.selectOption('en-US')
     
-    // Save
+    // Save — button text is 'Guardar cambios' (es) at this point
     await page.getByRole('button', { name: 'Guardar cambios' }).click()
     await expect(page.getByText('Perfil actualizado correctamente')).toBeVisible({ timeout: 10000 })
     
-    // Reload and verify
+    // Reload and verify locale persisted
     await page.reload()
     await expect(page.locator('select').nth(1)).toHaveValue('en-US')
     
-    // Restore original locale
+    // Restore original locale (page may now be in English — match either language's save button)
     await page.locator('select').nth(1).selectOption(originalValue)
-    await page.getByRole('button', { name: 'Guardar cambios' }).click()
-    await expect(page.getByText('Perfil actualizado correctamente')).toBeVisible({ timeout: 10000 })
+    await page.locator('button:has-text("Save changes"), button:has-text("Guardar cambios")').first().click()
+    await page.waitForTimeout(2000)
   })
 
   test('should toggle password change section', async ({ page }) => {
@@ -215,6 +216,7 @@ test.describe('Profile Page', () => {
 test.describe('Profile Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
+    await resetLocale(page)
   })
 
   test('should navigate to profile from user menu', async ({ page }) => {
