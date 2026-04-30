@@ -1,0 +1,15 @@
+# Ephemeral / large runtime files — exclude from repo
+activity/
+exec/
+audit/
+runtime/
+worktrees/
+browser-state/
+browser-baselines/
+*.db-shm
+*.db-wal
+*.jsonl
+last-snapshot.md
+metrics.json
+repo-meta.json
+state-manifest.json

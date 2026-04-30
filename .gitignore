@@ -20,7 +20,6 @@ next-env.d.ts
 test-results/
 
 # ── GSD baseline (auto-generated) ──
-.gsd
 .gsd-id
 .mcp.json
 .bg-shell/
