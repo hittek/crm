@@ -24,7 +24,7 @@ Task lifecycle covers: create → verify in list → mark complete → verify in
 
 ## Tasks
 
-- [ ] **T01: Fix URL param auto-open for quick-add targets** `est:30m`
+- [x] **T01: Fix URL param auto-open for quick-add targets** `est:30m`
   pages/tasks.js: add `useEffect` watching `router.query.new === 'task'` → call `handleNewTask()`.
   pages/deals.js: same pattern for `?new=deal`.
   pages/index.js: same pattern for `?new=contact`.
@@ -32,7 +32,7 @@ Task lifecycle covers: create → verify in list → mark complete → verify in
   - Files: `pages/tasks.js`, `pages/deals.js`, `pages/index.js`
   - Verify: navigate to /tasks?new=task in browser → TaskForm opens automatically
 
-- [ ] **T02: Add Tasks CRUD Playwright tests** `est:40m`
+- [x] **T02: Add Tasks CRUD Playwright tests** `est:40m`
   Add `test.describe('Tasks CRUD')` to crm.spec.js:
   1. Create a task via "Nueva tarea" button (title = unique timestamp name), submit form → appears in Hoy or Próximas list
   2. Mark task complete → moves to Completadas filter
@@ -42,7 +42,7 @@ Task lifecycle covers: create → verify in list → mark complete → verify in
   - Files: `tests/e2e/crm.spec.js`
   - Verify: pnpm test:e2e --grep 'Tasks CRUD' --workers=1 --reporter=line
 
-- [ ] **T03: Full suite run and audit report update** `est:20m`
+- [x] **T03: Full suite run and audit report update** `est:20m`
   Run full suite. Update tests/e2e/audit-report.md with S04 results.
   - Files: `tests/e2e/audit-report.md`
   - Verify: npx playwright test --workers=1 --reporter=line

@@ -1,9 +1,9 @@
 # E2E Audit Report — Baseline Pass/Fail State
 
-**Last updated:** 2026-04-30 (after S03 — 91 tests)
+**Last updated:** 2026-04-30 (after S04 — 96 tests)
 **Environment:** Local dev (Next.js 14, PostgreSQL), single Playwright worker
 **Node:** v24.14.0 | **Playwright:** 1.57.0
-**Total tests:** 91 | **Passed:** 81 | **Failed:** 10 | **Skipped:** 0
+**Total tests:** 96 | **Passed:** 86 | **Failed:** 10 | **Skipped:** 0
 **Run conditions:** Sequential (--workers=1)
 
 ---
@@ -15,6 +15,7 @@
 | S01 | Baseline nav/auth | — | 57/88 |
 | S02 | Contacts CRUD, kanban selectors, notifications UI | 57/88 | 57/88 |
 | S03 | BUG-7 locale fix, Deals CRUD tests (+3), deals.js fix | 57/88 | **81/91** |
+| S04 | Tasks CRUD (+2), quick-add nav (+3), URL param auto-open | 81/91 | **86/96** |
 
 ---
 
@@ -28,6 +29,27 @@
 | profile.spec.js | 17 | 10 | 7 | +7 pass (new tests), BUG-3 still open |
 | settings.spec.js | 11 | 8 | 3 | +6 pass (new tests), BUG-5 still open |
 | **Total** | **91** | **81** | **10** | **+24 pass, 91 vs 88 tests** |
+
+---
+
+## S04 Results
+
+| File | Tests | Pass | Fail | Δ vs S03 |
+|------|-------|------|------|----------|
+| crm.spec.js | 51 | 51 | 0 | +5 (Tasks CRUD x2, Quick Add Navigation x3) |
+| i18n.spec.js | 9 | 9 | 0 | no change |
+| notifications.spec.js | 8 | 8 | 0 | no change |
+| profile.spec.js | 17 | 10 | 7 | no change (BUG-3 open) |
+| settings.spec.js | 11 | 8 | 3 | no change (BUG-5 open) |
+| **Total** | **96** | **86** | **10** | **+5 pass, 96 vs 91 tests** |
+
+---
+
+## Bugs Fixed This Slice (S04)
+
+- ✅ **Quick-add URL params:** `?new=task`, `?new=deal`, `?new=contact` now auto-open the corresponding form on navigation
+- ✅ **Tasks CRUD verified:** Create task → appears in list (any filter), open drawer → mark complete → appears in Completadas
+- ✅ **Quick Add Navigation verified:** N key → menu → select item → correct page loads with form open
 
 ---
 
@@ -53,9 +75,9 @@ Note: profile tests 1–8 pass when running after crm/i18n/notifications specs (
 
 ---
 
-## All Test Results (S03)
+## All Test Results (S04 — current)
 
-### crm.spec.js (46/46 pass)
+### crm.spec.js (51/51 pass)
 
 | # | Suite | Test | Result |
 |---|-------|------|--------|
@@ -105,6 +127,11 @@ Note: profile tests 1–8 pass when running after crm/i18n/notifications specs (
 | 44 | UI Components | should display avatars with initials in contact list | ✅ |
 | 45 | UI Components | should show search button in sidebar | ✅ |
 | 46 | UI Components | should show logo in sidebar | ✅ |
+| 47 | Tasks CRUD | creates a task and it appears in the list | ✅ |
+| 48 | Tasks CRUD | marks a task complete and it moves to Completadas | ✅ |
+| 49 | Quick Add Navigation | quick-add Tarea navigates to /tasks with TaskForm open | ✅ |
+| 50 | Quick Add Navigation | quick-add Oportunidad navigates to /deals with DealForm open | ✅ |
+| 51 | Quick Add Navigation | quick-add Contacto navigates to / with ContactForm open | ✅ |
 
 ### i18n.spec.js (9/9 pass)
 

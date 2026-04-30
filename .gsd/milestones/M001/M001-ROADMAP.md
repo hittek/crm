@@ -22,7 +22,7 @@
 - [x] **S03: S03** `risk:high` `depends:[]`
   > After this: After this: create a deal (appears in correct kanban column), drag it to a new stage (DB updated), open the deal drawer (all fields load), and mark it won — all verified by Playwright including the drag-drop
 
-- [ ] **S04: Tasks & Modal Forms Fix & Verification** `risk:medium` `depends:[S01]`
+- [x] **S04: Tasks & Modal Forms Fix & Verification** `risk:medium` `depends:[S01]`
   > After this: After this: create a task (appears in list), mark it complete (moves to completed filter), use quick-add menu to create a contact/deal/task, and open/submit every modal form in the app without any broken submit buttons
 
 - [ ] **S05: Settings, Reports & Mobile Polish** `risk:low` `depends:[S01]`
