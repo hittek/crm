@@ -20,7 +20,7 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      const redirectTo = router.query.redirect || '/'
+      const redirectTo = router.query.redirect || '/contacts'
       router.push(redirectTo)
     }
   }, [authLoading, isAuthenticated, router])
@@ -39,7 +39,7 @@ export default function LoginPage() {
     }
 
     // Redirect to home or intended destination
-    const redirectTo = router.query.redirect || '/'
+    const redirectTo = router.query.redirect || '/contacts'
     router.push(redirectTo)
   }
 

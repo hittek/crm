@@ -53,7 +53,14 @@ export default function SignupPage() {
   const { isAuthenticated, isLoading: authLoading, login } = useAuth()
 
   const [step, setStep] = useState(1) // 1 = plan, 2 = account details
-  const [selectedPlan, setSelectedPlan] = useState('starter')
+  const [selectedPlan, setSelectedPlan] = useState(() => {
+    // Pre-select from ?plan= query param (set by landing page pricing CTAs)
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('plan')
+      if (['trial', 'starter', 'pro'].includes(p)) return p
+    }
+    return 'starter'
+  })
   const [orgName, setOrgName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -68,9 +75,17 @@ export default function SignupPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.push('/')
+      router.push('/contacts')
     }
   }, [authLoading, isAuthenticated, router])
+
+  // Sync plan from URL query after Next.js hydration
+  useEffect(() => {
+    const p = router.query.plan
+    if (p && ['trial', 'starter', 'pro'].includes(p)) {
+      setSelectedPlan(p)
+    }
+  }, [router.query.plan])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -99,7 +114,7 @@ export default function SignupPage() {
 
       // Hydrate AuthContext with the new user so the redirect guard recognizes the session
       await login(email, password)
-      router.push('/?welcome=1')
+      router.push('/contacts?welcome=1')
     } catch {
       setError('Error de red. Intenta de nuevo.')
     } finally {

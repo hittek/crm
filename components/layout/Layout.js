@@ -26,7 +26,7 @@ export default function Layout({ children }) {
 
   // Navigation items using translations
   const baseNavigation = [
-    { name: t('nav.contacts'), href: '/', icon: Icons.contacts },
+    { name: t('nav.contacts'), href: '/contacts', icon: Icons.contacts },
     { name: t('nav.pipeline'), href: '/deals', icon: Icons.deals },
     { name: t('nav.tasks'), href: '/tasks', icon: Icons.tasks },
     { name: t('nav.reports'), href: '/reports', icon: Icons.reports },
@@ -78,7 +78,7 @@ export default function Layout({ children }) {
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Logo */}
         <div className="h-16 flex items-center px-6 border-b border-gray-200">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/contacts" className="flex items-center gap-2">
             {organization.logo ? (
               <img 
                 src={organization.logo} 
@@ -117,7 +117,7 @@ export default function Layout({ children }) {
         <nav className="flex-1 px-4 space-y-1">
           {navigation.map((item) => {
             const isActive = router.pathname === item.href || 
-              (item.href !== '/' && router.pathname.startsWith(item.href))
+              (item.href !== '/contacts' && router.pathname.startsWith(item.href))
             
             return (
               <Link

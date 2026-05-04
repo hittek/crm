@@ -105,7 +105,7 @@ export default function AdminPage() {
       <div className="h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 font-medium mb-4">{error}</p>
-          <button onClick={() => router.push('/')} className="btn-primary px-4 py-2">
+          <button onClick={() => router.push('/contacts')} className="btn-primary px-4 py-2">
             Ir al inicio
           </button>
         </div>
@@ -123,7 +123,7 @@ export default function AdminPage() {
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => router.push('/')} className="text-gray-400 hover:text-gray-600">
+            <button onClick={() => router.push('/contacts')} className="text-gray-400 hover:text-gray-600">
               <Icons.back className="w-5 h-5" />
             </button>
             <h1 className="text-xl font-bold text-gray-900">Super Admin</h1>

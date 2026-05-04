@@ -316,7 +316,7 @@ test.describe('Navigation', () => {
     
     await page.locator('nav a:has-text("Contactos")').click()
     
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/contacts')
     await expect(page.locator('text=/\\d+ contactos?/')).toBeVisible({ timeout: 10000 })
   })
 })
@@ -345,7 +345,7 @@ test.describe('Auth & Mobile', () => {
     await page.reload({ waitUntil: 'networkidle' })
 
     // Should still be on home, not redirected to login
-    await expect(page).toHaveURL('/', { timeout: 10000 })
+    await expect(page).toHaveURL('/contacts', { timeout: 10000 })
     await expect(page.locator('nav').first()).toBeVisible()
   })
 
@@ -657,8 +657,8 @@ test.describe('Quick Add Navigation', () => {
     // Use description text to uniquely identify the Contacto option
     await page.locator('button:has-text("Agregar un nuevo contacto")').click()
 
-    // Should land on / (contacts page)
-    await page.waitForURL('**/', { timeout: 10000 })
+    // Should land on /contacts
+    await page.waitForURL('**/contacts', { timeout: 10000 })
     await page.waitForSelector('main', { timeout: 10000 })
 
     // ContactForm modal should be open
@@ -691,7 +691,7 @@ test.describe('UI Components', () => {
     await login(page)
     
     // Logo area should be visible (check for the logo link in the sidebar)
-    const logoLink = page.locator('aside a[href="/"]').first()
+    const logoLink = page.locator('aside a[href="/contacts"]').first()
     await expect(logoLink).toBeVisible()
     
     // Should have organization name text (dynamic based on settings)

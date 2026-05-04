@@ -7,7 +7,7 @@ import { useRouter } from 'next/router'
 import { Spinner } from '../components/ui/Spinner'
 
 // Pages that don't require authentication
-const PUBLIC_PAGES = ['/login', '/signup']
+const PUBLIC_PAGES = ['/login', '/signup', '/', '/privacidad']
 
 function AuthenticatedApp({ Component, pageProps }) {
   const router = useRouter()

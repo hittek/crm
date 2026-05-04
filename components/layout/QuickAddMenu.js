@@ -8,7 +8,7 @@ const quickAddItems = [
     description: 'Agregar un nuevo contacto',
     icon: Icons.contacts,
     color: 'blue',
-    href: '/?new=contact'
+    href: '/contacts?new=contact'
   },
   { 
     id: 'deal', 

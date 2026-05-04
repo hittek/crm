@@ -117,7 +117,7 @@ export default function SettingsPage() {
   // Redirect non-admin users away from settings page
   useEffect(() => {
     if (!authLoading && !isAdmin) {
-      router.push('/')
+      router.push('/contacts')
     }
   }, [authLoading, isAdmin, router])
 
