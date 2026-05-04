@@ -23,14 +23,21 @@ function extractOrgSlug(host) {
 
 export function middleware(request) {
   const host = request.headers.get('host') || ''
+  const hostWithoutPort = host.split(':')[0]
   const slug = extractOrgSlug(host)
 
-  const response = NextResponse.next()
+  const requestHeaders = new Headers(request.headers)
 
   if (slug) {
-    // Attach slug as a request header so API handlers can validate org context
-    response.headers.set('x-org-slug', slug)
-    // Also forward as a response header so client code can read it if needed
+    requestHeaders.set('x-org-slug', slug)
+  }
+
+  // Always forward the bare host so API routes can resolve custom domains
+  requestHeaders.set('x-org-host', hostWithoutPort)
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } })
+
+  if (slug) {
     response.headers.set('x-forwarded-org-slug', slug)
   }
 

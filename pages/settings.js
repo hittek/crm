@@ -82,7 +82,9 @@ export default function SettingsPage() {
     timezone: 'America/Mexico_City',
     currency: 'MXN',
     dateFormat: 'dd/MM/yyyy',
+    customDomain: '',
   })
+  const [logoUploading, setLogoUploading] = useState(false)
   
   const [dealStages, setDealStages] = useState([])
   const [contactStatuses, setContactStatuses] = useState([])
@@ -431,23 +433,35 @@ export default function SettingsPage() {
                         Sube el logo de tu empresa. Recomendado: PNG o SVG, máximo 1MB.
                       </p>
                       <div className="flex gap-2">
-                        <label className="btn btn-secondary cursor-pointer">
+                        <label className={`btn btn-secondary cursor-pointer ${logoUploading ? 'opacity-50' : ''}`}>
                           <input
                             type="file"
                             accept="image/*"
                             className="hidden"
-                            onChange={(e) => {
+                            disabled={logoUploading}
+                            onChange={async (e) => {
                               const file = e.target.files?.[0]
-                              if (file) {
-                                const reader = new FileReader()
-                                reader.onload = (ev) => {
-                                  setOrganization({ ...organization, logo: ev.target?.result })
+                              if (!file) return
+                              setLogoUploading(true)
+                              try {
+                                const res = await fetch(
+                                  `/api/settings/upload-logo?filename=logo`,
+                                  {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': file.type },
+                                    body: file,
+                                  }
+                                )
+                                const data = await res.json()
+                                if (data.url) {
+                                  setOrganization({ ...organization, logo: data.url })
                                 }
-                                reader.readAsDataURL(file)
+                              } finally {
+                                setLogoUploading(false)
                               }
                             }}
                           />
-                          Subir logo
+                          {logoUploading ? 'Subiendo...' : 'Subir logo'}
                         </label>
                         {organization.logo && (
                           <button
@@ -493,6 +507,22 @@ export default function SettingsPage() {
                         placeholder="#4F46E5"
                       />
                     </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Dominio personalizado
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      Configura un CNAME de <code className="bg-gray-100 px-1 rounded">tu.dominio.com</code> apuntando a <code className="bg-gray-100 px-1 rounded">cname.vercel-dns.com</code>, luego ingresa el dominio aquí.
+                    </p>
+                    <input
+                      type="text"
+                      className="input max-w-md"
+                      value={organization.customDomain || ''}
+                      onChange={(e) => setOrganization({ ...organization, customDomain: e.target.value })}
+                      placeholder="crm.miempresa.com"
+                    />
                   </div>
                 </div>
               </div>

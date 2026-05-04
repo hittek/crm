@@ -81,6 +81,7 @@ async function getSettings(req, res, organizationId) {
         timezone: true,
         currency: true,
         locale: true,
+        customDomain: true,
         orgSettings: true,
       }
     })
@@ -112,6 +113,7 @@ async function getSettings(req, res, organizationId) {
       timezone: organization.timezone,
       currency: organization.currency,
       locale: organization.locale,
+      customDomain: organization.customDomain ?? '',
     }
     
     // Override with custom settings from orgSettings JSON
@@ -156,7 +158,7 @@ async function updateSettings(req, res, currentUser, organizationId) {
 
     // Handle organization-level settings (stored in Organization columns)
     if (updates.organization) {
-      const { name, logo, favicon, primaryColor, timezone, currency, locale } = updates.organization
+      const { name, logo, favicon, primaryColor, timezone, currency, locale, customDomain } = updates.organization
       if (name !== undefined) orgUpdate.name = name
       if (logo !== undefined) orgUpdate.logo = logo
       if (favicon !== undefined) orgUpdate.favicon = favicon
@@ -164,6 +166,7 @@ async function updateSettings(req, res, currentUser, organizationId) {
       if (timezone !== undefined) orgUpdate.timezone = timezone
       if (currency !== undefined) orgUpdate.currency = currency
       if (locale !== undefined) orgUpdate.locale = locale
+      if (customDomain !== undefined) orgUpdate.customDomain = customDomain || null
     }
 
     // Handle custom settings (stored in orgSettings JSON)
