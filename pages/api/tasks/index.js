@@ -3,6 +3,7 @@ import { createHandler, success, created, parseFilters } from '../../../lib/api'
 import { logAudit, AuditActions, AuditEntities } from '../../../lib/audit'
 import { getSession } from '../../../lib/auth'
 import { notifications } from '../../../lib/notifications'
+import { checkPlanLimit, planLimitResponse } from '../../../lib/planLimits'
 
 const methods = {
   GET: async (req, res) => {
@@ -112,6 +113,10 @@ const methods = {
     if (!organizationId) {
       return res.status(401).json({ error: 'No autenticado' })
     }
+
+    // Enforce plan limit
+    const limitCheck = await checkPlanLimit(prisma, organizationId, 'tasks')
+    if (!limitCheck.allowed) return planLimitResponse(res, { ...limitCheck, entity: 'tareas' })
     
     const { assignedToId, ownerId, visibility, ...rest } = req.body
     

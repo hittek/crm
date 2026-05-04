@@ -3,6 +3,7 @@ import { createHandler, success, created, parseFilters } from '../../../lib/api'
 import { logAudit, AuditActions, AuditEntities } from '../../../lib/audit'
 import { getSession } from '../../../lib/auth'
 import { notifications } from '../../../lib/notifications'
+import { checkPlanLimit, planLimitResponse } from '../../../lib/planLimits'
 
 const methods = {
   GET: async (req, res) => {
@@ -87,6 +88,10 @@ const methods = {
     if (!organizationId) {
       return res.status(401).json({ error: 'No autenticado' })
     }
+
+    // Enforce plan limit
+    const limitCheck = await checkPlanLimit(prisma, organizationId, 'contacts')
+    if (!limitCheck.allowed) return planLimitResponse(res, { ...limitCheck, entity: 'contactos' })
     
     // Destructure to exclude relation fields and id that shouldn't be in create data
     const { id, ownerId, visibility, visibleTo, owner, deals, tasks, activities, _count, createdAt, updatedAt, organization, organizationId: bodyOrgId, ...rest } = req.body

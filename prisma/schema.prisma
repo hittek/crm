@@ -19,6 +19,18 @@ model Organization {
   locale      String    @default("es-MX")
   isActive    Boolean   @default(true)
   orgSettings String?   // JSON for org-specific settings
+
+  // SaaS billing & plan
+  plan                 String    @default("trial")     // trial, starter, pro, enterprise
+  planStatus           String    @default("trialing")  // trialing, active, past_due, canceled, suspended
+  trialEndsAt          DateTime?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  planLimits           String?   // JSON: { contacts: 50, users: 3, deals: 50, chatbots: 0 }
+  customDomain         String?   @unique
+  suspendedAt          DateTime?
+  suspendedReason      String?
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -186,6 +198,7 @@ model User {
   isActive    Boolean   @default(true)
   preferences String?   // JSON for user preferences
   lastLoginAt DateTime? // Track last login time
+  isSuperAdmin Boolean  @default(false) // Hittek platform super-admins
   organizationId Int    // Organization this user belongs to
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
