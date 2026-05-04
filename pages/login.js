@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
+import Link from 'next/link'
 import { useOrganization } from '../lib/SettingsContext'
 import { useAuth } from '../lib/AuthContext'
 import Icons from '../components/ui/Icons'
@@ -174,6 +175,12 @@ export default function LoginPage() {
           {/* Footer text */}
           <p className="text-center text-xs text-gray-500">
             ¿Olvidaste tu contraseña? Contacta al administrador del sistema.
+          </p>
+          <p className="text-center text-sm text-gray-500 mt-3">
+            ¿No tienes cuenta?{' '}
+            <Link href="/signup" className="text-primary-600 hover:text-primary-700 font-medium">
+              Regístrate gratis
+            </Link>
           </p>
         </div>
       </div>
