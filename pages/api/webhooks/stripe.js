@@ -1,9 +1,18 @@
 import stripe from '../../../lib/stripe'
 import prisma from '../../../lib/prisma'
-import { buffer } from 'micro'
 
-// Stripe requires raw body for signature verification
+// Stripe requires the raw body for signature verification
 export const config = { api: { bodyParser: false } }
+
+/** Collect the raw request body as a Buffer (no micro dependency). */
+function getRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = []
+    req.on('data', (chunk) => chunks.push(chunk))
+    req.on('end', () => resolve(Buffer.concat(chunks)))
+    req.on('error', reject)
+  })
+}
 
 async function updateOrgPlan(organizationId, plan, subscriptionId, status) {
   const planStatus = {
@@ -32,7 +41,7 @@ export default async function handler(req, res) {
   }
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-  const rawBody = await buffer(req)
+  const rawBody = await getRawBody(req)
   const sig = req.headers['stripe-signature']
 
   let event
