@@ -21,12 +21,16 @@
     "seed": "node prisma/seed.js"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3", "prisma"]
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "prisma"
+    ]
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "@prisma/extension-accelerate": "^3.0.1",
+    "@stripe/stripe-js": "^9.4.0",
     "bcryptjs": "^3.0.3",
     "date-fns": "^3.0.0",
     "dotenv": "^17.2.3",
@@ -35,7 +39,8 @@
     "pg": "^8.17.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-icons": "^5.0.1"
+    "react-icons": "^5.0.1",
+    "stripe": "^22.1.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
