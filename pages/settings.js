@@ -66,6 +66,9 @@ export default function SettingsPage() {
   const [isBillingLoading, setIsBillingLoading] = useState(false)
   const [isUpgrading, setIsUpgrading] = useState(null)
   const [billingMessage, setBillingMessage] = useState(null)
+  const [invoices, setInvoices] = useState(null)
+  const [isInvoicesLoading, setIsInvoicesLoading] = useState(false)
+  const [isPortalLoading, setIsPortalLoading] = useState(false)
   
   // Sync activeTab with URL query parameter
   useEffect(() => {
@@ -224,6 +227,36 @@ export default function SettingsPage() {
         .catch(() => setIsBillingLoading(false))
     }
   }, [activeTab, billing])
+
+  // Load invoices alongside billing status
+  useEffect(() => {
+    if (activeTab === 'billing' && invoices === null) {
+      setIsInvoicesLoading(true)
+      fetch('/api/billing/invoices')
+        .then((r) => r.json())
+        .then((d) => { setInvoices(d.invoices ?? []); setIsInvoicesLoading(false) })
+        .catch(() => { setInvoices([]); setIsInvoicesLoading(false) })
+    }
+  }, [activeTab, invoices])
+
+  // Open Stripe Customer Portal
+  const handlePortal = async () => {
+    setIsPortalLoading(true)
+    setBillingMessage(null)
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setBillingMessage({ type: 'error', text: data.error || 'Error al abrir el portal de pago.' })
+      }
+    } catch {
+      setBillingMessage({ type: 'error', text: 'Error de red. Intenta de nuevo.' })
+    } finally {
+      setIsPortalLoading(false)
+    }
+  }
 
   // Handle plan upgrade from settings
   const handleUpgrade = async (plan) => {
@@ -1236,6 +1269,30 @@ export default function SettingsPage() {
                       Estás en el plan Enterprise. Contacta a <a href="mailto:soporte@hittek.mx" className="text-indigo-600 hover:underline">soporte@hittek.mx</a> para cualquier cambio.
                     </p>
                   )}
+
+                  {/* ── Payment method & portal ─────────────────────────── */}
+                  {billing.stripeCustomerId && (
+                    <div className="mt-8 pt-6 border-t border-gray-100">
+                      <h4 className="text-base font-semibold text-gray-900 mb-1">Método de pago</h4>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Actualiza tu tarjeta o consulta la información de pago en el portal seguro de Stripe.
+                      </p>
+                      <button
+                        onClick={handlePortal}
+                        disabled={isPortalLoading}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors disabled:opacity-60"
+                      >
+                        {isPortalLoading ? <Spinner size="sm" /> : <Icons.creditCard className="w-4 h-4" />}
+                        Gestionar método de pago
+                      </button>
+                    </div>
+                  )}
+
+                  {/* ── Invoice history ──────────────────────────────────── */}
+                  <div className="mt-8 pt-6 border-t border-gray-100">
+                    <h4 className="text-base font-semibold text-gray-900 mb-4">Historial de pagos</h4>
+                    <InvoiceHistory invoices={invoices} isLoading={isInvoicesLoading} />
+                  </div>
                 </>
               ) : (
                 <p className="text-sm text-gray-400">No se pudo cargar la información de facturación.</p>
@@ -1314,7 +1371,7 @@ function BillingCurrentPlan({ billing }) {
 
       {status === 'active' && plan !== 'enterprise' && (
         <p className="mt-3 text-xs text-gray-400">
-          Gestiona tu suscripción desde el portal de pagos de Stripe (próximamente).
+          Usa el portal de facturación de abajo para gestionar tu suscripción.
         </p>
       )}
     </div>
@@ -1358,6 +1415,93 @@ function PlanCard({ id, name, price, period, features, highlight, onUpgrade, isU
       >
         {isUpgrading === id ? <Spinner size="sm" /> : <>Actualizar a {name} <FiArrowRight className="w-3.5 h-3.5" /></>}
       </button>
+    </div>
+  )
+}
+
+const STATUS_INVOICE_LABELS = {
+  paid:           { label: 'Pagado',     color: 'green' },
+  open:           { label: 'Pendiente',  color: 'yellow' },
+  draft:          { label: 'Borrador',   color: 'gray' },
+  uncollectible:  { label: 'Incobrable', color: 'red' },
+  void:           { label: 'Anulado',    color: 'gray' },
+}
+
+function InvoiceHistory({ invoices, isLoading }) {
+  const statusColors = {
+    green:  'bg-green-100 text-green-700',
+    yellow: 'bg-yellow-100 text-yellow-700',
+    red:    'bg-red-100 text-red-700',
+    gray:   'bg-gray-100 text-gray-500',
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center py-6"><Spinner /></div>
+  }
+
+  if (!invoices || invoices.length === 0) {
+    return (
+      <div className="text-center py-8 text-sm text-gray-400">
+        <Icons.creditCard className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+        No hay pagos registrados aún.
+      </div>
+    )
+  }
+
+  const fmt = (cents, currency) =>
+    new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: currency?.toUpperCase() ?? 'MXN',
+    }).format(cents / 100)
+
+  return (
+    <div className="overflow-x-auto -mx-1">
+      <table className="min-w-full text-sm">
+        <thead>
+          <tr className="text-xs text-gray-400 border-b border-gray-100">
+            <th className="text-left font-medium pb-2 pr-4">Fecha</th>
+            <th className="text-left font-medium pb-2 pr-4">Factura</th>
+            <th className="text-right font-medium pb-2 pr-4">Monto</th>
+            <th className="text-left font-medium pb-2 pr-4">Estado</th>
+            <th className="text-right font-medium pb-2">PDF</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-50">
+          {invoices.map((inv) => {
+            const info = STATUS_INVOICE_LABELS[inv.status] ?? { label: inv.status, color: 'gray' }
+            const date = new Intl.DateTimeFormat('es-MX', { year: 'numeric', month: 'short', day: 'numeric' })
+              .format(new Date(inv.date * 1000))
+            return (
+              <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
+                <td className="py-2.5 pr-4 text-gray-600 whitespace-nowrap">{date}</td>
+                <td className="py-2.5 pr-4 text-gray-500 font-mono text-xs">{inv.number ?? inv.id.slice(-8)}</td>
+                <td className="py-2.5 pr-4 text-right font-semibold text-gray-900 whitespace-nowrap">
+                  {fmt(inv.amount, inv.currency)}
+                </td>
+                <td className="py-2.5 pr-4">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[info.color]}`}>
+                    {info.label}
+                  </span>
+                </td>
+                <td className="py-2.5 text-right">
+                  {inv.pdfUrl ? (
+                    <a
+                      href={inv.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:text-indigo-800 transition-colors text-xs font-medium"
+                    >
+                      Descargar
+                    </a>
+                  ) : (
+                    <span className="text-gray-300 text-xs">—</span>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }
