@@ -1287,7 +1287,7 @@ export default function SettingsPage() {
                   {billing.plan !== 'enterprise' && (
                     <div className="mt-8">
                       <h4 className="text-base font-semibold text-gray-900 mb-4">
-                        {billing.plan === 'trial' || billing.planStatus === 'trialing'
+                        {billing.plan === 'trial'
                           ? 'Elige tu plan'
                           : 'Cambiar plan'}
                       </h4>
@@ -1412,10 +1412,22 @@ function BillingCurrentPlan({ billing }) {
         <div className={`mt-3 p-3 rounded-lg text-sm ${
           trialDaysLeft <= 3 ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'
         }`}>
-          {trialDaysLeft > 0
-            ? `Tu período de prueba termina en ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''}.`
-            : 'Tu período de prueba ha terminado.'}
-          {' '}Elige un plan para continuar.
+          {plan === 'trial' ? (
+            // Free trial — no plan committed yet
+            <>
+              {trialDaysLeft > 0
+                ? `Tu período de prueba termina en ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''}.`
+                : 'Tu período de prueba ha terminado.'}
+              {' '}Elige un plan para continuar.
+            </>
+          ) : (
+            // Paid plan in Stripe trial period — already committed
+            <>
+              {trialDaysLeft > 0
+                ? `Tu plan ${PLAN_LABELS[plan]?.name ?? plan} inicia en ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''}. No se realizará ningún cargo hasta entonces.`
+                : `Tu plan ${PLAN_LABELS[plan]?.name ?? plan} inicia hoy.`}
+            </>
+          )}
         </div>
       )}
 
