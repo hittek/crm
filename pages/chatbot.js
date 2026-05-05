@@ -201,8 +201,8 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
         })
       }
 
-      const data = await resp.json()
-      if (!resp.ok) throw new Error(data.error || 'Error al agregar documento')
+      const data = await resp.json().catch(() => null)
+      if (!resp.ok) throw new Error(data?.error || `Error del servidor (${resp.status})`)
       onAdded(data)
     } catch (e) {
       setError(e.message)
@@ -446,6 +446,29 @@ export default function ChatbotPage() {
   }, [])
 
   useEffect(() => { fetchDocs(activeKb) }, [activeKb, fetchDocs])
+
+  // Poll every 3 s while any document is still processing
+  useEffect(() => {
+    const hasProcessing = documents.some(d => d.status === 'processing')
+    if (!hasProcessing || !activeKb) return
+    const timer = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/chatbot/knowledge-bases/${activeKb.id}/documents`)
+        if (r.ok) {
+          const updated = await r.json()
+          setDocuments(updated)
+          // Also refresh KB-level status (e.g. indexing → ready)
+          const kr = await fetch(`/api/chatbot/knowledge-bases/${activeKb.id}`)
+          if (kr.ok) {
+            const kb = await kr.json()
+            setKbs(prev => prev.map(k => k.id === kb.id ? kb : k))
+            setActiveKb(kb)
+          }
+        }
+      } catch { /* ignore transient errors */ }
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [documents, activeKb])
 
   function selectKb(kb) {
     setActiveKb(kb)
