@@ -3,7 +3,7 @@ import { createHandler, success, created, parseFilters } from '../../../lib/api'
 import { logAudit, AuditActions, AuditEntities } from '../../../lib/audit'
 import { getSession } from '../../../lib/auth'
 import { notifications } from '../../../lib/notifications'
-import { checkPlanLimit, planLimitResponse } from '../../../lib/planLimits'
+import { checkPlanLimit, planLimitResponse, checkOrgAccess, orgAccessResponse } from '../../../lib/planLimits'
 
 const methods = {
   GET: async (req, res) => {
@@ -115,6 +115,9 @@ const methods = {
     }
 
     // Enforce plan limit
+    const accessCheck = await checkOrgAccess(prisma, organizationId)
+    if (accessCheck.blocked) return orgAccessResponse(res, accessCheck)
+
     const limitCheck = await checkPlanLimit(prisma, organizationId, 'tasks')
     if (!limitCheck.allowed) return planLimitResponse(res, { ...limitCheck, entity: 'tareas' })
     

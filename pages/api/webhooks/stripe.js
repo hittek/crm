@@ -30,6 +30,8 @@ async function updateOrgPlan(organizationId, plan, subscriptionId, status) {
       plan,
       planStatus,
       stripeSubscriptionId: subscriptionId,
+      // Clear suspension when a payment activates the org
+      ...(planStatus === 'active' ? { suspendedAt: null } : {}),
     },
   })
 }
