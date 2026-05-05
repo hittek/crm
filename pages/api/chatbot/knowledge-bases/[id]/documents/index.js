@@ -6,6 +6,20 @@ import { chunkText, chunkQA } from '../../../../../../lib/chunker'
 
 export const config = { api: { bodyParser: false } }
 
+// ── startup cleanup ──────────────────────────────────────────────────────────
+// If the server crashed mid-ingest, documents may be stuck in 'processing'.
+// Reset anything older than 5 minutes on first module load.
+;(async () => {
+  try {
+    const staleAt = new Date(Date.now() - 5 * 60 * 1000)
+    const { count } = await prisma.knowledgeBaseDocument.updateMany({
+      where: { status: 'processing', createdAt: { lt: staleAt } },
+      data: { status: 'error', errorMessage: 'El servidor se reinició durante el procesamiento. Intenta de nuevo.' },
+    })
+    if (count > 0) console.log(`[chatbot] cleaned up ${count} stale 'processing' docs`)
+  } catch { /* non-fatal */ }
+})()
+
 // ── helpers ─────────────────────────────────────────────────────────────────
 
 // eval('require') bypasses webpack/turbopack static analysis so these
@@ -19,13 +33,43 @@ async function extractPdf(filePath) {
   return data.text ?? ''
 }
 
-async function scrapeUrl(url) {
-  const cheerio = _require('cheerio')
+/**
+ * Lightweight regex-based HTML→text extractor.
+ * Avoids loading a DOM library (cheerio) mid-request which caused V8 OOM
+ * on memory-constrained machines when the Prisma TLS pool was also active.
+ */
+function htmlToText(html) {
+  return html
+    // Drop entire script / style / noscript blocks
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+    // Strip remaining tags
+    .replace(/<[^>]+>/g, ' ')
+    // Decode common HTML entities
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&nbsp;/gi, ' ')
+    // Collapse whitespace
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function extractTitle(html, fallback) {
+  const m = html.match(/<title[^>]*>([^<]*)<\/title>/i)
+  if (m?.[1]?.trim()) return m[1].trim()
+  const h1 = html.match(/<h1[^>]*>([^<]*)<\/h1>/i)
+  if (h1?.[1]?.trim()) return h1[1].replace(/<[^>]+>/g, '').trim()
+  return fallback
+}
+
+async function scrapeUrl(url, depth = 0) {
   const https = _require('https')
   const http  = _require('http')
 
-  // Use native node:http/https to bypass Next.js's patched fetch.
-  // Explicitly request no compression to avoid native zlib crashes in prod.
   const html = await new Promise((resolve, reject) => {
     const parsed = new URL(url)
     const lib = parsed.protocol === 'https:' ? https : http
@@ -33,19 +77,19 @@ async function scrapeUrl(url) {
       headers: {
         'User-Agent': 'HittekCRM/1.0 (+https://hittek.mx)',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Encoding': 'identity', // no compression
+        'Accept-Encoding': 'identity',
         'Accept-Language': 'es-MX,es;q=0.9,en;q=0.8',
       },
       timeout: 15000,
     }, res => {
+      // Follow up to 2 redirects
+      if ([301, 302, 303, 307, 308].includes(res.statusCode) && depth < 2) {
+        const loc = res.headers.location
+        if (loc) { res.resume(); return resolve(scrapeUrl(loc, depth + 1)) }
+      }
       if (res.statusCode && res.statusCode >= 400) {
         res.resume()
         return reject(new Error(`HTTP ${res.statusCode}`))
-      }
-      // Follow 1 redirect
-      if (res.statusCode === 301 || res.statusCode === 302) {
-        const loc = res.headers.location
-        if (loc) { res.resume(); return resolve(scrapeUrl(loc)) }
       }
       const buffers = []
       res.on('data', c => buffers.push(Buffer.isBuffer(c) ? c : Buffer.from(c)))
@@ -56,13 +100,8 @@ async function scrapeUrl(url) {
     req.on('error', reject)
   })
 
-  const $ = cheerio.load(html)
-  // Remove noise
-  $('script, style, nav, footer, header, aside, [aria-hidden="true"]').remove()
-  const title = $('title').first().text().trim() ||
-                $('h1').first().text().trim() ||
-                new URL(url).hostname
-  const text = $('body').text().replace(/\s+/g, ' ').trim()
+  const title = extractTitle(html, new URL(url).hostname)
+  const text  = htmlToText(html)
   if (!text) throw new Error('No se pudo extraer texto de la URL')
   return { title, text }
 }

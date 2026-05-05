@@ -100,7 +100,7 @@ function KBCard({ kb, isActive, onClick, onDelete }) {
   )
 }
 
-function DocumentRow({ doc, onDelete }) {
+function DocumentRow({ doc, onDelete, onRetry }) {
   const DocIcon = DOC_ICONS[doc.type] ?? Icons.fileText
   const ds = DOC_STATUS[doc.status] ?? DOC_STATUS.pending
   return (
@@ -121,16 +121,31 @@ function DocumentRow({ doc, onDelete }) {
               <Icons.external className="w-3 h-3" /> ver
             </a>
           )}
-          {doc.errorMessage && <span className="text-red-400">{doc.errorMessage}</span>}
+          {doc.status === 'error' && doc.errorMessage && (
+            <span className="text-red-400 truncate max-w-xs" title={doc.errorMessage}>
+              {doc.errorMessage.slice(0, 60)}{doc.errorMessage.length > 60 ? '…' : ''}
+            </span>
+          )}
         </div>
       </div>
-      <button
-        onClick={() => onDelete(doc)}
-        className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 text-gray-400 transition-all"
-        title="Eliminar documento"
-      >
-        <Icons.delete className="w-4 h-4" />
-      </button>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+        {doc.status === 'error' && onRetry && (
+          <button
+            onClick={() => onRetry(doc)}
+            className="p-1.5 rounded hover:bg-yellow-50 hover:text-yellow-600 text-gray-400 transition-colors"
+            title="Reintentar"
+          >
+            <Icons.refresh className="w-4 h-4" />
+          </button>
+        )}
+        <button
+          onClick={() => onDelete(doc)}
+          className="p-1.5 rounded hover:bg-red-50 hover:text-red-500 text-gray-400 transition-colors"
+          title="Eliminar documento"
+        >
+          <Icons.delete className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   )
 }
@@ -457,6 +472,13 @@ export default function ChatbotPage() {
     }
   }
 
+  async function retryDoc(doc) {
+    // Delete the failed doc and re-open the add modal pre-filled
+    await fetch(`/api/chatbot/knowledge-bases/${activeKb.id}/documents/${doc.id}`, { method: 'DELETE' })
+    setDocuments(prev => prev.filter(d => d.id !== doc.id))
+    setShowAddDoc(true)
+  }
+
   if (authLoading) return null
 
   if (planBlocked) {
@@ -561,7 +583,7 @@ export default function ChatbotPage() {
                       {documents.reduce((s, d) => s + (d.chunkCount ?? 0), 0)} fragmentos totales
                     </p>
                     {documents.map(doc => (
-                      <DocumentRow key={doc.id} doc={doc} onDelete={deleteDoc} />
+                      <DocumentRow key={doc.id} doc={doc} onDelete={deleteDoc} onRetry={retryDoc} />
                     ))}
                   </div>
                 )}
