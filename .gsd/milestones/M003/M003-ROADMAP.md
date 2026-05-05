@@ -2,7 +2,7 @@
 
 ## Slices
 
-- [ ] **S01: Knowledge Base Management** `risk:high` `depends:[]`
+- [x] **S01: Knowledge Base Management** `risk:high` `depends:[]`
   > After this: org admin can create a knowledge base, upload PDFs, paste URLs for scraping, and enter manual Q&A pairs — all chunked, embedded, and stored in pgvector
 
 - [ ] **S02: RAG Engine & Claude Integration** `risk:high` `depends:[S01]`
