@@ -31,7 +31,15 @@ Logo upload via Vercel Blob (base64 fallback in dev). Primary + secondary brand 
 ## S05 — Super-admin Panel
 `lib/superAdmin.js` `requireSuperAdmin` guard. `/api/admin/orgs` GET + PATCH (suspend/unsuspend/plan override). `/admin` org table with status badges, suspend toggles, plan dropdowns.
 
+## Production Checklist (Before Go-Live)
+
+- [ ] **Stripe live credentials** — swap `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_PRO` to live-mode values in Vercel env vars
+- [ ] **Stripe webhook endpoint** — create endpoint in Stripe Dashboard → Developers → Webhooks pointing to `https://hittek.mx/api/webhooks/stripe` (or the production domain); copy the signing secret to `STRIPE_WEBHOOK_SECRET` in Vercel. `stripe listen` is dev-only.
+- [ ] **Stripe Customer Portal** — activate in Stripe Dashboard → Settings → Billing → Customer Portal before the "Gestionar método de pago" button works
+- [ ] **Vercel Blob token** — `BLOB_READ_WRITE_TOKEN` must be set in Vercel for logo upload to work in production
+- [ ] **SESSION_SECRET** — replace the dev placeholder with a secure 32+ char random string in Vercel env vars
+
 ## Remaining Work (M003+)
 - AI chatbot (M003 — pgvector RAG on existing PostgreSQL)
-- Production deployment hardening (M004)
-- Feature expansion (M005)
+- Channel integrations (M004)
+- Quote generation (M005)
