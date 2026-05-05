@@ -112,8 +112,28 @@ export default function SignupPage() {
         return
       }
 
-      // Hydrate AuthContext with the new user so the redirect guard recognizes the session
+      // Hydrate AuthContext with the new user so the session is live
       await login(email, password)
+
+      // For paid plans, redirect to Stripe Checkout
+      if (selectedPlan !== 'trial') {
+        const checkoutRes = await fetch('/api/billing/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: selectedPlan }),
+        })
+        const checkoutData = await checkoutRes.json()
+
+        if (checkoutData.url) {
+          window.location.href = checkoutData.url
+          return
+        }
+
+        // Checkout creation failed — land in app anyway, user can upgrade from billing
+        console.error('Checkout creation failed:', checkoutData.error)
+        // Fall through to contacts redirect
+      }
+
       router.push('/contacts?welcome=1')
     } catch {
       setError('Error de red. Intenta de nuevo.')
