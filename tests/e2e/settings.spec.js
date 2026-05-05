@@ -1,10 +1,29 @@
 import { test, expect } from '@playwright/test'
 const { login, resetLocale } = require('./helpers/login')
 
+// Default deal stages - reset before each test to ensure clean state
+const DEFAULT_STAGES = [
+  { id: 'lead', label: 'Lead', color: 'gray', probability: 10 },
+  { id: 'qualified', label: 'Calificado', color: 'blue', probability: 25 },
+  { id: 'proposal', label: 'Propuesta', color: 'indigo', probability: 50 },
+  { id: 'negotiation', label: 'Negociación', color: 'purple', probability: 75 },
+  { id: 'won', label: 'Ganado', color: 'green', probability: 100 },
+  { id: 'lost', label: 'Perdido', color: 'red', probability: 0 },
+]
+
 test.describe('Settings Page', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await resetLocale(page)
+    // Reset deal stages to defaults so pipeline tests see predictable data
+    await page.evaluate(async (stages) => {
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealStages: stages }),
+        credentials: 'include',
+      })
+    }, DEFAULT_STAGES)
     await page.goto('/settings')
   })
 
@@ -126,7 +145,7 @@ test.describe('Settings Page', () => {
   })
 
   test('should change primary color', async ({ page }) => {
-    const colorInput = page.locator('input[type="color"]')
+    const colorInput = page.locator('input[type="color"]').first()
     await colorInput.fill('#ff5500')
     
     await page.getByRole('button', { name: 'Guardar cambios' }).click()

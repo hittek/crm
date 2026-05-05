@@ -10,6 +10,13 @@
   --primary-500: #3b82f6;
   --primary-600: #2563eb;
   --primary-700: #1d4ed8;
+
+  --secondary-color: #7c3aed;
+  --secondary-50:  #f5f3ff;
+  --secondary-100: #ede9fe;
+  --secondary-500: #8b5cf6;
+  --secondary-600: #7c3aed;
+  --secondary-700: #6d28d9;
 }
 
 @layer base {
@@ -36,7 +43,7 @@
   }
   
   .btn-secondary {
-    @apply btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-primary-500;
+    @apply btn bg-secondary-50 text-secondary-700 border border-secondary-200 hover:bg-secondary-100 focus:ring-secondary-500;
   }
   
   .btn-ghost {
@@ -151,6 +158,8 @@
 
   .sidebar-link-active {
     @apply bg-primary-50 text-primary-700 hover:bg-primary-100;
+    border-left: 3px solid var(--secondary-600, #7c3aed);
+    padding-left: calc(0.75rem - 3px);
   }
 
   .dropdown-menu {

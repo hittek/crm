@@ -62,10 +62,10 @@ export default function Dashboard() {
   }
 
   const stageColors = {
-    lead: 'bg-gray-500',
-    qualified: 'bg-blue-500',
-    proposal: 'bg-indigo-500',
-    negotiation: 'bg-purple-500',
+    lead: 'bg-gray-400',
+    qualified: 'bg-primary-500',
+    proposal: 'bg-secondary-500',
+    negotiation: 'bg-secondary-700',
   }
 
   return (
@@ -78,8 +78,8 @@ export default function Dashboard() {
         <div className="card p-4 lg:p-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-500">Pipeline Total</span>
-            <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-              <Icons.trending className="w-5 h-5 text-indigo-600" />
+            <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
+              <Icons.trending className="w-5 h-5 text-primary-600" />
             </div>
           </div>
           <p className="text-2xl font-bold text-gray-900">
@@ -122,8 +122,8 @@ export default function Dashboard() {
         <div className="card p-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-500">Tasa de conversión</span>
-            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Icons.reports className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 rounded-lg bg-secondary-100 flex items-center justify-center">
+              <Icons.reports className="w-5 h-5 text-secondary-600" />
             </div>
           </div>
           <p className="text-2xl font-bold text-gray-900">

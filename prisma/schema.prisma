@@ -13,7 +13,8 @@ model Organization {
   slug        String    @unique // URL-friendly identifier
   logo        String?
   favicon     String?
-  primaryColor String?  @default("#2563eb")
+  primaryColor   String?  @default("#2563eb")
+  secondaryColor String?  @default("#7c3aed")
   currency    String    @default("MXN")
   timezone    String    @default("America/Mexico_City")
   locale      String    @default("es-MX")

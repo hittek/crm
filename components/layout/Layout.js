@@ -88,7 +88,9 @@ export default function Layout({ children }) {
             ) : (
               <div 
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: organization.primaryColor || '#2563eb' }}
+                style={{
+                  background: `linear-gradient(135deg, ${organization.primaryColor || '#2563eb'}, ${organization.secondaryColor || '#7c3aed'})`,
+                }}
               >
                 <span className="text-white font-bold text-sm">
                   {organization.name?.charAt(0) || 'C'}
@@ -153,11 +155,11 @@ export default function Layout({ children }) {
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="w-full flex items-center gap-3 hover:bg-gray-50 rounded-lg p-1 -m-1 transition-colors"
           >
-            <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
+            <div className="w-8 h-8 bg-secondary-100 rounded-full flex items-center justify-center">
               {user?.avatar ? (
                 <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
               ) : (
-                <span className="text-sm font-medium text-primary-700">
+                <span className="text-sm font-medium text-secondary-700">
                   {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
                 </span>
               )}

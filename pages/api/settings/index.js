@@ -78,6 +78,7 @@ async function getSettings(req, res, organizationId) {
         logo: true,
         favicon: true,
         primaryColor: true,
+        secondaryColor: true,
         timezone: true,
         currency: true,
         locale: true,
@@ -110,6 +111,7 @@ async function getSettings(req, res, organizationId) {
       logo: organization.logo,
       favicon: organization.favicon,
       primaryColor: organization.primaryColor,
+      secondaryColor: organization.secondaryColor,
       timezone: organization.timezone,
       currency: organization.currency,
       locale: organization.locale,
@@ -158,11 +160,12 @@ async function updateSettings(req, res, currentUser, organizationId) {
 
     // Handle organization-level settings (stored in Organization columns)
     if (updates.organization) {
-      const { name, logo, favicon, primaryColor, timezone, currency, locale, customDomain } = updates.organization
+      const { name, logo, favicon, primaryColor, secondaryColor, timezone, currency, locale, customDomain } = updates.organization
       if (name !== undefined) orgUpdate.name = name
       if (logo !== undefined) orgUpdate.logo = logo
       if (favicon !== undefined) orgUpdate.favicon = favicon
       if (primaryColor !== undefined) orgUpdate.primaryColor = primaryColor
+      if (secondaryColor !== undefined) orgUpdate.secondaryColor = secondaryColor
       if (timezone !== undefined) orgUpdate.timezone = timezone
       if (currency !== undefined) orgUpdate.currency = currency
       if (locale !== undefined) orgUpdate.locale = locale

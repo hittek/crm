@@ -97,6 +97,7 @@ export default function SettingsPage() {
     name: 'Mi CRM',
     logo: null,
     primaryColor: '#4F46E5',
+    secondaryColor: '#7c3aed',
     timezone: 'America/Mexico_City',
     currency: 'MXN',
     dateFormat: 'dd/MM/yyyy',
@@ -589,6 +590,61 @@ export default function SettingsPage() {
                         className="input w-32"
                         placeholder="#4F46E5"
                       />
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Color secundario
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      Usado en botones secundarios, barra lateral activa, avatares y acentos visuales.
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={organization.secondaryColor || '#7c3aed'}
+                        onChange={(e) => setOrganization({ ...organization, secondaryColor: e.target.value })}
+                        className="w-10 h-10 rounded cursor-pointer border border-gray-300"
+                      />
+                      <input
+                        type="text"
+                        value={organization.secondaryColor || '#7c3aed'}
+                        onChange={(e) => setOrganization({ ...organization, secondaryColor: e.target.value })}
+                        className="input w-32"
+                        placeholder="#7c3aed"
+                      />
+                    </div>
+                    {/* Live preview */}
+                    <div className="mt-3 flex items-center gap-3 flex-wrap">
+                      <span
+                        className="text-xs px-3 py-1.5 rounded-lg font-medium text-white"
+                        style={{ backgroundColor: organization.secondaryColor || '#7c3aed' }}
+                      >
+                        Botón secundario
+                      </span>
+                      <span
+                        className="text-xs px-3 py-1.5 rounded-lg font-medium border"
+                        style={{
+                          color: organization.secondaryColor || '#7c3aed',
+                          borderColor: organization.secondaryColor || '#7c3aed',
+                          backgroundColor: `${organization.secondaryColor || '#7c3aed'}15`,
+                        }}
+                      >
+                        Badge / Acento
+                      </span>
+                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <span
+                          className="inline-block w-3 h-3 rounded-full"
+                          style={{ backgroundColor: organization.primaryColor || '#2563eb' }}
+                        />
+                        Principal
+                        <span
+                          className="inline-block w-3 h-3 rounded-full ml-1"
+                          style={{ backgroundColor: organization.secondaryColor || '#7c3aed' }}
+                        />
+                        Secundario
+                      </span>
                     </div>
                   </div>
 
