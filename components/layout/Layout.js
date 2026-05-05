@@ -30,6 +30,7 @@ export default function Layout({ children }) {
     { name: t('nav.pipeline'), href: '/deals', icon: Icons.deals },
     { name: t('nav.tasks'), href: '/tasks', icon: Icons.tasks },
     { name: t('nav.reports'), href: '/reports', icon: Icons.reports },
+    { name: t('nav.chatbot'), href: '/chatbot', icon: Icons.bot },
     { name: t('nav.settings'), href: '/settings', icon: Icons.settings, adminOnly: true },
   ]
 

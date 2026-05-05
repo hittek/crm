@@ -44,6 +44,7 @@ model Organization {
   savedViews    SavedView[]
   auditLogs     AuditLog[]
   notifications Notification[]
+  knowledgeBases KnowledgeBase[]
 }
 
 // Contact model - the core entity in a contacts-first CRM
@@ -259,6 +260,73 @@ model AuditLog {
   @@index([organizationId])
   @@index([createdAt])
 }
+
+// ─── Chatbot / Knowledge Base ───────────────────────────────────────────────
+
+// One knowledge base per chatbot configuration (one per org on Starter)
+model KnowledgeBase {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  status      String    @default("empty") // empty | indexing | ready | error
+  orgId       Int
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   String?
+
+  documents   KnowledgeBaseDocument[]
+
+  @@index([orgId])
+}
+
+// A single source ingested into a knowledge base
+model KnowledgeBaseDocument {
+  id              Int            @id @default(autoincrement())
+  knowledgeBaseId Int
+  knowledgeBase   KnowledgeBase  @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  orgId           Int
+  type            String         // pdf | url | qa
+  title           String
+  content         String?        // raw extracted text (plain)
+  fileUrl         String?        // Blob URL for PDFs
+  sourceUrl       String?        // original URL for scraped docs
+  question        String?        // Q&A: question
+  answer          String?        // Q&A: answer
+  fileSize        Int?           // bytes
+  status          String         @default("pending") // pending | processing | chunked | error
+  errorMessage    String?
+  chunkCount      Int            @default(0)
+  metadata        String?        // JSON
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  chunks  KnowledgeBaseChunk[]
+
+  @@index([knowledgeBaseId])
+  @@index([orgId])
+}
+
+// A chunk of text ready for embedding (vectors added in S02)
+model KnowledgeBaseChunk {
+  id          Int                    @id @default(autoincrement())
+  documentId  Int
+  document    KnowledgeBaseDocument  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  kbId        Int
+  orgId       Int
+  content     String                 // chunk text
+  chunkIndex  Int
+  tokenCount  Int                    @default(0)
+  embedded    Boolean                @default(false) // true after S02 embeds it
+  metadata    String?                // JSON (page number, heading, etc.)
+  createdAt   DateTime               @default(now())
+
+  @@index([kbId])
+  @@index([documentId])
+  @@index([orgId])
+}
+
+// ─── Notification model ──────────────────────────────────────────────────────
 
 // Notification model - in-app notifications
 model Notification {
