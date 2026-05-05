@@ -272,7 +272,7 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
                 placeholder="Título (opcional)"
                 value={pdfTitle}
                 onChange={e => setPdfTitle(e.target.value)}
-                className="input-field"
+                className="input"
               />
             </>
           )}
@@ -284,14 +284,14 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
                 placeholder="https://ejemplo.com/articulo"
                 value={url}
                 onChange={e => setUrl(e.target.value)}
-                className="input-field"
+                className="input"
               />
               <input
                 type="text"
                 placeholder="Título (opcional — se extrae automáticamente)"
                 value={urlTitle}
                 onChange={e => setUrlTitle(e.target.value)}
-                className="input-field"
+                className="input"
               />
               <p className="text-xs text-gray-400">
                 El texto de la página será extraído y fragmentado automáticamente.
@@ -306,14 +306,14 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
                 placeholder="¿Cuál es el horario de atención?"
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
-                className="input-field"
+                className="input"
               />
               <textarea
                 rows={4}
                 placeholder="Atendemos de lunes a viernes de 9 AM a 6 PM CST."
                 value={answer}
                 onChange={e => setAnswer(e.target.value)}
-                className="input-field resize-none"
+                className="input resize-none"
               />
             </>
           )}
@@ -381,7 +381,7 @@ function CreateKBModal({ onClose, onCreate }) {
             placeholder="Nombre, p. ej. «Soporte al cliente»"
             value={name}
             onChange={e => setName(e.target.value)}
-            className="input-field"
+            className="input"
             autoFocus
           />
           <textarea
@@ -389,7 +389,7 @@ function CreateKBModal({ onClose, onCreate }) {
             placeholder="Descripción (opcional)"
             value={desc}
             onChange={e => setDesc(e.target.value)}
-            className="input-field resize-none"
+            className="input resize-none"
           />
           {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div className="flex items-center justify-end gap-3 pt-1">
