@@ -53,8 +53,8 @@ export default async function handler(req, res) {
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
-      success_url: `${baseUrl}/billing?success=1`,
-      cancel_url: `${baseUrl}/billing?canceled=1`,
+      success_url: `${baseUrl}/settings?tab=billing&success=1`,
+      cancel_url: `${baseUrl}/settings?tab=billing&canceled=1`,
       metadata: {
         organizationId: String(org.id),
         plan,

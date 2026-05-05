@@ -33,6 +33,10 @@ export default async function handler(req, res) {
             name: true,
             slug: true,
             isActive: true,
+            plan: true,
+            planStatus: true,
+            trialEndsAt: true,
+            suspendedAt: true,
           },
         },
       },
@@ -68,7 +72,13 @@ export default async function handler(req, res) {
       user: {
         ...session.user,
         avatar: user.avatar,
-      }
+      },
+      org: {
+        plan: user.organization?.plan ?? 'trial',
+        planStatus: user.organization?.planStatus ?? 'trialing',
+        trialEndsAt: user.organization?.trialEndsAt ?? null,
+        suspendedAt: user.organization?.suspendedAt ?? null,
+      },
     })
   } catch (error) {
     console.error('Me error:', error)

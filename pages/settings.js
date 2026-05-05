@@ -4,6 +4,7 @@ import Head from 'next/head'
 import Icons from '../components/ui/Icons'
 import { Spinner } from '../components/ui/Spinner'
 import { useAuth } from '../lib/AuthContext'
+import { FiCheck, FiArrowRight } from 'react-icons/fi'
 
 const COLOR_MAP = {
   gray: '#6B7280',
@@ -59,12 +60,26 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState(null)
+
+  // Billing tab state
+  const [billing, setBilling] = useState(null)
+  const [isBillingLoading, setIsBillingLoading] = useState(false)
+  const [isUpgrading, setIsUpgrading] = useState(null)
+  const [billingMessage, setBillingMessage] = useState(null)
   
   // Sync activeTab with URL query parameter
   useEffect(() => {
-    const { tab } = router.query
+    const { tab, success, canceled } = router.query
     if (tab && typeof tab === 'string') {
       setActiveTab(tab)
+    }
+    if (success) {
+      setBillingMessage({ type: 'success', text: '¡Suscripción activada! Tu plan ha sido actualizado.' })
+      router.replace({ pathname: '/settings', query: { tab: 'billing' } }, undefined, { shallow: true })
+    }
+    if (canceled) {
+      setBillingMessage({ type: 'info', text: 'Pago cancelado. No se realizaron cargos.' })
+      router.replace({ pathname: '/settings', query: { tab: 'billing' } }, undefined, { shallow: true })
     }
   }, [router.query])
 
@@ -128,6 +143,7 @@ export default function SettingsPage() {
     { id: 'contacts', label: 'Contactos', icon: Icons.contacts },
     { id: 'notifications', label: 'Notificaciones', icon: Icons.bell },
     { id: 'integrations', label: 'Integraciones', icon: Icons.link },
+    { id: 'billing', label: 'Plan', icon: Icons.creditCard, adminOnly: true },
   ].filter(tab => !tab.adminOnly || isAdmin)
 
   // Fetch settings
@@ -197,6 +213,40 @@ export default function SettingsPage() {
       fetchUsers()
     }
   }, [activeTab, fetchUsers])
+
+  // Load billing when switching to billing tab
+  useEffect(() => {
+    if (activeTab === 'billing' && !billing) {
+      setIsBillingLoading(true)
+      fetch('/api/billing/status')
+        .then((r) => r.json())
+        .then((d) => { setBilling(d); setIsBillingLoading(false) })
+        .catch(() => setIsBillingLoading(false))
+    }
+  }, [activeTab, billing])
+
+  // Handle plan upgrade from settings
+  const handleUpgrade = async (plan) => {
+    setIsUpgrading(plan)
+    setBillingMessage(null)
+    try {
+      const res = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setBillingMessage({ type: 'error', text: data.error || 'Error al iniciar el pago' })
+      }
+    } catch {
+      setBillingMessage({ type: 'error', text: 'Error de red. Intenta de nuevo.' })
+    } finally {
+      setIsUpgrading(null)
+    }
+  }
 
   // User management handlers
   const openUserModal = (user = null) => {
@@ -1118,8 +1168,196 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+
+          {/* ── Plan y Facturación tab ───────────────────────────────────────── */}
+          {activeTab === 'billing' && (
+            <div className="max-w-2xl">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">Plan y Facturación</h3>
+
+              {billingMessage && (
+                <div className={`mb-5 p-4 rounded-xl text-sm flex items-center gap-3 ${
+                  billingMessage.type === 'success'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : billingMessage.type === 'error'
+                    ? 'bg-red-50 text-red-700 border border-red-200'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                }`}>
+                  <FiCheck className="w-4 h-4 shrink-0" />
+                  {billingMessage.text}
+                </div>
+              )}
+
+              {isBillingLoading ? (
+                <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+              ) : billing ? (
+                <>
+                  {/* Current plan */}
+                  <BillingCurrentPlan billing={billing} />
+
+                  {/* Upgrade options */}
+                  {billing.plan !== 'enterprise' && (
+                    <div className="mt-8">
+                      <h4 className="text-base font-semibold text-gray-900 mb-4">
+                        {billing.plan === 'trial' || billing.planStatus === 'trialing'
+                          ? 'Elige tu plan'
+                          : 'Cambiar plan'}
+                      </h4>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        {billing.plan !== 'starter' && billing.plan !== 'pro' && (
+                          <PlanCard
+                            id="starter"
+                            name="Starter"
+                            price="$499"
+                            period="/mes MXN"
+                            features={['500 contactos', '500 negocios', '5 usuarios', '1 chatbot IA', 'Soporte prioritario']}
+                            highlight={false}
+                            onUpgrade={handleUpgrade}
+                            isUpgrading={isUpgrading}
+                          />
+                        )}
+                        {billing.plan !== 'pro' && (
+                          <PlanCard
+                            id="pro"
+                            name="Pro"
+                            price="$1,299"
+                            period="/mes MXN"
+                            features={['5,000 contactos', '5,000 negocios', '20 usuarios', '3 chatbots IA', 'Soporte dedicado', 'White-label']}
+                            highlight={true}
+                            onUpgrade={handleUpgrade}
+                            isUpgrading={isUpgrading}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {billing.plan === 'enterprise' && (
+                    <p className="mt-6 text-sm text-gray-500">
+                      Estás en el plan Enterprise. Contacta a <a href="mailto:soporte@hittek.mx" className="text-indigo-600 hover:underline">soporte@hittek.mx</a> para cualquier cambio.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-gray-400">No se pudo cargar la información de facturación.</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
+  )
+}
+
+// ── Billing sub-components ────────────────────────────────────────────────────
+
+const PLAN_LABELS = {
+  trial:      { name: 'Prueba gratuita', color: 'gray' },
+  starter:    { name: 'Starter',         color: 'blue' },
+  pro:        { name: 'Pro',             color: 'indigo' },
+  enterprise: { name: 'Enterprise',      color: 'purple' },
+}
+
+const STATUS_LABELS = {
+  trialing:  { label: 'En prueba',     color: 'yellow' },
+  active:    { label: 'Activo',        color: 'green' },
+  past_due:  { label: 'Pago atrasado', color: 'red' },
+  canceled:  { label: 'Cancelado',     color: 'gray' },
+  suspended: { label: 'Suspendido',    color: 'red' },
+}
+
+function BillingCurrentPlan({ billing }) {
+  const plan       = billing?.plan ?? 'trial'
+  const status     = billing?.planStatus ?? 'trialing'
+  const trialEndsAt = billing?.trialEndsAt
+  const planInfo   = PLAN_LABELS[plan] ?? PLAN_LABELS.trial
+  const statusInfo = STATUS_LABELS[status] ?? STATUS_LABELS.trialing
+
+  const trialDaysLeft = trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt) - Date.now()) / 86400000))
+    : null
+
+  const statusColors = {
+    green:  'bg-green-100 text-green-700',
+    yellow: 'bg-yellow-100 text-yellow-700',
+    red:    'bg-red-100 text-red-700',
+    gray:   'bg-gray-100 text-gray-600',
+  }
+
+  return (
+    <div className="card p-6">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <p className="text-sm text-gray-500 mb-1">Plan actual</p>
+          <p className="text-2xl font-bold text-gray-900">{planInfo.name}</p>
+        </div>
+        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColors[statusInfo.color] ?? statusColors.gray}`}>
+          {statusInfo.label}
+        </span>
+      </div>
+
+      {trialEndsAt && status === 'trialing' && (
+        <div className={`mt-3 p-3 rounded-lg text-sm ${
+          trialDaysLeft <= 3 ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'
+        }`}>
+          {trialDaysLeft > 0
+            ? `Tu período de prueba termina en ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''}.`
+            : 'Tu período de prueba ha terminado.'}
+          {' '}Elige un plan para continuar.
+        </div>
+      )}
+
+      {status === 'past_due' && (
+        <div className="mt-3 p-3 rounded-lg text-sm bg-red-50 text-red-700">
+          Hay un problema con tu pago. Actualiza tu método de pago para evitar suspensión.
+        </div>
+      )}
+
+      {status === 'active' && plan !== 'enterprise' && (
+        <p className="mt-3 text-xs text-gray-400">
+          Gestiona tu suscripción desde el portal de pagos de Stripe (próximamente).
+        </p>
+      )}
+    </div>
+  )
+}
+
+function PlanCard({ id, name, price, period, features, highlight, onUpgrade, isUpgrading }) {
+  return (
+    <div className={`relative bg-white rounded-2xl border p-5 flex flex-col ${
+      highlight
+        ? 'border-indigo-500 shadow-md shadow-indigo-100 ring-1 ring-indigo-500'
+        : 'border-gray-200'
+    }`}>
+      {highlight && (
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold text-white bg-indigo-600 px-3 py-1 rounded-full">
+          Más popular
+        </span>
+      )}
+      <div className="mb-4">
+        <p className="font-semibold text-gray-900 mb-1">{name}</p>
+        <div className="flex items-baseline gap-1">
+          <span className="text-2xl font-bold text-gray-900">{price}</span>
+          <span className="text-sm text-gray-400">{period}</span>
+        </div>
+      </div>
+      <ul className="space-y-2 mb-5 flex-1">
+        {features.map((f) => (
+          <li key={f} className="flex items-center gap-2 text-xs text-gray-600">
+            <FiCheck className="w-3.5 h-3.5 text-indigo-500 shrink-0" />{f}
+          </li>
+        ))}
+      </ul>
+      <button
+        onClick={() => onUpgrade(id)}
+        disabled={!!isUpgrading}
+        className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-colors ${
+          highlight
+            ? 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60'
+            : 'border border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50 disabled:opacity-60'
+        }`}
+      >
+        {isUpgrading === id ? <Spinner size="sm" /> : <>Actualizar a {name} <FiArrowRight className="w-3.5 h-3.5" /></>}
+      </button>
+    </div>
   )
 }
