@@ -16,6 +16,7 @@ const NOTIFICATION_CONFIG = {
   deal_lost: { icon: Icons.close, color: 'text-red-500', bg: 'bg-red-100' },
   deal_stage_changed: { icon: Icons.deals, color: 'text-purple-500', bg: 'bg-purple-100' },
   deal_assigned: { icon: Icons.deals, color: 'text-purple-500', bg: 'bg-purple-100' },
+  chat_escalated: { icon: Icons.alert, color: 'text-red-500', bg: 'bg-red-100' },
   mention: { icon: Icons.mail, color: 'text-blue-500', bg: 'bg-blue-100' },
   system: { icon: Icons.alert, color: 'text-gray-500', bg: 'bg-gray-100' },
 }
@@ -29,6 +30,30 @@ export default function NotificationBell() {
   const [isLoading, setIsLoading] = useState(false)
   const dropdownRef = useRef(null)
   const buttonRef = useRef(null)
+  const prevNotifsRef = useRef([])
+
+  // Request browser notification permission once on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  // Fire a browser (OS-level) notification for a CRM notification object
+  function fireBrowserNotif(notif) {
+    if (typeof window === 'undefined') return
+    if (!('Notification' in window)) return
+    if (Notification.permission !== 'granted') return
+    try {
+      const n = new Notification(notif.title, {
+        body:     notif.message || '',
+        icon:     '/favicon.ico',
+        tag:      `crm-notif-${notif.id}`,
+        renotify: false,
+      })
+      if (notif.link) n.onclick = () => { window.focus(); router.push(notif.link); n.close() }
+    } catch (_) {}
+  }
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
@@ -36,20 +61,28 @@ export default function NotificationBell() {
       const res = await fetch('/api/notifications?limit=10')
       if (res.ok) {
         const data = await res.json()
-        setNotifications(data.data || [])
-        setUnreadCount(data.unreadCount || 0)
+        const newNotifs = data.data || []
+        const newUnread = data.unreadCount || 0
+
+        // Fire browser notification for entries that are new since last poll
+        const prevIds = new Set(prevNotifsRef.current.map(n => n.id))
+        const fresh   = newNotifs.filter(n => !n.isRead && !prevIds.has(n.id))
+        fresh.forEach(fireBrowserNotif)
+
+        prevNotifsRef.current = newNotifs
+        setNotifications(newNotifs)
+        setUnreadCount(newUnread)
       }
     } catch (error) {
       console.error('Error fetching notifications:', error)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Initial fetch and polling
+  // Initial fetch + poll every 15s (fast enough for chat escalations)
   useEffect(() => {
     fetchNotifications()
-    
-    // Poll every 30 seconds for new notifications
-    const interval = setInterval(fetchNotifications, 30000)
+    const interval = setInterval(fetchNotifications, 15000)
     return () => clearInterval(interval)
   }, [fetchNotifications])
 

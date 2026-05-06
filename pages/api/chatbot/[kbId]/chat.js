@@ -25,6 +25,7 @@ import { getSession } from '../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse } from '../../../../lib/planLimits'
 import { searchChunks } from '../../../../lib/rag'
 import { notifications } from '../../../../lib/notifications'
+import { shouldEscalate } from '../../../../lib/escalation'
 
 export const config = { api: { bodyParser: true } }
 
@@ -92,7 +93,7 @@ export default async function handler(req, res) {
     conversationId = conv.id
 
     // Check escalation before AI
-    if (chatbot.escalationPhrase && message.toLowerCase().includes(chatbot.escalationPhrase.toLowerCase())) {
+    if (chatbot.escalationPhrase && await shouldEscalate(message, chatbot.escalationPhrase)) {
       const escalationReply = 'Un agente se comunicará contigo en breve.'
       // Persist both messages so agents can see the full thread
       await prisma.conversationMessage.createMany({
@@ -103,7 +104,9 @@ export default async function handler(req, res) {
       })
       await prisma.conversation.update({ where: { id: conversationId }, data: { status: 'escalated' } })
       // Notify all admins/managers (fire-and-forget)
-      notifications.chatEscalated({ id: conversationId }, chatbot, organizationId).catch(() => {})
+      notifications.chatEscalated({ id: conversationId }, chatbot, organizationId).catch(err =>
+        console.error('[chat] chatEscalated notification failed:', err.message)
+      )
       return res.json({ conversationId, reply: escalationReply })
     }
 
