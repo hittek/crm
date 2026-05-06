@@ -6,6 +6,7 @@ import prisma from '../../../../lib/prisma'
 import { getSession } from '../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse } from '../../../../lib/planLimits'
 import { hasMinRole } from '../../../../lib/auth'
+import { sendMessage as sendTelegram } from '../../../../lib/channels/telegram'
 
 async function getConv(id, orgId) {
   return prisma.conversation.findFirst({ where: { id, orgId } })
@@ -13,6 +14,38 @@ async function getConv(id, orgId) {
 
 function isAdminOrManager(role) {
   return hasMinRole(role, 'manager')
+}
+
+/**
+ * Forward an agent reply to the originating channel.
+ * Silently ignores errors so the agent reply always persists even if delivery fails.
+ */
+async function forwardToChannel(conv, content) {
+  if (!conv.channel || conv.channel === 'sandbox' || conv.channel === 'web') return
+
+  try {
+    const channelConfig = await prisma.channelConfig.findFirst({
+      where: { chatbotId: conv.chatbotId, channel: conv.channel, isActive: true },
+    })
+    if (!channelConfig) return
+
+    const creds    = typeof channelConfig.credentials === 'string'
+      ? JSON.parse(channelConfig.credentials)
+      : channelConfig.credentials
+    const metadata = typeof conv.metadata === 'string'
+      ? JSON.parse(conv.metadata)
+      : (conv.metadata || {})
+
+    if (conv.channel === 'telegram') {
+      const chatId = metadata.telegramChatId || metadata.fromId
+      if (!chatId || !creds?.token) return
+      await sendTelegram(creds.token, chatId, content)
+    }
+
+    // WhatsApp / Facebook placeholders — implement when those channels are wired
+  } catch (err) {
+    console.error('[messages] forwardToChannel failed:', err.message)
+  }
 }
 
 export default async function handler(req, res) {
@@ -56,6 +89,7 @@ export default async function handler(req, res) {
     const isAdmin        = isAdminOrManager(agentRole)
     const isAssignee     = conv.assignedToId === agentId
     const isUnassigned   = !conv.assignedToId
+    const isEscalated    = conv.status === 'escalated'
     const isJoiningAdmin = isAdmin && !isUnassigned && !isAssignee
 
     // Access gate: unassigned → anyone; assigned → only assignee or admin/manager
@@ -64,6 +98,9 @@ export default async function handler(req, res) {
         error: 'Esta conversación está asignada a otro agente. Solo administradores pueden intervenir.',
       })
     }
+
+    // When an agent replies to an escalated conv, transition back to open
+    const statusUpdate = isEscalated ? { status: 'open' } : {}
 
     const ops = [
       prisma.conversationMessage.create({
@@ -79,14 +116,15 @@ export default async function handler(req, res) {
         where: { id: convId },
         data:  {
           updatedAt: new Date(),
+          ...statusUpdate,
           // First reply on unassigned → pick it up
           ...(isUnassigned ? { assignedToId: agentId } : {}),
         },
       }),
     ]
 
-    // picked_up event on first reply
-    if (isUnassigned) {
+    // picked_up event on first reply to an unassigned or escalated conversation
+    if (isUnassigned || isEscalated) {
       ops.push(
         prisma.conversationEvent.create({
           data: { conversationId: convId, userId: agentId, type: 'picked_up' },
@@ -109,7 +147,16 @@ export default async function handler(req, res) {
     }
 
     const [msg] = await prisma.$transaction(ops)
-    return res.status(201).json({ message: msg, pickedUp: isUnassigned, joined: isJoiningAdmin })
+
+    // Forward to originating channel (fire-and-forget, non-blocking)
+    forwardToChannel(conv, content.trim())
+
+    return res.status(201).json({
+      message:   msg,
+      pickedUp:  isUnassigned || isEscalated,
+      joined:    isJoiningAdmin,
+      newStatus: isEscalated ? 'open' : conv.status,
+    })
   }
 
   res.setHeader('Allow', ['GET', 'POST'])

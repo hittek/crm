@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 import Icons from '../components/ui/Icons'
 import { useAuth } from '../lib/AuthContext'
 import { PageLoader } from '../components/ui/Spinner'
@@ -246,10 +247,14 @@ function Thread({ conv, onStatusChange, currentUser }) {
     if (r.ok) {
       const data = await r.json()
       setMessages(prev => [...prev, data.message])
-      // If this was the first reply, it created a picked_up event — refresh events
-      if (data.pickedUp) {
+      // Refresh events for picked_up / joined pills
+      if (data.pickedUp || data.joined) {
         const evR = await fetch(`/api/conversations/${conv.id}/messages`)
         if (evR.ok) { const d = await evR.json(); setEvents(d.events || []) }
+      }
+      // Sync status change (escalated → open) back to the list + thread header
+      if (data.newStatus && data.newStatus !== conv.status) {
+        onStatusChange(conv.id, data.newStatus)
       }
     }
     setSending(false)
@@ -444,6 +449,7 @@ const STATUSES = ['', 'open', 'resolved', 'escalated']
 
 export default function ConversationsPage() {
   const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
   const [convs, setConvs]       = useState([])
   const [total, setTotal]       = useState(0)
   const [page, setPage]         = useState(1)
@@ -468,6 +474,22 @@ export default function ConversationsPage() {
 
   useEffect(() => { if (user) fetchConvs() }, [user, fetchConvs])
   useEffect(() => { setPage(1); setSelected(null) }, [filterStatus, filterChannel])
+
+  // Auto-select conversation when navigated from a notification link (?id=X)
+  useEffect(() => {
+    const targetId = parseInt(router.query.id, 10)
+    if (!targetId || loading || convs.length === 0) return
+    const match = convs.find(c => c.id === targetId)
+    if (match) {
+      setSelected(match)
+    } else {
+      // Conversation may not be on current page — fetch it directly
+      fetch(`/api/conversations/${targetId}`).then(r => r.ok ? r.json() : null).then(data => {
+        if (data?.conversation) setSelected(data.conversation)
+      }).catch(() => {})
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query.id, loading])
 
   // When an agent resolves / reopens a conv, update it in the list
   function handleStatusChange(convId, status) {
