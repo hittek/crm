@@ -18,7 +18,7 @@ function uuid() {
   })
 }
 
-export default function ChatPanel({ kb, chatbotId }) {
+export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
   const [messages, setMessages]   = useState(EMPTY_MESSAGES)
   const [input, setInput]         = useState('')
   const [loading, setLoading]     = useState(false)
@@ -131,26 +131,35 @@ export default function ChatPanel({ kb, chatbotId }) {
 
   const canSend = input.trim().length > 0 && !loading
   const hasMessages = messages.length > 0
+  const isInline = variant === 'inline'
 
   return (
-    <div className="mx-6 mb-6 flex flex-col border border-gray-200 rounded-xl overflow-hidden bg-white" style={{ height: '420px' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50">
-        <div className="flex items-center gap-2">
-          <Icons.bot className="w-4 h-4 text-primary-500" />
-          <span className="text-sm font-medium text-gray-700">Sandbox del chatbot</span>
-          <span className="text-xs text-gray-400">— {kb.name}</span>
+    <div
+      className={isInline
+        ? 'flex flex-col h-full'
+        : 'mx-6 mb-6 flex flex-col border border-gray-200 rounded-xl overflow-hidden bg-white'
+      }
+      style={isInline ? undefined : { height: '420px' }}
+    >
+      {/* Header — standalone only */}
+      {!isInline && (
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+          <div className="flex items-center gap-2">
+            <Icons.bot className="w-4 h-4 text-primary-500" />
+            <span className="text-sm font-medium text-gray-700">Sandbox del chatbot</span>
+            <span className="text-xs text-gray-400">— {kb.name}</span>
+          </div>
+          {hasMessages && (
+            <button
+              onClick={clearChat}
+              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              title="Limpiar conversación"
+            >
+              Limpiar
+            </button>
+          )}
         </div>
-        {hasMessages && (
-          <button
-            onClick={clearChat}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-            title="Limpiar conversación"
-          >
-            Limpiar
-          </button>
-        )}
-      </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
@@ -191,6 +200,16 @@ export default function ChatPanel({ kb, chatbotId }) {
           maxLength={2000}
           className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:opacity-50 disabled:bg-gray-50"
         />
+        {isInline && hasMessages && (
+          <button
+            type="button"
+            onClick={clearChat}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+            title="Limpiar"
+          >
+            <Icons.refresh className="w-4 h-4" />
+          </button>
+        )}
         <button
           type="submit"
           disabled={!canSend}
@@ -202,4 +221,9 @@ export default function ChatPanel({ kb, chatbotId }) {
       </form>
     </div>
   )
+}
+
+// Convenience alias — fills a flex parent, no fixed height, no standalone header
+export function ChatPanelInline({ kb, chatbotId }) {
+  return <ChatPanel kb={kb} chatbotId={chatbotId} variant="inline" />
 }

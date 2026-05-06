@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import Icons from '../components/ui/Icons'
 import { useAuth } from '../lib/AuthContext'
 import { PageLoader } from '../components/ui/Spinner'
+import ChatPanel, { ChatPanelInline } from '../components/chatbot/ChatPanel'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -138,7 +139,7 @@ function BotModal({ bot, kbs, onClose, onSave }) {
 
 // ── Bot card ──────────────────────────────────────────────────────────────────
 
-function BotCard({ bot, onEdit, onDelete }) {
+function BotCard({ bot, onEdit, onDelete, onTest, isTesting }) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-3">
@@ -155,6 +156,10 @@ function BotCard({ bot, onEdit, onDelete }) {
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          <button onClick={() => onTest(bot)} title="Probar chatbot"
+            className={`p-1.5 rounded-lg transition-colors ${isTesting ? 'bg-primary-100 text-primary-600' : 'hover:bg-gray-100 text-gray-400'}`}>
+            <Icons.send className="w-4 h-4" />
+          </button>
           <button onClick={() => onEdit(bot)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors" title="Editar">
             <Icons.edit className="w-4 h-4" />
           </button>
@@ -192,11 +197,12 @@ function BotCard({ bot, onEdit, onDelete }) {
 export default function ChatbotsPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
-  const [bots, setBots]     = useState([])
-  const [kbs, setKbs]       = useState([])
-  const [loading, setLoading] = useState(true)
+  const [bots, setBots]         = useState([])
+  const [kbs, setKbs]           = useState([])
+  const [loading, setLoading]   = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [editBot, setEditBot]     = useState(null)
+  const [editBot, setEditBot]   = useState(null)
+  const [testingBot, setTestingBot] = useState(null)   // bot currently in sandbox
 
   const fetchBots = useCallback(async () => {
     const [rb, rk] = await Promise.all([
@@ -225,71 +231,119 @@ export default function ChatbotsPage() {
     setEditBot(null)
   }
 
+  function handleTest(bot) {
+    setTestingBot(prev => prev?.id === bot.id ? null : bot)
+  }
+
   if (authLoading) return <PageLoader />
 
   return (
     <>
       <Head><title>Mis Chatbots</title></Head>
 
-      <div className="px-6 py-6 max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Mis Chatbots</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Configura chatbots para conectar con WhatsApp, Facebook y Telegram</p>
-          </div>
-          <button
-            onClick={() => { setEditBot(null); setShowModal(true) }}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            <Icons.plus className="w-4 h-4" />
-            Nuevo chatbot
-          </button>
-        </div>
+      <div className="flex flex-1 overflow-hidden">
 
-        {/* Loading */}
-        {loading && (
-          <div className="flex justify-center py-20">
-            <PageLoader />
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!loading && bots.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
-              <Icons.bot className="w-7 h-7 text-primary-400" />
-            </div>
-            <h3 className="text-base font-semibold text-gray-700 mb-1">Sin chatbots todavía</h3>
-            <p className="text-sm text-gray-400 mb-5 max-w-xs">
-              Crea tu primer chatbot y conéctalo a una base de conocimiento para empezar a responder automáticamente.
-            </p>
-            {kbs.length === 0 ? (
-              <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
-                Primero necesitas crear una base de conocimiento en la sección <strong>Chatbot IA</strong>.
-              </p>
-            ) : (
+        {/* LEFT — bot list */}
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          <div className="px-6 py-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Mis Chatbots</h1>
+                <p className="text-sm text-gray-500 mt-0.5">Configura chatbots para conectar con WhatsApp, Facebook y Telegram</p>
+              </div>
               <button
-                onClick={() => setShowModal(true)}
-                className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
+                onClick={() => { setEditBot(null); setShowModal(true) }}
+                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
               >
-                Crear primer chatbot
+                <Icons.plus className="w-4 h-4" />
+                Nuevo chatbot
               </button>
+            </div>
+
+            {/* Loading */}
+            {loading && (
+              <div className="flex justify-center py-20">
+                <PageLoader />
+              </div>
+            )}
+
+            {/* Empty state */}
+            {!loading && bots.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
+                  <Icons.bot className="w-7 h-7 text-primary-400" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-700 mb-1">Sin chatbots todavía</h3>
+                <p className="text-sm text-gray-400 mb-5 max-w-xs">
+                  Crea tu primer chatbot y conéctalo a una base de conocimiento para empezar a responder automáticamente.
+                </p>
+                {kbs.length === 0 ? (
+                  <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+                    Primero necesitas crear una base de conocimiento en la sección <strong>Chatbot IA</strong>.
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => setShowModal(true)}
+                    className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    Crear primer chatbot
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Bot grid — narrows when test panel is open */}
+            {bots.length > 0 && (
+              <div className={`grid gap-4 ${testingBot ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+                {bots.map(bot => (
+                  <BotCard
+                    key={bot.id}
+                    bot={bot}
+                    isTesting={testingBot?.id === bot.id}
+                    onTest={handleTest}
+                    onEdit={b => { setEditBot(b); setShowModal(true) }}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
             )}
           </div>
-        )}
+        </div>
 
-        {/* Bot grid */}
-        {bots.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {bots.map(bot => (
-              <BotCard
-                key={bot.id}
-                bot={bot}
-                onEdit={b => { setEditBot(b); setShowModal(true) }}
-                onDelete={handleDelete}
-              />
-            ))}
+        {/* RIGHT — test sandbox panel */}
+        {testingBot && (
+          <div className="w-[400px] shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
+            {/* Panel header */}
+            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: testingBot.primaryColor + '20' }}
+                >
+                  <Icons.bot className="w-3.5 h-3.5" style={{ color: testingBot.primaryColor }} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{testingBot.name}</p>
+                  <p className="text-xs text-gray-400 truncate">KB: {testingBot.kb?.name}</p>
+                </div>
+              </div>
+              <button onClick={() => setTestingBot(null)} className="p-1 rounded hover:bg-gray-200 text-gray-400 shrink-0">
+                <Icons.close className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Greeting hint */}
+            {testingBot.greeting && (
+              <div className="px-4 py-2.5 bg-primary-50 border-b border-primary-100">
+                <p className="text-xs text-primary-700 italic">«{testingBot.greeting}»</p>
+              </div>
+            )}
+
+            {/* ChatPanel fills remaining space */}
+            <div className="flex-1 overflow-hidden">
+              <ChatPanelInline kb={testingBot.kb} chatbotId={testingBot.id} />
+            </div>
           </div>
         )}
       </div>
