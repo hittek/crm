@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import Head from 'next/head'
-import Layout from '../components/layout/Layout'
 import Icons from '../components/ui/Icons'
 import { useAuth } from '../lib/AuthContext'
 
@@ -142,9 +141,8 @@ export default function ConversationsPage() {
   if (authLoading) return null
 
   return (
-    <Layout>
+    <>
       <Head><title>Conversaciones</title></Head>
-
       <div className="px-6 py-6 max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
@@ -224,6 +222,6 @@ export default function ConversationsPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </>
   )
 }

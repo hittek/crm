@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import Layout from '../components/layout/Layout'
 import Icons from '../components/ui/Icons'
 import { useAuth } from '../lib/AuthContext'
 
@@ -228,7 +227,7 @@ export default function ChatbotsPage() {
   if (authLoading) return null
 
   return (
-    <Layout>
+    <>
       <Head><title>Mis Chatbots</title></Head>
 
       <div className="px-6 py-6 max-w-5xl mx-auto">
@@ -295,6 +294,6 @@ export default function ChatbotsPage() {
           onSave={handleSave}
         />
       )}
-    </Layout>
+    </>
   )
 }
