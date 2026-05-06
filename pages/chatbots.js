@@ -171,7 +171,7 @@ function BotCard({ bot, onEdit, onDelete }) {
         </div>
         {bot.escalationPhrase && (
           <div className="flex items-center gap-2">
-            <Icons.alertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <Icons.alert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <p className="text-xs text-gray-500">Escalación: «{bot.escalationPhrase}»</p>
           </div>
         )}
