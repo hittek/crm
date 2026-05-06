@@ -26,11 +26,29 @@ export default function Layout({ children }) {
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [escalatedCount, setEscalatedCount] = useState(0)
 
   // Close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false)
   }, [router.pathname])
+
+  // Poll for escalated conversations count every 30s
+  useEffect(() => {
+    if (!user) return
+    async function fetchEscalated() {
+      try {
+        const r = await fetch('/api/conversations?status=escalated&limit=1')
+        if (r.ok) {
+          const data = await r.json()
+          setEscalatedCount(data.total || 0)
+        }
+      } catch { /* non-fatal */ }
+    }
+    fetchEscalated()
+    const interval = setInterval(fetchEscalated, 30000)
+    return () => clearInterval(interval)
+  }, [user])
 
   // Navigation items using translations
   const baseNavigation = [
@@ -44,7 +62,7 @@ export default function Layout({ children }) {
   const aiSubNav = [
     { name: t('nav.chatbot'), href: '/chatbot', icon: Icons.bot },
     { name: t('nav.chatbots'), href: '/chatbots', icon: Icons.messageSquare },
-    { name: t('nav.conversations'), href: '/conversations', icon: Icons.activity },
+    { name: t('nav.conversations'), href: '/conversations', icon: Icons.activity, badge: escalatedCount || null },
   ]
 
   const aiRoutes = aiSubNav.map(i => i.href)
@@ -180,7 +198,12 @@ export default function Layout({ children }) {
                       }`}
                     >
                       <item.icon className="w-4 h-4 shrink-0" />
-                      {item.name}
+                      <span className="flex-1">{item.name}</span>
+                      {item.badge > 0 && (
+                        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
                     </Link>
                   )
                 })}
