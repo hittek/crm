@@ -3,6 +3,7 @@ import Head from 'next/head'
 import Icons from '../components/ui/Icons'
 import { useAuth } from '../lib/AuthContext'
 import { PageLoader } from '../components/ui/Spinner'
+import { hasMinRole } from '../lib/auth'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -52,9 +53,9 @@ function bubbleClass(role) {
 function bubbleSide(role) {
   return role === 'agent' ? 'justify-end' : 'justify-start'
 }
-function roleLabel(role) {
-  if (role === 'agent') return 'Agente'
-  if (role === 'assistant') return 'Bot'
+function roleLabel(msg) {
+  if (msg.role === 'agent')     return msg.agentName || 'Agente'
+  if (msg.role === 'assistant') return 'Bot'
   return null
 }
 
@@ -92,10 +93,11 @@ function ConvRow({ conv, isSelected, onClick }) {
 // ── Event pill rendered inline in the message timeline ───────────────────────
 
 const EVENT_META = {
-  picked_up: { icon: Icons.user,         text: (e) => `${e.user?.name} tomó la conversación`,                                              color: 'text-blue-600',  bg: 'bg-blue-50'  },
-  forwarded:  { icon: Icons.send,         text: (e) => `${e.user?.name} transfirió a ${e.toUser?.name || 'otro agente'}${e.note ? ` · "${e.note}"` : ''}`, color: 'text-purple-600', bg: 'bg-purple-50' },
-  resolved:   { icon: Icons.check,        text: (e) => `${e.user?.name} cerró la conversación${e.note ? ` · "${e.note}"` : ''}`,            color: 'text-green-600', bg: 'bg-green-50' },
-  reopened:   { icon: Icons.refresh,      text: (e) => `${e.user?.name} reabrió la conversación`,                                           color: 'text-yellow-600', bg: 'bg-yellow-50' },
+  picked_up: { icon: Icons.user,    text: (e) => `${e.user?.name} tomó la conversación`,                                                                    color: 'text-blue-600',   bg: 'bg-blue-50'   },
+  forwarded:  { icon: Icons.send,   text: (e) => `${e.user?.name} transfirió a ${e.toUser?.name || 'otro agente'}${e.note ? ` · "${e.note}"` : ''}`,          color: 'text-purple-600', bg: 'bg-purple-50' },
+  joined:     { icon: Icons.users,  text: (e) => `${e.user?.name} intervino en la conversación`,                                                              color: 'text-orange-600', bg: 'bg-orange-50' },
+  resolved:   { icon: Icons.check,  text: (e) => `${e.user?.name} cerró la conversación${e.note ? ` · "${e.note}"` : ''}`,                                    color: 'text-green-600',  bg: 'bg-green-50'  },
+  reopened:   { icon: Icons.refresh,text: (e) => `${e.user?.name} reabrió la conversación`,                                                                   color: 'text-yellow-600', bg: 'bg-yellow-50' },
 }
 
 function EventPill({ event }) {
@@ -192,7 +194,7 @@ function ForwardModal({ convId, onClose, onForwarded }) {
 
 // ── Thread ────────────────────────────────────────────────────────────────────
 
-function Thread({ conv, onStatusChange }) {
+function Thread({ conv, onStatusChange, currentUser }) {
   const [messages, setMessages]         = useState([])
   const [events, setEvents]             = useState([])
   const [replyText, setReplyText]       = useState('')
@@ -285,8 +287,12 @@ function Thread({ conv, onStatusChange }) {
     )
   }
 
-  const canReply    = conv.status !== 'resolved'
-  const isEscalated = conv.status === 'escalated'
+  const isAdmin      = hasMinRole(currentUser?.role, 'manager')
+  const isAssignee   = conv.assignedToId === currentUser?.id
+  const isUnassigned = !conv.assignedToId
+  const canReply     = conv.status !== 'resolved' && (isUnassigned || isAssignee || isAdmin)
+  const isEscalated  = conv.status === 'escalated'
+  const isLocked     = conv.status !== 'resolved' && !isUnassigned && !isAssignee && !isAdmin
 
   // Merge messages and events into a single sorted timeline
   const timeline = [
@@ -343,11 +349,21 @@ function Thread({ conv, onStatusChange }) {
       </div>
 
       {/* Escalation banner */}
-      {isEscalated && (
+      {isEscalated && !isLocked && (
         <div className="px-5 py-2.5 bg-red-50 border-b border-red-100 flex items-center gap-2 shrink-0">
           <Icons.alert className="w-4 h-4 text-red-500 shrink-0" />
           <p className="text-xs text-red-700 font-medium">
             El cliente solicitó hablar con un agente. Responde en este hilo para continuar la conversación.
+          </p>
+        </div>
+      )}
+
+      {/* Locked banner — assigned to someone else, current user is not admin */}
+      {isLocked && (
+        <div className="px-5 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center gap-2 shrink-0">
+          <Icons.lock className="w-4 h-4 text-gray-400 shrink-0" />
+          <p className="text-xs text-gray-500">
+            Asignada a otro agente. Solo puedes leer este hilo.
           </p>
         </div>
       )}
@@ -363,9 +379,9 @@ function Thread({ conv, onStatusChange }) {
           ) : (
             <div key={`msg-${item.id}`} className={`flex ${bubbleSide(item.role)}`}>
               <div className="max-w-[72%]">
-                {roleLabel(item.role) && (
+                {roleLabel(item) && (
                   <p className={`text-xs mb-1 ${item.role === 'agent' ? 'text-right text-primary-500' : 'text-gray-400'}`}>
-                    {roleLabel(item.role)}
+                    {roleLabel(item)}
                   </p>
                 )}
                 <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${bubbleClass(item.role)}`}>
@@ -555,7 +571,7 @@ export default function ConversationsPage() {
 
           {/* RIGHT — thread */}
           <div className="flex-1 bg-white overflow-hidden">
-            <Thread conv={selected} onStatusChange={handleStatusChange} />
+            <Thread conv={selected} onStatusChange={handleStatusChange} currentUser={user} />
           </div>
         </div>
       </div>

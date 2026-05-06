@@ -405,11 +405,15 @@ model ConversationMessage {
   id             Int          @id @default(autoincrement())
   conversationId Int
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  role           String       // user | assistant
+  role           String       // user | assistant | agent
   content        String
+  // Agent attribution (null for user/assistant messages)
+  userId         Int?
+  agentName      String?      // denormalized — avoids join on every poll
   createdAt      DateTime     @default(now())
 
   @@index([conversationId])
+  @@index([userId])
 }
 
 // ─── Notification model ──────────────────────────────────────────────────────
