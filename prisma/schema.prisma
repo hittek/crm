@@ -211,9 +211,12 @@ model User {
   assignedTasks   Task[]          @relation("TaskAssignee")
   ownedTasks      Task[]          @relation("TaskOwner")
   ownedContacts   Contact[]       @relation("ContactOwner")
-  ownedDeals      Deal[]          @relation("DealOwner")
-  auditLogs       AuditLog[]
-  notifications   Notification[]
+  ownedDeals            Deal[]          @relation("DealOwner")
+  auditLogs             AuditLog[]
+  notifications         Notification[]
+  assignedConversations Conversation[]  @relation("ConversationAssignee")
+  convEventActions      ConversationEvent[] @relation("ConversationEventActor")
+  convEventTargets      ConversationEvent[] @relation("ConversationEventTarget")
 
   @@unique([email, organizationId]) // Email unique per organization
   @@index([organizationId])
@@ -354,23 +357,48 @@ model Chatbot {
 }
 
 model Conversation {
-  id         Int       @id @default(autoincrement())
-  chatbotId  Int
-  chatbot    Chatbot   @relation(fields: [chatbotId], references: [id])
-  orgId      Int
-  sessionId  String    // client-generated UUID per browser/device session
-  channel    String    @default("web") // web | sandbox | whatsapp | facebook
-  status     String    @default("open") // open | resolved | escalated
-  contactId  Int?      // nullable — linked CRM contact
-  metadata   String?   // JSON (IP, user-agent, etc.)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id           Int       @id @default(autoincrement())
+  chatbotId    Int
+  chatbot      Chatbot   @relation(fields: [chatbotId], references: [id])
+  orgId        Int
+  sessionId    String    // client-generated UUID per browser/device session
+  channel      String    @default("web") // web | sandbox | whatsapp | facebook
+  status       String    @default("open") // open | resolved | escalated
+  contactId    Int?      // nullable — linked CRM contact
+  metadata     String?   // JSON (IP, user-agent, etc.)
+  // Denormalized current assignee — updated on every pickup / forward
+  assignedToId Int?
+  assignedTo   User?     @relation("ConversationAssignee", fields: [assignedToId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  messages   ConversationMessage[]
+  messages     ConversationMessage[]
+  events       ConversationEvent[]
 
   @@index([chatbotId])
   @@index([orgId])
   @@index([sessionId])
+  @@index([assignedToId])
+}
+
+model ConversationEvent {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  // who acted
+  userId         Int
+  user           User         @relation("ConversationEventActor", fields: [userId], references: [id])
+  // event type
+  type           String       // picked_up | forwarded | resolved | reopened
+  // for 'forwarded': the agent who received the conversation
+  toUserId       Int?
+  toUser         User?        @relation("ConversationEventTarget", fields: [toUserId], references: [id])
+  note           String?      // optional handoff/close note
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([userId])
+  @@index([toUserId])
 }
 
 model ConversationMessage {

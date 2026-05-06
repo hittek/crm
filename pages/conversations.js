@@ -89,19 +89,122 @@ function ConvRow({ conv, isSelected, onClick }) {
   )
 }
 
+// ── Event pill rendered inline in the message timeline ───────────────────────
+
+const EVENT_META = {
+  picked_up: { icon: Icons.user,         text: (e) => `${e.user?.name} tomó la conversación`,                                              color: 'text-blue-600',  bg: 'bg-blue-50'  },
+  forwarded:  { icon: Icons.send,         text: (e) => `${e.user?.name} transfirió a ${e.toUser?.name || 'otro agente'}${e.note ? ` · "${e.note}"` : ''}`, color: 'text-purple-600', bg: 'bg-purple-50' },
+  resolved:   { icon: Icons.check,        text: (e) => `${e.user?.name} cerró la conversación${e.note ? ` · "${e.note}"` : ''}`,            color: 'text-green-600', bg: 'bg-green-50' },
+  reopened:   { icon: Icons.refresh,      text: (e) => `${e.user?.name} reabrió la conversación`,                                           color: 'text-yellow-600', bg: 'bg-yellow-50' },
+}
+
+function EventPill({ event }) {
+  const meta = EVENT_META[event.type] || { icon: Icons.activity, text: () => event.type, color: 'text-gray-500', bg: 'bg-gray-50' }
+  const Icon = meta.icon
+  return (
+    <div className="flex justify-center">
+      <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs ${meta.color} ${meta.bg} border border-current/10`}>
+        <Icon className="w-3 h-3 shrink-0" />
+        <span>{meta.text(event)}</span>
+        <span className="opacity-50">·</span>
+        <span className="opacity-60">{timeAgo(event.createdAt)}</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Forward modal ─────────────────────────────────────────────────────────────
+
+function ForwardModal({ convId, onClose, onForwarded }) {
+  const [users, setUsers]     = useState([])
+  const [toUserId, setTo]     = useState('')
+  const [note, setNote]       = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving]   = useState(false)
+
+  useEffect(() => {
+    fetch('/api/users')
+      .then(r => r.ok ? r.json() : { users: [] })
+      .then(d => { setUsers(d.data || d.users || []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!toUserId) return
+    setSaving(true)
+    const r = await fetch(`/api/conversations/${convId}/status`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'forward', toUserId: parseInt(toUserId), note: note.trim() || undefined }),
+    })
+    if (r.ok) {
+      const data = await r.json()
+      onForwarded(data.forwardedTo)
+    }
+    setSaving(false)
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Transferir conversación</h3>
+        {loading ? (
+          <p className="text-sm text-gray-400 text-center py-4">Cargando agentes…</p>
+        ) : (
+          <form onSubmit={submit} className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">Transferir a</label>
+              <select
+                value={toUserId} onChange={e => setTo(e.target.value)} required
+                className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+              >
+                <option value="">Selecciona un agente…</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">Nota (opcional)</label>
+              <textarea
+                value={note} onChange={e => setNote(e.target.value)}
+                placeholder="Contexto para el siguiente agente…"
+                rows={2}
+                className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-300"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-sm rounded-lg border border-gray-200 hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button type="submit" disabled={!toUserId || saving} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40">
+                {saving ? 'Transfiriendo…' : 'Transferir'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Thread ────────────────────────────────────────────────────────────────────
 
 function Thread({ conv, onStatusChange }) {
-  const [messages, setMessages] = useState([])
-  const [replyText, setReplyText] = useState('')
-  const [sending, setSending] = useState(false)
+  const [messages, setMessages]         = useState([])
+  const [events, setEvents]             = useState([])
+  const [replyText, setReplyText]       = useState('')
+  const [sending, setSending]           = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [showForward, setShowForward]   = useState(false)
   const bottomRef = useRef(null)
   const inputRef  = useRef(null)
 
-  // Load + poll messages when conv changes
+  // Load + poll messages+events when conv changes
   useEffect(() => {
-    if (!conv) { setMessages([]); return }
+    if (!conv) { setMessages([]); setEvents([]); return }
 
     let cancelled = false
     async function fetchMessages() {
@@ -109,12 +212,12 @@ function Thread({ conv, onStatusChange }) {
       if (r.ok && !cancelled) {
         const data = await r.json()
         setMessages(data.messages)
+        setEvents(data.events || [])
       }
     }
 
     fetchMessages()
 
-    // Poll every 5s while conversation is open or escalated
     let interval
     if (conv.status !== 'resolved') {
       interval = setInterval(fetchMessages, 5000)
@@ -122,10 +225,10 @@ function Thread({ conv, onStatusChange }) {
     return () => { cancelled = true; clearInterval(interval) }
   }, [conv?.id, conv?.status])
 
-  // Scroll to bottom when messages update
+  // Scroll to bottom when messages or events update
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, events])
 
   async function sendReply(e) {
     e?.preventDefault()
@@ -141,6 +244,11 @@ function Thread({ conv, onStatusChange }) {
     if (r.ok) {
       const data = await r.json()
       setMessages(prev => [...prev, data.message])
+      // If this was the first reply, it created a picked_up event — refresh events
+      if (data.pickedUp) {
+        const evR = await fetch(`/api/conversations/${conv.id}/messages`)
+        if (evR.ok) { const d = await evR.json(); setEvents(d.events || []) }
+      }
     }
     setSending(false)
     inputRef.current?.focus()
@@ -153,8 +261,19 @@ function Thread({ conv, onStatusChange }) {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ status }),
     })
-    if (r.ok) onStatusChange(conv.id, status)
+    if (r.ok) {
+      onStatusChange(conv.id, status)
+      // Refresh events to show resolved/reopened pill
+      const evR = await fetch(`/api/conversations/${conv.id}/messages`)
+      if (evR.ok) { const d = await evR.json(); setEvents(d.events || []) }
+    }
     setUpdatingStatus(false)
+  }
+
+  function handleForwarded(toUser) {
+    // Refresh events to show forwarded pill
+    fetch(`/api/conversations/${conv.id}/messages`)
+      .then(r => r.json()).then(d => setEvents(d.events || []))
   }
 
   if (!conv) {
@@ -166,8 +285,14 @@ function Thread({ conv, onStatusChange }) {
     )
   }
 
-  const canReply   = conv.status !== 'resolved'
+  const canReply    = conv.status !== 'resolved'
   const isEscalated = conv.status === 'escalated'
+
+  // Merge messages and events into a single sorted timeline
+  const timeline = [
+    ...messages.map(m => ({ ...m, _kind: 'message' })),
+    ...events.map(e   => ({ ...e, _kind: 'event'   })),
+  ].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
 
   return (
     <div className="flex flex-col h-full">
@@ -184,8 +309,18 @@ function Thread({ conv, onStatusChange }) {
           </p>
         </div>
 
-        {/* Status actions */}
+        {/* Actions */}
         <div className="flex items-center gap-2 shrink-0">
+          {canReply && (
+            <button
+              onClick={() => setShowForward(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              title="Transferir a otro agente"
+            >
+              <Icons.send className="w-3.5 h-3.5" />
+              Transferir
+            </button>
+          )}
           {conv.status === 'resolved' ? (
             <button
               onClick={() => updateStatus('open')}
@@ -217,28 +352,32 @@ function Thread({ conv, onStatusChange }) {
         </div>
       )}
 
-      {/* Messages */}
+      {/* Unified timeline */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-        {messages.length === 0 && (
+        {timeline.length === 0 && (
           <p className="text-sm text-gray-400 text-center py-8">Sin mensajes en esta conversación</p>
         )}
-        {messages.map(msg => (
-          <div key={msg.id} className={`flex ${bubbleSide(msg.role)}`}>
-            <div className="max-w-[72%]">
-              {roleLabel(msg.role) && (
-                <p className={`text-xs mb-1 ${msg.role === 'agent' ? 'text-right text-primary-500' : 'text-gray-400'}`}>
-                  {roleLabel(msg.role)}
-                </p>
-              )}
-              <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${bubbleClass(msg.role)}`}>
-                {msg.content}
-                <div className={`text-xs mt-1 ${msg.role === 'agent' ? 'text-primary-200' : 'text-gray-400'}`}>
-                  {new Date(msg.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+        {timeline.map(item =>
+          item._kind === 'event' ? (
+            <EventPill key={`ev-${item.id}`} event={item} />
+          ) : (
+            <div key={`msg-${item.id}`} className={`flex ${bubbleSide(item.role)}`}>
+              <div className="max-w-[72%]">
+                {roleLabel(item.role) && (
+                  <p className={`text-xs mb-1 ${item.role === 'agent' ? 'text-right text-primary-500' : 'text-gray-400'}`}>
+                    {roleLabel(item.role)}
+                  </p>
+                )}
+                <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${bubbleClass(item.role)}`}>
+                  {item.content}
+                  <div className={`text-xs mt-1 ${item.role === 'agent' ? 'text-primary-200' : 'text-gray-400'}`}>
+                    {new Date(item.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        )}
         <div ref={bottomRef} />
       </div>
 
@@ -269,9 +408,18 @@ function Thread({ conv, onStatusChange }) {
           <p className="text-xs text-gray-400">Conversación resuelta · <button onClick={() => updateStatus('open')} className="text-primary-500 hover:underline">Reabrir para responder</button></p>
         </div>
       )}
+
+      {showForward && (
+        <ForwardModal
+          convId={conv.id}
+          onClose={() => setShowForward(false)}
+          onForwarded={handleForwarded}
+        />
+      )}
     </div>
   )
 }
+
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
