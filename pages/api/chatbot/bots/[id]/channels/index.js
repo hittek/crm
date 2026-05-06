@@ -5,11 +5,11 @@
  *
  * DELETE uses ?channel=telegram|whatsapp|facebook as a query param on this same route.
  */
-import prisma             from '../../../../../lib/prisma'
-import { getSession }     from '../../../../../lib/auth'
-import { checkOrgAccess, orgAccessResponse } from '../../../../../lib/planLimits'
-import { encryptJSON, decryptJSON } from '../../../../../lib/crypto'
-import { getMe, setWebhook, deleteWebhook } from '../../../../../lib/channels/telegram'
+import prisma             from '../../../../../../lib/prisma'
+import { getSession }     from '../../../../../../lib/auth'
+import { checkOrgAccess, orgAccessResponse } from '../../../../../../lib/planLimits'
+import { encryptJSON, decryptJSON } from '../../../../../../lib/crypto'
+import { getMe, setWebhook, deleteWebhook } from '../../../../../../lib/channels/telegram'
 
 function safeConfig(cfg) {
   // Never expose raw credentials to the client
