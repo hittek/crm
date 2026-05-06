@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Head from 'next/head'
 import Icons from '../components/ui/Icons'
 import UpgradeWall from '../components/ui/UpgradeWall'
+import ChatPanel from '../components/chatbot/ChatPanel'
 import { useAuth } from '../lib/AuthContext'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -612,13 +613,18 @@ export default function ChatbotPage() {
                 )}
               </div>
 
-              {/* S02 teaser banner */}
-              <div className="mx-6 mb-4 px-4 py-3 bg-primary-50 border border-primary-100 rounded-xl flex items-center gap-3">
-                <Icons.bot className="w-5 h-5 text-primary-500 shrink-0" />
-                <p className="text-sm text-primary-700">
-                  <strong>Próximamente:</strong> Sandbox del chatbot — prueba respuestas en tiempo real desde esta base de conocimiento.
-                </p>
-              </div>
+              {/* Chat sandbox — show when KB has indexed documents */}
+              {activeKb?.status === 'ready' && (
+                <ChatPanel kb={activeKb} />
+              )}
+              {activeKb?.status !== 'ready' && (
+                <div className="mx-6 mb-4 px-4 py-3 bg-primary-50 border border-primary-100 rounded-xl flex items-center gap-3">
+                  <Icons.bot className="w-5 h-5 text-primary-500 shrink-0" />
+                  <p className="text-sm text-primary-700">
+                    Agrega y procesa documentos para habilitar el chatbot.
+                  </p>
+                </div>
+              )}
             </>
           )}
         </div>

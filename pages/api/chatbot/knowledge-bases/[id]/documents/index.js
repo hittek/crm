@@ -4,19 +4,53 @@ import prisma from '../../../../../../lib/prisma'
 import { getSession } from '../../../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse, checkPlanLimit, planLimitResponse } from '../../../../../../lib/planLimits'
 import { chunkText, chunkQA } from '../../../../../../lib/chunker'
+import { embedTexts } from '../../../../../../lib/embeddings'
 
 export const config = { api: { bodyParser: false } }
 
 // ── startup cleanup ──────────────────────────────────────────────────────────
 ;(async () => {
   try {
+    // 1. Reset stale 'processing' docs (server was killed mid-flight)
     const staleAt = new Date(Date.now() - 10 * 60 * 1000)
     const { count } = await prisma.knowledgeBaseDocument.updateMany({
       where: { status: 'processing', createdAt: { lt: staleAt } },
       data: { status: 'error', errorMessage: 'El servidor se reinició durante el procesamiento. Intenta de nuevo.' },
     })
     if (count > 0) console.log(`[chatbot] cleaned up ${count} stale 'processing' docs`)
-  } catch { /* non-fatal */ }
+
+    // 2. Backfill embeddings for docs that were chunked but not yet indexed.
+    //    SPENDING GUARD: fetches ALL un-embedded chunks in ONE batch.
+    //    embedTexts() hard-caps at 100 inputs — if > 100 pending it throws
+    //    and we skip silently (they'll be indexed on next retry).
+    const pending = await prisma.knowledgeBaseChunk.findMany({
+      where:   { embedded: false },
+      orderBy: { id: 'asc' },
+      select:  { id: true, content: true, documentId: true },
+    })
+    if (pending.length > 0 && pending.length <= 100) {
+      console.log(`[chatbot] backfilling embeddings for ${pending.length} chunks`)
+      const embeddings = await embedTexts(pending.map(c => c.content))
+      await prisma.$transaction(
+        pending.map((chunk, i) =>
+          prisma.$executeRawUnsafe(
+            `UPDATE "KnowledgeBaseChunk" SET embedding = $1::vector, embedded = true WHERE id = $2`,
+            `[${embeddings[i].join(',')}]`,
+            chunk.id,
+          )
+        )
+      )
+      // Mark the owning documents as indexed
+      const docIds = [...new Set(pending.map(c => c.documentId))]
+      await prisma.knowledgeBaseDocument.updateMany({
+        where: { id: { in: docIds }, status: 'chunked' },
+        data:  { status: 'indexed' },
+      })
+      console.log(`[chatbot] backfill complete — ${pending.length} chunks across ${docIds.length} docs`)
+    } else if (pending.length > 100) {
+      console.log(`[chatbot] backfill skipped — ${pending.length} chunks exceeds safe batch size; retry individually`)
+    }
+  } catch (e) { console.error('[chatbot] startup cleanup error:', e.message) }
 })()
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -170,6 +204,42 @@ async function persistChunks(chunks, documentId, kbId, orgId) {
   })
 }
 
+/**
+ * Embed all un-embedded chunks for a document.
+ *
+ * SPENDING GUARD:
+ *   - Exactly 1 Voyage API call (all chunks in one batch).
+ *   - Hard-capped at 100 inputs via embedTexts().
+ *   - Only chunks with embedded=false are touched.
+ *   - No retries — throws on failure, caller marks doc as error.
+ *
+ * @param {number} documentId
+ */
+async function embedChunks(documentId) {
+  const chunks = await prisma.knowledgeBaseChunk.findMany({
+    where:   { documentId, embedded: false },
+    orderBy: { chunkIndex: 'asc' },
+    select:  { id: true, content: true },
+  })
+  if (chunks.length === 0) return 0
+
+  // ONE Voyage API call — embedTexts() enforces MAX_TEXTS=100 hard cap
+  const embeddings = await embedTexts(chunks.map(c => c.content))
+
+  // ONE transaction — N SQL UPDATEs bundled together, no loop of round-trips
+  await prisma.$transaction(
+    chunks.map((chunk, i) =>
+      prisma.$executeRawUnsafe(
+        `UPDATE "KnowledgeBaseChunk" SET embedding = $1::vector, embedded = true WHERE id = $2`,
+        `[${embeddings[i].join(',')}]`,
+        chunk.id,
+      )
+    )
+  )
+
+  return chunks.length
+}
+
 // ── background processor ─────────────────────────────────────────────────────
 /**
  * Runs after the HTTP response has been sent.
@@ -229,6 +299,10 @@ async function processDocument({ docId, kbId, orgId, type, fields, filePath, fil
     await persistChunks(chunks, docId, kbId, orgId)
     console.log(`[chatbot] doc ${docId} chunks persisted — heap ${mem()}`)
 
+    // Embed chunks — 1 Voyage API call, result stored in DB
+    const embeddedCount = await embedChunks(docId)
+    console.log(`[chatbot] doc ${docId} embedded ${embeddedCount} chunks — heap ${mem()}`)
+
     await prisma.knowledgeBaseDocument.update({
       where: { id: docId },
       data: {
@@ -239,7 +313,7 @@ async function processDocument({ docId, kbId, orgId, type, fields, filePath, fil
         question,
         answer,
         fileSize,
-        status:     'chunked',
+        status:     'indexed',
         chunkCount: chunks.length,
       },
     })

@@ -317,7 +317,8 @@ model KnowledgeBaseChunk {
   content     String                 // chunk text
   chunkIndex  Int
   tokenCount  Int                    @default(0)
-  embedded    Boolean                @default(false) // true after S02 embeds it
+  embedded    Boolean                @default(false) // true once Voyage embedding stored
+  embedding   Unsupported("vector(512)")?  // voyage-3-lite = 512 dims
   metadata    String?                // JSON (page number, heading, etc.)
   createdAt   DateTime               @default(now())
 
