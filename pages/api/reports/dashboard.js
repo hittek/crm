@@ -142,7 +142,74 @@ const methods = {
       ...formattedAuditLogs,
     ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 15)
 
-    // Pipeline total value
+    // ── Chatbot metrics ──────────────────────────────────────────────────────
+    const [
+      chatConvsThisMonth,
+      chatConvsLastMonth,
+      convsByStatus,
+      convsByChannel,
+      convsByChatbot,
+      totalMessages,
+      totalConvsWithMessages,
+    ] = await Promise.all([
+      // Total conversations this month
+      prisma.conversation.count({
+        where: { orgId: organizationId, createdAt: { gte: startOfMonth } },
+      }),
+      // Total conversations last month (for comparison)
+      prisma.conversation.count({
+        where: { orgId: organizationId, createdAt: { gte: startOfLastMonth, lt: startOfMonth } },
+      }),
+      // Breakdown by status (all time)
+      prisma.conversation.groupBy({
+        by: ['status'],
+        _count: true,
+        where: { orgId: organizationId },
+      }),
+      // Breakdown by channel this month
+      prisma.conversation.groupBy({
+        by: ['channel'],
+        _count: true,
+        where: { orgId: organizationId, createdAt: { gte: startOfMonth } },
+        orderBy: { _count: { channel: 'desc' } },
+      }),
+      // Top chatbots by conversation count (all time, top 5)
+      prisma.conversation.groupBy({
+        by: ['chatbotId'],
+        _count: true,
+        where: { orgId: organizationId },
+        orderBy: { _count: { chatbotId: 'desc' } },
+        take: 5,
+      }),
+      // Total messages across all conversations (for avg calculation)
+      prisma.conversationMessage.count({
+        where: { conversation: { orgId: organizationId } },
+      }),
+      // Conversations that have at least 1 message (for avg)
+      prisma.conversation.count({
+        where: { orgId: organizationId, messages: { some: {} } },
+      }),
+    ])
+
+    // Resolve chatbot names for the top-bots breakdown
+    const chatbotIds = convsByChatbot.map(r => r.chatbotId)
+    const chatbotNames = await prisma.chatbot.findMany({
+      where: { id: { in: chatbotIds } },
+      select: { id: true, name: true, primaryColor: true },
+    })
+    const chatbotMap = Object.fromEntries(chatbotNames.map(b => [b.id, b]))
+
+    const statusMap  = Object.fromEntries(convsByStatus.map(r => [r.status, r._count]))
+    const avgMessages = totalConvsWithMessages > 0
+      ? Math.round(totalMessages / totalConvsWithMessages)
+      : 0
+    const escalationRate = chatConvsThisMonth > 0
+      ? Math.round(((statusMap.escalated || 0) / chatConvsThisMonth) * 100)
+      : 0
+    const resolutionRate = chatConvsThisMonth > 0
+      ? Math.round(((statusMap.resolved || 0) / chatConvsThisMonth) * 100)
+      : 0
+
     const pipelineTotal = pipelineByStage.reduce((acc, stage) => acc + (stage._sum.value || 0), 0)
 
     success(res, {
@@ -172,6 +239,23 @@ const methods = {
         completedThisWeek,
       },
       recentActivities: allActivities,
+      chatbot: {
+        totalThisMonth: chatConvsThisMonth,
+        totalLastMonth: chatConvsLastMonth,
+        byStatus: {
+          open:      statusMap.open      || 0,
+          escalated: statusMap.escalated || 0,
+          resolved:  statusMap.resolved  || 0,
+        },
+        byChannel: convsByChannel.map(r => ({ channel: r.channel, count: r._count })),
+        topBots: convsByChatbot.map(r => ({
+          chatbot: chatbotMap[r.chatbotId] || { id: r.chatbotId, name: 'Desconocido', primaryColor: '#6b7280' },
+          count: r._count,
+        })),
+        avgMessages,
+        escalationRate,
+        resolutionRate,
+      },
     })
   },
 }

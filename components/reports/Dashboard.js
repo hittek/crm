@@ -243,6 +243,179 @@ export default function Dashboard() {
           </div>
         </div>
 
+      </div>
+
+      {/* ── Chatbot Analytics ─────────────────────────────────────────────── */}
+      {data.chatbot && (
+        <div className="mt-6 lg:mt-8">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">Chatbot IA</h2>
+
+          {/* Chatbot KPI row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Conversations this month */}
+            <div className="card p-4 lg:p-5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Conversaciones</span>
+                <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center">
+                  <Icons.messageSquare className="w-4 h-4 text-primary-600" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{data.chatbot.totalThisMonth}</p>
+              <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                Este mes
+                {data.chatbot.totalLastMonth > 0 && (
+                  <span className={`font-medium ${
+                    data.chatbot.totalThisMonth >= data.chatbot.totalLastMonth ? 'text-green-600' : 'text-red-500'
+                  }`}>
+                    {data.chatbot.totalThisMonth >= data.chatbot.totalLastMonth ? '↑' : '↓'}
+                    {Math.abs(Math.round((data.chatbot.totalThisMonth / data.chatbot.totalLastMonth - 1) * 100))}%
+                  </span>
+                )}
+              </p>
+            </div>
+
+            {/* Resolution rate */}
+            <div className="card p-4 lg:p-5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Resueltas</span>
+                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                  <Icons.check className="w-4 h-4 text-green-600" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{data.chatbot.resolutionRate}%</p>
+              <p className="text-xs text-gray-500 mt-1">{data.chatbot.byStatus.resolved} conversaciones</p>
+            </div>
+
+            {/* Escalation rate */}
+            <div className="card p-4 lg:p-5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Escaladas</span>
+                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                  <Icons.alert className="w-4 h-4 text-red-500" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{data.chatbot.escalationRate}%</p>
+              <p className="text-xs text-gray-500 mt-1">{data.chatbot.byStatus.escalated} conversaciones</p>
+            </div>
+
+            {/* Avg messages */}
+            <div className="card p-4 lg:p-5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Msgs promedio</span>
+                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                  <Icons.activity className="w-4 h-4 text-purple-600" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{data.chatbot.avgMessages}</p>
+              <p className="text-xs text-gray-500 mt-1">Por conversación</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+            {/* By Channel */}
+            <div className="card">
+              <div className="card-header">
+                <h3 className="font-semibold text-gray-900">Por canal</h3>
+              </div>
+              <div className="card-body">
+                {data.chatbot.byChannel.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">Sin datos</p>
+                ) : (
+                  <div className="space-y-3">
+                    {(() => {
+                      const max = Math.max(...data.chatbot.byChannel.map(r => r.count))
+                      const CHANNEL_COLORS = {
+                        web: 'bg-blue-400', sandbox: 'bg-purple-400',
+                        whatsapp: 'bg-green-400', facebook: 'bg-indigo-400', telegram: 'bg-sky-400',
+                      }
+                      const CHANNEL_LABELS = {
+                        web: 'Web', sandbox: 'Sandbox',
+                        whatsapp: 'WhatsApp', facebook: 'Facebook', telegram: 'Telegram',
+                      }
+                      return data.chatbot.byChannel.map(r => (
+                        <div key={r.channel} className="flex items-center gap-3">
+                          <span className="w-20 text-xs font-medium text-gray-600 shrink-0">
+                            {CHANNEL_LABELS[r.channel] || r.channel}
+                          </span>
+                          <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden">
+                            <div
+                              className={`h-full ${CHANNEL_COLORS[r.channel] || 'bg-gray-400'} rounded transition-all`}
+                              style={{ width: `${max > 0 ? (r.count / max) * 100 : 0}%` }}
+                            />
+                          </div>
+                          <span className="w-8 text-xs font-semibold text-gray-700 text-right shrink-0">{r.count}</span>
+                        </div>
+                      ))
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Top chatbots */}
+            <div className="card">
+              <div className="card-header">
+                <h3 className="font-semibold text-gray-900">Top chatbots</h3>
+              </div>
+              <div className="card-body">
+                {data.chatbot.topBots.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">Sin datos</p>
+                ) : (
+                  <div className="space-y-3">
+                    {(() => {
+                      const max = Math.max(...data.chatbot.topBots.map(r => r.count))
+                      return data.chatbot.topBots.map(r => (
+                        <div key={r.chatbot.id} className="flex items-center gap-3">
+                          <span className="w-24 text-xs font-medium text-gray-600 truncate shrink-0">
+                            {r.chatbot.name}
+                          </span>
+                          <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden">
+                            <div
+                              className="h-full rounded transition-all"
+                              style={{
+                                width: `${max > 0 ? (r.count / max) * 100 : 0}%`,
+                                backgroundColor: r.chatbot.primaryColor || '#6366f1',
+                              }}
+                            />
+                          </div>
+                          <span className="w-8 text-xs font-semibold text-gray-700 text-right shrink-0">{r.count}</span>
+                        </div>
+                      ))
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Status breakdown */}
+            <div className="card">
+              <div className="card-header">
+                <h3 className="font-semibold text-gray-900">Estado actual</h3>
+              </div>
+              <div className="card-body space-y-4">
+                {[
+                  { key: 'open',      label: 'Abiertas',  icon: Icons.messageSquare, bg: 'bg-yellow-100', fg: 'text-yellow-600' },
+                  { key: 'escalated', label: 'Escaladas', icon: Icons.alert,         bg: 'bg-red-100',    fg: 'text-red-600'    },
+                  { key: 'resolved',  label: 'Resueltas', icon: Icons.check,         bg: 'bg-green-100',  fg: 'text-green-600'  },
+                ].map(({ key, label, icon: Icon, bg, fg }) => (
+                  <div key={key} className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
+                      <Icon className={`w-4 h-4 ${fg}`} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xl font-bold text-gray-900">{data.chatbot.byStatus[key]}</p>
+                      <p className="text-xs text-gray-500">{label}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mt-6 lg:mt-8">
+
         {/* Recent Activity */}
         <div className="card lg:col-span-3">
           <div className="card-header flex items-center justify-between">
