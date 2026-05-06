@@ -24,7 +24,7 @@ import { searchChunks } from '../../../../lib/rag'
 
 export const config = { api: { bodyParser: true } }
 
-const MODEL      = 'claude-3-5-haiku-20241022'
+const MODEL      = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 800   // hard cap — prevents runaway token spend
 const TOP_K      = 5     // chunks to include as context
 
