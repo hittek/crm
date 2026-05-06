@@ -70,6 +70,7 @@ export const Icons = {
   // Chatbot / AI
   bot: FiCpu,
   send: FiSend,
+  messageSquare: FiMessageSquare,
   database: FiDatabase,
   globe: FiGlobe,
   bookOpen: FiBookOpen,

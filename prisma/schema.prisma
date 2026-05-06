@@ -45,6 +45,7 @@ model Organization {
   auditLogs     AuditLog[]
   notifications Notification[]
   knowledgeBases KnowledgeBase[]
+  chatbots      Chatbot[]
 }
 
 // Contact model - the core entity in a contacts-first CRM
@@ -276,6 +277,7 @@ model KnowledgeBase {
   createdBy   String?
 
   documents   KnowledgeBaseDocument[]
+  chatbots    Chatbot[]
 
   @@index([orgId])
 }
@@ -325,6 +327,61 @@ model KnowledgeBaseChunk {
   @@index([kbId])
   @@index([documentId])
   @@index([orgId])
+}
+
+// ─── Chatbot models ──────────────────────────────────────────────────────────
+
+model Chatbot {
+  id               Int       @id @default(autoincrement())
+  orgId            Int
+  org              Organization @relation(fields: [orgId], references: [id])
+  kbId             Int
+  kb               KnowledgeBase @relation(fields: [kbId], references: [id])
+  name             String
+  greeting         String    @default("Hola, ¿en qué puedo ayudarte?")
+  escalationPhrase String?   // phrase that triggers human escalation
+  avatarUrl        String?
+  primaryColor     String    @default("#2563eb")
+  isActive         Boolean   @default(true)
+  apiKey           String    @unique @default(cuid()) // used by widget + channel webhooks
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  conversations    Conversation[]
+
+  @@index([orgId])
+  @@index([kbId])
+}
+
+model Conversation {
+  id         Int       @id @default(autoincrement())
+  chatbotId  Int
+  chatbot    Chatbot   @relation(fields: [chatbotId], references: [id])
+  orgId      Int
+  sessionId  String    // client-generated UUID per browser/device session
+  channel    String    @default("web") // web | sandbox | whatsapp | facebook
+  status     String    @default("open") // open | resolved | escalated
+  contactId  Int?      // nullable — linked CRM contact
+  metadata   String?   // JSON (IP, user-agent, etc.)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  messages   ConversationMessage[]
+
+  @@index([chatbotId])
+  @@index([orgId])
+  @@index([sessionId])
+}
+
+model ConversationMessage {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String       // user | assistant
+  content        String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
 }
 
 // ─── Notification model ──────────────────────────────────────────────────────

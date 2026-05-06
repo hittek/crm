@@ -3,16 +3,26 @@
  *
  * Per-message API cost: 1 Voyage call + 1 Anthropic call (max_tokens: 800).
  * No retry logic, no auto-send, no polling.
+ * When chatbotId is provided, conversations are persisted.
  */
 import { useState, useRef, useEffect } from 'react'
 import Icons from '../ui/Icons'
 
 const EMPTY_MESSAGES = []
 
-export default function ChatPanel({ kb }) {
+// Simple UUID v4 generator — no external dep
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+  })
+}
+
+export default function ChatPanel({ kb, chatbotId }) {
   const [messages, setMessages]   = useState(EMPTY_MESSAGES)
   const [input, setInput]         = useState('')
   const [loading, setLoading]     = useState(false)
+  const sessionId                 = useRef(uuid()) // stable per mount
   const bottomRef                 = useRef(null)
   const inputRef                  = useRef(null)
 
@@ -38,7 +48,11 @@ export default function ChatPanel({ kb }) {
       const resp = await fetch(`/api/chatbot/${kb.id}/chat`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ message: text }),
+        body:    JSON.stringify({
+          message:   text,
+          sessionId: sessionId.current,
+          chatbotId: chatbotId || undefined,
+        }),
       })
 
       if (!resp.ok) {

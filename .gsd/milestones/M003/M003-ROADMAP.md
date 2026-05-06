@@ -5,7 +5,7 @@
 - [x] **S01: Knowledge Base Management** `risk:high` `depends:[]`
   > After this: org admin can create a knowledge base, upload PDFs, paste URLs for scraping, and enter manual Q&A pairs — all chunked, embedded, and stored in pgvector
 
-- [ ] **S02: RAG Engine & Claude Integration** `risk:high` `depends:[S01]`
+- [x] **S02: RAG Engine & Claude Integration** `risk:high` `depends:[S01]`
   > After this: a query against the knowledge base retrieves relevant chunks, assembles a prompt, and returns a grounded Claude-generated answer — latency and token cost logged per request
 
 - [ ] **S03: Chatbot Config UI & Sandbox** `risk:medium` `depends:[S02]`

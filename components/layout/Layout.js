@@ -31,6 +31,8 @@ export default function Layout({ children }) {
     { name: t('nav.tasks'), href: '/tasks', icon: Icons.tasks },
     { name: t('nav.reports'), href: '/reports', icon: Icons.reports },
     { name: t('nav.chatbot'), href: '/chatbot', icon: Icons.bot },
+    { name: t('nav.chatbots'), href: '/chatbots', icon: Icons.messageSquare },
+    { name: t('nav.conversations'), href: '/conversations', icon: Icons.activity },
     { name: t('nav.settings'), href: '/settings', icon: Icons.settings, adminOnly: true },
   ]
 
