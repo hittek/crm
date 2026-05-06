@@ -81,16 +81,24 @@ export default async function handler(req, res) {
   let conversationId = null
   if (chatbot && sessionId) {
     let conv = await prisma.conversation.findFirst({
-      where: { chatbotId: chatbot.id, sessionId, status: 'open' },
-      select: { id: true },
+      where: { chatbotId: chatbot.id, sessionId, status: { in: ['open', 'escalated'] } },
+      select: { id: true, assignedToId: true },
     })
     if (!conv) {
       conv = await prisma.conversation.create({
         data: { chatbotId: chatbot.id, orgId: organizationId, sessionId, channel: 'sandbox' },
-        select: { id: true },
+        select: { id: true, assignedToId: true },
       })
     }
     conversationId = conv.id
+
+    // If an agent has taken over, store the message and let them handle it
+    if (conv.assignedToId) {
+      await prisma.conversationMessage.create({
+        data: { conversationId, role: 'user', content: message.trim() },
+      })
+      return res.json({ conversationId, reply: null, handedOff: true })
+    }
 
     // Check escalation before AI
     if (chatbot.escalationPhrase && await shouldEscalate(message, chatbot.escalationPhrase)) {

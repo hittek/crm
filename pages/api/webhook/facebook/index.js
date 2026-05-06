@@ -76,7 +76,9 @@ export default async function handler(req, res) {
             metadata:    { messengerSenderId: senderId, pageId },
           })
 
-          await sendMessenger(pageAccessToken, senderId, reply)
+          if (reply) {
+            await sendMessenger(pageAccessToken, senderId, reply)
+          }
         }
       }
     } catch (err) {

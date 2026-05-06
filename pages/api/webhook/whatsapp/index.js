@@ -83,7 +83,9 @@ export default async function handler(req, res) {
         metadata:    { whatsappFrom: from, phoneNumberId, displayPhone: value?.metadata?.display_phone_number },
       })
 
-      await sendWhatsApp(phoneNumberId, accessToken, from, reply)
+      if (reply) {
+        await sendWhatsApp(phoneNumberId, accessToken, from, reply)
+      }
     } catch (err) {
       console.error('[webhook/whatsapp]', err.message)
     }

@@ -57,8 +57,10 @@ export default async function handler(req, res) {
       },
     })
 
-    // Reply on Telegram
-    await sendMessage(botToken, chatId, reply)
+    // Reply on Telegram (skip if agent has taken over)
+    if (reply) {
+      await sendMessage(botToken, chatId, reply)
+    }
 
   } catch (err) {
     // Log but always return 200 so Telegram doesn't retry
