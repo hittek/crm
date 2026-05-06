@@ -3,6 +3,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Icons from '../components/ui/Icons'
 import { useAuth } from '../lib/AuthContext'
+import { PageLoader } from '../components/ui/Spinner'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -224,7 +225,7 @@ export default function ChatbotsPage() {
     setEditBot(null)
   }
 
-  if (authLoading) return null
+  if (authLoading) return <PageLoader />
 
   return (
     <>
@@ -245,6 +246,13 @@ export default function ChatbotsPage() {
             Nuevo chatbot
           </button>
         </div>
+
+        {/* Loading */}
+        {loading && (
+          <div className="flex justify-center py-20">
+            <PageLoader />
+          </div>
+        )}
 
         {/* Empty state */}
         {!loading && bots.length === 0 && (

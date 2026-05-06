@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Head from 'next/head'
 import Icons from '../components/ui/Icons'
 import { useAuth } from '../lib/AuthContext'
+import { PageLoader } from '../components/ui/Spinner'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -138,7 +139,7 @@ export default function ConversationsPage() {
 
   const totalPages = Math.ceil(total / 20)
 
-  if (authLoading) return null
+  if (authLoading) return <PageLoader />
 
   return (
     <>
@@ -178,13 +179,10 @@ export default function ConversationsPage() {
 
         {/* List */}
         {loading && (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 animate-pulse h-16" />
-            ))}
+          <div className="flex justify-center py-20">
+            <PageLoader />
           </div>
         )}
-
         {!loading && convs.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">

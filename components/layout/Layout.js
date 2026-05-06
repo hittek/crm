@@ -9,6 +9,14 @@ import { useOrganization } from '../../lib/SettingsContext'
 import { useAuth } from '../../lib/AuthContext'
 import { useI18n } from '../../lib/i18n'
 
+// Nav item is active only if pathname exactly matches href,
+// or starts with href followed by '/' (avoids /chatbot matching /chatbots).
+function isNavActive(href, pathname) {
+  if (pathname === href) return true
+  if (href === '/') return false
+  return pathname.startsWith(href + '/')
+}
+
 export default function Layout({ children }) {
   const router = useRouter()
   const organization = useOrganization()
@@ -30,11 +38,24 @@ export default function Layout({ children }) {
     { name: t('nav.pipeline'), href: '/deals', icon: Icons.deals },
     { name: t('nav.tasks'), href: '/tasks', icon: Icons.tasks },
     { name: t('nav.reports'), href: '/reports', icon: Icons.reports },
+    { name: t('nav.settings'), href: '/settings', icon: Icons.settings, adminOnly: true },
+  ]
+
+  const aiSubNav = [
     { name: t('nav.chatbot'), href: '/chatbot', icon: Icons.bot },
     { name: t('nav.chatbots'), href: '/chatbots', icon: Icons.messageSquare },
     { name: t('nav.conversations'), href: '/conversations', icon: Icons.activity },
-    { name: t('nav.settings'), href: '/settings', icon: Icons.settings, adminOnly: true },
   ]
+
+  const aiRoutes = aiSubNav.map(i => i.href)
+  const isAiRoute = aiRoutes.some(h => isNavActive(h, router.pathname))
+
+  const [aiExpanded, setAiExpanded] = useState(isAiRoute)
+
+  // Auto-expand when navigating into an AI route
+  useEffect(() => {
+    if (isAiRoute) setAiExpanded(true)
+  }, [isAiRoute])
 
   // Filter navigation based on user role - hide admin-only items for regular users
   const navigation = baseNavigation.filter(item => !item.adminOnly || permissions?.canManageSettings)
@@ -121,9 +142,7 @@ export default function Layout({ children }) {
         {/* Navigation */}
         <nav className="flex-1 px-4 space-y-1">
           {navigation.map((item) => {
-            const isActive = router.pathname === item.href || 
-              (item.href !== '/contacts' && router.pathname.startsWith(item.href))
-            
+            const isActive = isNavActive(item.href, router.pathname)
             return (
               <Link
                 key={item.name}
@@ -135,6 +154,39 @@ export default function Layout({ children }) {
               </Link>
             )
           })}
+
+          {/* AI group */}
+          <div>
+            <button
+              onClick={() => setAiExpanded(e => !e)}
+              className={`sidebar-link w-full ${isAiRoute ? 'text-primary-600' : ''}`}
+            >
+              <Icons.bot className="w-5 h-5" />
+              <span className="flex-1 text-left">Chatbot IA</span>
+              <Icons.chevronDown className={`w-4 h-4 transition-transform duration-150 ${aiExpanded ? 'rotate-180' : ''}`} />
+            </button>
+            {aiExpanded && (
+              <div className="mt-0.5 ml-3 pl-3 border-l border-gray-200 space-y-0.5">
+                {aiSubNav.map(item => {
+                  const isActive = isNavActive(item.href, router.pathname)
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4 shrink-0" />
+                      {item.name}
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Quick add button */}
