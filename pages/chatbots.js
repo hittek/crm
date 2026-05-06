@@ -163,6 +163,8 @@ function ChannelsModal({ bot, onClose }) {
 
   const connectedMap = Object.fromEntries(channels.map(c => [c.channel, c]))
 
+  const [warning, setWarning] = useState(null)
+
   async function connect(channel) {
     setSaving(true); setError(null)
     const body = { channel, ...form }
@@ -175,6 +177,7 @@ function ChannelsModal({ bot, onClose }) {
     if (!r.ok) { setError(data.error || 'Error conectando'); setSaving(false); return }
     setChannels(prev => [...prev, data.channel])
     setActive(null); setForm({})
+    if (data.warning) setWarning(data.warning)
     setSaving(false)
   }
 
@@ -207,6 +210,12 @@ function ChannelsModal({ bot, onClose }) {
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-4 space-y-3">
+          {warning && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-xs text-amber-800">
+              <Icons.alert className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-500" />
+              <span>{warning}</span>
+            </div>
+          )}
           {loading ? (
             <p className="text-sm text-gray-400 text-center py-6">Cargando…</p>
           ) : (
@@ -225,9 +234,10 @@ function ChannelsModal({ bot, onClose }) {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">{meta.label}</p>
                       {connected ? (
-                        <p className="text-xs text-green-600 flex items-center gap-1 mt-0.5">
-                          <Icons.check className="w-3 h-3" />
+                        <p className={`text-xs flex items-center gap-1 mt-0.5 ${connected.isActive ? 'text-green-600' : 'text-amber-600'}`}>
+                          {connected.isActive ? <Icons.check className="w-3 h-3" /> : <Icons.alert className="w-3 h-3" />}
                           {connected.botUsername ? `@${connected.botUsername}` : connected.phoneNumberId || connected.pageId || 'Conectado'}
+                          {!connected.isActive && <span className="text-amber-500">(pendiente HTTPS)</span>}
                         </p>
                       ) : (
                         <p className="text-xs text-gray-400 mt-0.5">No conectado</p>

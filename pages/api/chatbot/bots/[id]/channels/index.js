@@ -90,12 +90,17 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: `Token inválido: ${err.message}` })
       }
 
-      // Register webhook
+      // Register webhook (only possible over HTTPS — skipped on local HTTP dev)
       const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook/telegram/${bot.apiKey}`
-      try {
-        await setWebhook(botToken.trim(), webhookUrl)
-      } catch (err) {
-        return res.status(500).json({ error: `Error registrando webhook: ${err.message}` })
+      const isHttps    = webhookUrl.startsWith('https://')
+      let webhookRegistered = false
+      if (isHttps) {
+        try {
+          await setWebhook(botToken.trim(), webhookUrl)
+          webhookRegistered = true
+        } catch (err) {
+          return res.status(500).json({ error: `Error registrando webhook: ${err.message}` })
+        }
       }
 
       const cfg = await prisma.channelConfig.create({
@@ -104,11 +109,17 @@ export default async function handler(req, res) {
           chatbotId,
           channel:     'telegram',
           credentials: encryptJSON({ botToken: botToken.trim() }),
-          isActive:    true,
+          isActive:    isHttps,   // only active once webhook is registered (requires HTTPS)
           botUsername: botInfo.username,
         },
       })
-      return res.status(201).json({ channel: safeConfig(cfg), botInfo })
+      return res.status(201).json({
+        channel: safeConfig(cfg),
+        botInfo,
+        webhookRegistered,
+        webhookUrl,
+        warning: isHttps ? null : 'Token guardado. El webhook se registrará automáticamente al desplegar en producción (requiere HTTPS).',
+      })
     }
 
     // ── WhatsApp ────────────────────────────────────────────────────────────
@@ -150,6 +161,31 @@ export default async function handler(req, res) {
     }
   }
 
-  res.setHeader('Allow', ['GET', 'POST', 'DELETE'])
+  // ── PATCH — re-register webhook (called after HTTPS deploy) ─────────────
+  if (req.method === 'PATCH') {
+    const channel = req.query.channel
+    if (channel !== 'telegram') return res.status(400).json({ error: 'Solo soportado para Telegram' })
+
+    const cfg = await prisma.channelConfig.findUnique({
+      where: { chatbotId_channel: { chatbotId, channel } },
+    })
+    if (!cfg) return res.status(404).json({ error: 'Canal no conectado' })
+    if (cfg.isActive) return res.json({ ok: true, already: true })
+
+    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook/telegram/${bot.apiKey}`
+    if (!webhookUrl.startsWith('https://')) {
+      return res.status(400).json({ error: 'NEXT_PUBLIC_APP_URL debe ser HTTPS para registrar el webhook' })
+    }
+
+    const { botToken } = decryptJSON(cfg.credentials)
+    await setWebhook(botToken, webhookUrl)
+    await prisma.channelConfig.update({
+      where: { chatbotId_channel: { chatbotId, channel } },
+      data:  { isActive: true },
+    })
+    return res.json({ ok: true, webhookUrl })
+  }
+
+  res.setHeader('Allow', ['GET', 'POST', 'PATCH', 'DELETE'])
   return res.status(405).end()
 }
