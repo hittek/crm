@@ -11,5 +11,5 @@
 - [ ] **S03: Facebook Messenger** `risk:high` `depends:[S01]`
   > After this: Messenger webhook verification passes; test messages route through the RAG engine and reply on Messenger; page token stored encrypted per org
 
-- [ ] **S04: Human Agent Handoff** `risk:medium` `depends:[S01]`
-  > After this: chatbot can escalate mid-conversation to a human agent; agent sees full history in CRM conversation view and can reply directly; conversation status changes to "escalated"
+- [x] **S04: Human Agent Handoff** `risk:medium` `depends:[S01]`
+  > Shipped in M003: escalation trigger, `escalated` status, agent reply UI, ConversationEvent audit log, access control. Nothing left to build.

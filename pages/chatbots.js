@@ -137,9 +137,249 @@ function BotModal({ bot, kbs, onClose, onSave }) {
   )
 }
 
+// ── Channel management modal ─────────────────────────────────────────────────
+
+const CHANNEL_META = {
+  telegram:  { label: 'Telegram',          icon: Icons.send,        color: 'text-sky-500',    bg: 'bg-sky-50' },
+  whatsapp:  { label: 'WhatsApp',          icon: Icons.messageSquare, color: 'text-green-600', bg: 'bg-green-50' },
+  facebook:  { label: 'Facebook Messenger', icon: Icons.globe,       color: 'text-blue-600',   bg: 'bg-blue-50' },
+}
+
+function ChannelsModal({ bot, onClose }) {
+  const [channels, setChannels] = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [active, setActive]     = useState(null)   // which channel card is expanded for connect
+  const [form, setForm]         = useState({})
+  const [saving, setSaving]     = useState(false)
+  const [error, setError]       = useState(null)
+  const [copied, setCopied]     = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/chatbot/bots/${bot.id}/channels`)
+      .then(r => r.json())
+      .then(d => { setChannels(d.channels || []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [bot.id])
+
+  const connectedMap = Object.fromEntries(channels.map(c => [c.channel, c]))
+
+  async function connect(channel) {
+    setSaving(true); setError(null)
+    const body = { channel, ...form }
+    const r = await fetch(`/api/chatbot/bots/${bot.id}/channels`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    })
+    const data = await r.json()
+    if (!r.ok) { setError(data.error || 'Error conectando'); setSaving(false); return }
+    setChannels(prev => [...prev, data.channel])
+    setActive(null); setForm({})
+    setSaving(false)
+  }
+
+  async function disconnect(channel) {
+    if (!confirm(`¿Desconectar ${CHANNEL_META[channel].label}?`)) return
+    const r = await fetch(`/api/chatbot/bots/${bot.id}/channels?channel=${channel}`, { method: 'DELETE' })
+    if (r.ok) setChannels(prev => prev.filter(c => c.channel !== channel))
+  }
+
+  function copyWebhook(channel) {
+    const url = channel === 'telegram'
+      ? `${window.location.origin}/api/webhook/telegram/${bot.apiKey}`
+      : channel === 'whatsapp'
+      ? `${window.location.origin}/api/webhook/whatsapp`
+      : `${window.location.origin}/api/webhook/facebook`
+    navigator.clipboard.writeText(url)
+    setCopied(channel)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Canales — {bot.name}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Conecta los canales donde tus clientes te escriben</p>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"><Icons.close className="w-4 h-4" /></button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-6 py-4 space-y-3">
+          {loading ? (
+            <p className="text-sm text-gray-400 text-center py-6">Cargando…</p>
+          ) : (
+            Object.entries(CHANNEL_META).map(([key, meta]) => {
+              const connected = connectedMap[key]
+              const Icon      = meta.icon
+              const isOpen    = active === key
+
+              return (
+                <div key={key} className={`border rounded-xl transition-all ${connected ? 'border-green-200 bg-green-50/40' : 'border-gray-200'}`}>
+                  {/* Channel row */}
+                  <div className="flex items-center gap-3 p-4">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${meta.bg}`}>
+                      <Icon className={`w-4 h-4 ${meta.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">{meta.label}</p>
+                      {connected ? (
+                        <p className="text-xs text-green-600 flex items-center gap-1 mt-0.5">
+                          <Icons.check className="w-3 h-3" />
+                          {connected.botUsername ? `@${connected.botUsername}` : connected.phoneNumberId || connected.pageId || 'Conectado'}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-400 mt-0.5">No conectado</p>
+                      )}
+                    </div>
+                    {connected ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => copyWebhook(key)}
+                          className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center gap-1"
+                          title="Copiar URL del webhook"
+                        >
+                          {copied === key ? <Icons.check className="w-3 h-3 text-green-500" /> : <Icons.copy className="w-3 h-3" />}
+                          URL
+                        </button>
+                        <button
+                          onClick={() => disconnect(key)}
+                          className="px-2.5 py-1.5 text-xs rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          Desconectar
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setActive(isOpen ? null : key); setError(null); setForm({}) }}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+                      >
+                        Conectar
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Expand connect form */}
+                  {isOpen && !connected && (
+                    <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
+                      {error && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+
+                      {key === 'telegram' && (
+                        <>
+                          <div>
+                            <label className="text-xs font-medium text-gray-600 block mb-1">Token del bot</label>
+                            <input
+                              type="text" placeholder="123456789:ABCdef..."
+                              value={form.botToken || ''} onChange={e => setForm(f => ({ ...f, botToken: e.target.value }))}
+                              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300 font-mono"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">Obtén el token de <span className="font-medium">@BotFather</span> en Telegram</p>
+                          </div>
+                        </>
+                      )}
+
+                      {key === 'whatsapp' && (
+                        <>
+                          <div>
+                            <label className="text-xs font-medium text-gray-600 block mb-1">Phone Number ID</label>
+                            <input
+                              type="text" placeholder="123456789012345"
+                              value={form.phoneNumberId || ''} onChange={e => setForm(f => ({ ...f, phoneNumberId: e.target.value }))}
+                              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-600 block mb-1">Access Token</label>
+                            <input
+                              type="password" placeholder="EAAxxxxxxxxxx..."
+                              value={form.accessToken || ''} onChange={e => setForm(f => ({ ...f, accessToken: e.target.value }))}
+                              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-600 block mb-1">Verify Token <span className="text-gray-400 font-normal">(elige uno, lo mismo que en Meta Dashboard)</span></label>
+                            <input
+                              type="text" placeholder="mi_token_secreto"
+                              value={form.verifyToken || ''} onChange={e => setForm(f => ({ ...f, verifyToken: e.target.value }))}
+                              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+                            />
+                          </div>
+                          <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
+                            <p className="font-medium mb-1">URL del webhook para Meta Dashboard:</p>
+                            <code className="break-all">{typeof window !== 'undefined' ? window.location.origin : ''}/api/webhook/whatsapp</code>
+                          </div>
+                        </>
+                      )}
+
+                      {key === 'facebook' && (
+                        <>
+                          <div>
+                            <label className="text-xs font-medium text-gray-600 block mb-1">Page ID</label>
+                            <input
+                              type="text" placeholder="123456789012345"
+                              value={form.pageId || ''} onChange={e => setForm(f => ({ ...f, pageId: e.target.value }))}
+                              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-600 block mb-1">Page Access Token</label>
+                            <input
+                              type="password" placeholder="EAAxxxxxxxxxx..."
+                              value={form.pageAccessToken || ''} onChange={e => setForm(f => ({ ...f, pageAccessToken: e.target.value }))}
+                              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-600 block mb-1">Verify Token</label>
+                            <input
+                              type="text" placeholder="mi_token_secreto"
+                              value={form.verifyToken || ''} onChange={e => setForm(f => ({ ...f, verifyToken: e.target.value }))}
+                              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-600 block mb-1">App Secret <span className="text-gray-400 font-normal">(para validar firmas, opcional)</span></label>
+                            <input
+                              type="password" placeholder="abc123..."
+                              value={form.appSecret || ''} onChange={e => setForm(f => ({ ...f, appSecret: e.target.value }))}
+                              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+                            />
+                          </div>
+                          <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
+                            <p className="font-medium mb-1">URL del webhook para Meta Dashboard:</p>
+                            <code className="break-all">{typeof window !== 'undefined' ? window.location.origin : ''}/api/webhook/facebook</code>
+                          </div>
+                        </>
+                      )}
+
+                      <div className="flex gap-2 pt-1">
+                        <button onClick={() => { setActive(null); setForm({}) }} className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 hover:bg-gray-50">
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={() => connect(key)}
+                          disabled={saving}
+                          className="flex-1 px-3 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40"
+                        >
+                          {saving ? 'Conectando…' : 'Guardar y conectar'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Bot card ──────────────────────────────────────────────────────────────────
 
-function BotCard({ bot, onEdit, onDelete, onTest, isTesting }) {
+function BotCard({ bot, onEdit, onDelete, onTest, onChannels, isTesting }) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-3">
@@ -159,6 +399,9 @@ function BotCard({ bot, onEdit, onDelete, onTest, isTesting }) {
           <button onClick={() => onTest(bot)} title="Probar chatbot"
             className={`p-1.5 rounded-lg transition-colors ${isTesting ? 'bg-primary-100 text-primary-600' : 'hover:bg-gray-100 text-gray-400'}`}>
             <Icons.send className="w-4 h-4" />
+          </button>
+          <button onClick={() => onChannels(bot)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors" title="Canales">
+            <Icons.globe className="w-4 h-4" />
           </button>
           <button onClick={() => onEdit(bot)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors" title="Editar">
             <Icons.edit className="w-4 h-4" />
@@ -200,9 +443,10 @@ export default function ChatbotsPage() {
   const [bots, setBots]         = useState([])
   const [kbs, setKbs]           = useState([])
   const [loading, setLoading]   = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [editBot, setEditBot]   = useState(null)
-  const [testingBot, setTestingBot] = useState(null)   // bot currently in sandbox
+  const [showModal, setShowModal]     = useState(false)
+  const [editBot, setEditBot]         = useState(null)
+  const [testingBot, setTestingBot]   = useState(null)   // bot currently in sandbox
+  const [channelsBot, setChannelsBot] = useState(null)   // bot with channels modal open
 
   const fetchBots = useCallback(async () => {
     const [rb, rk] = await Promise.all([
@@ -233,6 +477,10 @@ export default function ChatbotsPage() {
 
   function handleTest(bot) {
     setTestingBot(prev => prev?.id === bot.id ? null : bot)
+  }
+
+  function handleChannels(bot) {
+    setChannelsBot(bot)
   }
 
   if (authLoading) return <PageLoader />
@@ -304,6 +552,7 @@ export default function ChatbotsPage() {
                     onTest={handleTest}
                     onEdit={b => { setEditBot(b); setShowModal(true) }}
                     onDelete={handleDelete}
+                    onChannels={handleChannels}
                   />
                 ))}
               </div>
@@ -354,6 +603,13 @@ export default function ChatbotsPage() {
           kbs={kbs}
           onClose={() => { setShowModal(false); setEditBot(null) }}
           onSave={handleSave}
+        />
+      )}
+
+      {channelsBot && (
+        <ChannelsModal
+          bot={channelsBot}
+          onClose={() => setChannelsBot(null)}
         />
       )}
     </>

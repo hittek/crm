@@ -46,6 +46,7 @@ model Organization {
   notifications Notification[]
   knowledgeBases KnowledgeBase[]
   chatbots      Chatbot[]
+  channelConfigs ChannelConfig[]
 }
 
 // Contact model - the core entity in a contacts-first CRM
@@ -351,6 +352,7 @@ model Chatbot {
   updatedAt        DateTime  @updatedAt
 
   conversations    Conversation[]
+  channelConfigs   ChannelConfig[]
 
   @@index([orgId])
   @@index([kbId])
@@ -437,4 +439,26 @@ model Notification {
   @@index([userId, isRead])
   @@index([organizationId])
   @@index([createdAt])
+}
+
+model ChannelConfig {
+  id            Int       @id @default(autoincrement())
+  orgId         Int
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  chatbotId     Int
+  chatbot       Chatbot   @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
+  channel       String    // telegram | whatsapp | facebook
+  credentials   String    // AES-256-GCM encrypted JSON — never returned to client raw
+  isActive      Boolean   @default(false)
+  // Channel-specific routing keys (plaintext — used for inbound webhook lookup)
+  botUsername   String?   // Telegram: @botname
+  phoneNumberId String?   // WhatsApp: WABA phone number ID
+  pageId        String?   // Facebook: page ID
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([chatbotId, channel])
+  @@index([orgId])
+  @@index([phoneNumberId])
+  @@index([pageId])
 }
