@@ -30,7 +30,7 @@ export default function NotificationBell() {
   const [isLoading, setIsLoading] = useState(false)
   const dropdownRef = useRef(null)
   const buttonRef = useRef(null)
-  const prevNotifsRef = useRef([])
+  const seenIdsRef = useRef(new Set())
 
   // Request browser notification permission once on mount
   useEffect(() => {
@@ -55,36 +55,66 @@ export default function NotificationBell() {
     } catch (_) {}
   }
 
-  // Fetch notifications
+  // Initial load: fetch existing notifications + unread count via REST
   const fetchNotifications = useCallback(async () => {
     try {
       const res = await fetch('/api/notifications?limit=10')
       if (res.ok) {
         const data = await res.json()
-        const newNotifs = data.data || []
-        const newUnread = data.unreadCount || 0
-
-        // Fire browser notification for entries that are new since last poll
-        const prevIds = new Set(prevNotifsRef.current.map(n => n.id))
-        const fresh   = newNotifs.filter(n => !n.isRead && !prevIds.has(n.id))
-        fresh.forEach(fireBrowserNotif)
-
-        prevNotifsRef.current = newNotifs
-        setNotifications(newNotifs)
-        setUnreadCount(newUnread)
+        const notifs = data.data || []
+        notifs.forEach(n => seenIdsRef.current.add(n.id))
+        setNotifications(notifs)
+        setUnreadCount(data.unreadCount || 0)
       }
-    } catch (error) {
-      console.error('Error fetching notifications:', error)
+    } catch (err) {
+      console.error('Error fetching notifications:', err)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Initial fetch + poll every 15s (fast enough for chat escalations)
+  // SSE stream — real-time push for new notifications
+  // Falls back gracefully if EventSource unavailable (SSR, old browsers)
   useEffect(() => {
     fetchNotifications()
-    const interval = setInterval(fetchNotifications, 15000)
-    return () => clearInterval(interval)
-  }, [fetchNotifications])
+
+    if (typeof window === 'undefined' || !window.EventSource) return
+
+    let es
+    let reconnectTimer
+
+    function connect() {
+      es = new EventSource('/api/notifications/stream')
+
+      es.addEventListener('notification', (e) => {
+        try {
+          const notif = JSON.parse(e.data)
+          if (seenIdsRef.current.has(notif.id)) return
+          seenIdsRef.current.add(notif.id)
+
+          // Append to list + bump unread badge
+          setNotifications(prev => [notif, ...prev].slice(0, 10))
+          if (!notif.isRead) setUnreadCount(prev => prev + 1)
+
+          // OS-level notification
+          fireBrowserNotif(notif)
+        } catch (_) {}
+      })
+
+      es.onerror = () => {
+        es.close()
+        // Auto-reconnect after 5s (handles Vercel 55s timeout gracefully)
+        reconnectTimer = setTimeout(connect, 5000)
+      }
+    }
+
+    connect()
+
+    return () => {
+      clearTimeout(reconnectTimer)
+      if (es) es.close()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Close dropdown when clicking outside
   useEffect(() => {

@@ -7,6 +7,7 @@ import { getSession } from '../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse } from '../../../../lib/planLimits'
 import { hasMinRole } from '../../../../lib/auth'
 import { sendMessage as sendTelegram } from '../../../../lib/channels/telegram'
+import { decryptJSON } from '../../../../lib/crypto'
 
 async function getConv(id, orgId) {
   return prisma.conversation.findFirst({ where: { id, orgId } })
@@ -29,17 +30,15 @@ async function forwardToChannel(conv, content) {
     })
     if (!channelConfig) return
 
-    const creds    = typeof channelConfig.credentials === 'string'
-      ? JSON.parse(channelConfig.credentials)
-      : channelConfig.credentials
+    const creds    = decryptJSON(channelConfig.credentials)
     const metadata = typeof conv.metadata === 'string'
       ? JSON.parse(conv.metadata)
       : (conv.metadata || {})
 
     if (conv.channel === 'telegram') {
       const chatId = metadata.telegramChatId || metadata.fromId
-      if (!chatId || !creds?.token) return
-      await sendTelegram(creds.token, chatId, content)
+      if (!chatId || !creds?.botToken) return
+      await sendTelegram(creds.botToken, chatId, content)
     }
 
     // WhatsApp / Facebook placeholders — implement when those channels are wired
