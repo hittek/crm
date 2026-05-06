@@ -153,13 +153,32 @@ ${contextText}`
 
   const emit = data => res.write(`data: ${JSON.stringify(data)}\n\n`)
 
+  // Load conversation history (last 6 turns) so the AI can follow the thread
+  let historyMessages = []
+  if (conversationId) {
+    const rows = await prisma.conversationMessage.findMany({
+      where:   { conversationId, role: { in: ['user', 'assistant'] } },
+      orderBy: { createdAt: 'desc' },
+      take:    12,  // 6 turns × 2 roles
+    })
+    rows.reverse()
+    // Drop the last entry — it's the user message we just saved
+    historyMessages = rows.slice(0, -1).map(m => ({
+      role:    m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.content,
+    }))
+  }
+
   let fullReply = ''
   try {
     const stream = getAnthropic().messages.stream({
       model:      MODEL,
       max_tokens: MAX_TOKENS,
       system:     systemPrompt,
-      messages:   [{ role: 'user', content: message.trim() }],
+      messages:   [
+        ...historyMessages,
+        { role: 'user', content: message.trim() },
+      ],
     })
 
     let firstFrame = true

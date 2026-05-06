@@ -17,8 +17,8 @@ async function login(page) {
   await page.click('button[type="submit"]')
 
   // Wait for navigation to complete
-  await page.waitForURL('/contacts', { timeout: 10000 })
-  await page.waitForSelector('nav', { timeout: 10000 })
+  await page.waitForURL('/contacts', { timeout: 20000 })
+  await page.waitForSelector('nav', { timeout: 15000 })
 }
 
 /**

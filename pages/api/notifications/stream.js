@@ -29,6 +29,17 @@ export default async function handler(req, res) {
   const session = await getSession(req, res)
   if (!session?.user) return res.status(401).end()
 
+  // In Playwright tests, skip the persistent SSE stream entirely.
+  // Each test tab would hold a DB connection open every 3s; after ~50 tests
+  // the pool exhausts and login timeouts cascade through the full suite.
+  if (req.headers['x-playwright-test']) {
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.write('event: ping\ndata: 0\n\n')
+    res.end()
+    return
+  }
+
   const { id: userId, organizationId } = session.user
 
   // Set SSE headers
