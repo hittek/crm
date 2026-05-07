@@ -1,14 +1,14 @@
-import { getIronSession } from 'iron-session'
-import { sessionOptions } from '../../../lib/session'
-import { getPrisma } from '../../../lib/prisma'
-import { checkOrgAccess } from '../../../lib/orgAccess'
+
+import { getSession } from '../../../lib/auth'
+import prisma from '../../../lib/prisma'
+import { checkOrgAccess } from '../../../lib/planLimits'
 
 export default async function handler(req, res) {
-  const session = await getIronSession(req, res, sessionOptions)
+  const session = await getSession(req, res)
   if (!session.user) return res.status(401).json({ error: 'No autenticado' })
 
-  const prisma = getPrisma()
-  const { orgId, role } = session.user
+  
+  const { organizationId: orgId, role } = session.user
   const id = parseInt(req.query.id)
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' })
 
