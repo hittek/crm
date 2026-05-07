@@ -3,6 +3,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Icons from '../components/ui/Icons'
 import { useAuth } from '../lib/AuthContext'
+import { useDealStages } from '../lib/SettingsContext'
 import { PageLoader } from '../components/ui/Spinner'
 import ChatPanel, { ChatPanelInline } from '../components/chatbot/ChatPanel'
 
@@ -21,7 +22,7 @@ function StatusBadge({ status }) {
 
 // ── Create/Edit modal ─────────────────────────────────────────────────────────
 
-function BotModal({ bot, kbs, onClose, onSave }) {
+function BotModal({ bot, kbs, dealStages, onClose, onSave }) {
   const [form, setForm] = useState({
     name:             bot?.name             || '',
     kbId:             bot?.kbId             || (kbs[0]?.id || ''),
@@ -176,10 +177,13 @@ function BotModal({ bot, kbs, onClose, onSave }) {
                         value={form.defaultDealStage} onChange={e => set('defaultDealStage', e.target.value)}
                         className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-300"
                       >
-                        <option value="">Lead (predeterminado)</option>
-                        <option value="qualified">Calificado</option>
-                        <option value="proposal">Propuesta</option>
-                        <option value="negotiation">Negociación</option>
+                        <option value="">— primera etapa —</option>
+                        {dealStages
+                          .filter(s => s.id !== 'won' && s.id !== 'lost')
+                          .map(s => (
+                            <option key={s.id} value={s.id}>{s.label}</option>
+                          ))
+                        }
                       </select>
                     </div>
                     <div>
@@ -558,6 +562,7 @@ function BotCard({ bot, onEdit, onDelete, onTest, onChannels, isTesting }) {
 export default function ChatbotsPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
+  const dealStages = useDealStages()
   const [bots, setBots]         = useState([])
   const [kbs, setKbs]           = useState([])
   const [loading, setLoading]   = useState(true)
@@ -719,6 +724,7 @@ export default function ChatbotsPage() {
         <BotModal
           bot={editBot}
           kbs={kbs}
+          dealStages={dealStages}
           onClose={() => { setShowModal(false); setEditBot(null) }}
           onSave={handleSave}
         />
