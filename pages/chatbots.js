@@ -28,9 +28,20 @@ function BotModal({ bot, kbs, onClose, onSave }) {
     greeting:         bot?.greeting         || 'Hola, ¿en qué puedo ayudarte?',
     escalationPhrase: bot?.escalationPhrase || '',
     primaryColor:     bot?.primaryColor     || '#2563eb',
+    // CRM automation
+    autoCreateContact: bot?.autoCreateContact ?? false,
+    autoCreateDeal:    bot?.autoCreateDeal    ?? false,
+    defaultDealStage:  bot?.defaultDealStage  || '',
+    dealTitleTemplate: bot?.dealTitleTemplate || '',
+    // Tool-use capabilities (comma-separated tool names)
+    enabledTools:      bot?.enabledTools      || '',
   })
-  const [saving, setSaving] = useState(false)
-  const [error, setError]   = useState(null)
+  const [saving, setSaving]             = useState(false)
+  const [error, setError]               = useState(null)
+  const [showAutomation, setShowAuto]   = useState(
+    // Auto-expand if any automation field is already set
+    !!(bot?.autoCreateContact || bot?.autoCreateDeal || bot?.enabledTools)
+  )
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -121,6 +132,111 @@ function BotModal({ bot, kbs, onClose, onSave }) {
                 <span className="text-sm text-gray-500 font-mono">{form.primaryColor}</span>
               </div>
             </div>
+          </div>
+
+          {/* ── Automation & CRM ──────────────────────────────────────────── */}
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowAuto(v => !v)}
+              className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+            >
+              <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Automatización CRM</span>
+              <Icons.chevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showAutomation ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showAutomation && (
+              <div className="px-3 py-3 space-y-3 border-t border-gray-100">
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox" checked={form.autoCreateContact}
+                    onChange={e => set('autoCreateContact', e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-primary-600"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Crear contacto automáticamente</span>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Crea un nuevo contacto en el CRM cuando un usuario nuevo inicia conversación (WhatsApp: usa el número de teléfono).
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox" checked={form.autoCreateDeal}
+                    onChange={e => set('autoCreateDeal', e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-primary-600"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Abrir oportunidad automáticamente</span>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Crea un nuevo trato en el pipeline cuando un contacto inicia conversación y no tiene un trato abierto.
+                    </p>
+                  </div>
+                </label>
+
+                {form.autoCreateDeal && (
+                  <div className="pl-6 space-y-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Etapa inicial</label>
+                      <select
+                        value={form.defaultDealStage} onChange={e => set('defaultDealStage', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-300"
+                      >
+                        <option value="">lead (predeterminado)</option>
+                        <option value="lead">Lead</option>
+                        <option value="qualified">Calificado</option>
+                        <option value="proposal">Propuesta</option>
+                        <option value="negotiation">Negociación</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Título del trato</label>
+                      <input
+                        type="text" value={form.dealTitleTemplate}
+                        onChange={e => set('dealTitleTemplate', e.target.value)}
+                        placeholder="Consulta vía {channel}"
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+                      />
+                      <p className="text-xs text-gray-400 mt-0.5">Usa {'{channel}'} para el canal (whatsapp, telegram…)</p>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Herramientas Claude habilitadas <span className="text-gray-400 font-normal">(tool use)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['create_contact', 'create_quote'].map(tool => {
+                      const enabled = (form.enabledTools || '').split(',').map(t => t.trim()).includes(tool)
+                      return (
+                        <button
+                          key={tool} type="button"
+                          onClick={() => {
+                            const current = (form.enabledTools || '').split(',').map(t => t.trim()).filter(Boolean)
+                            const next = enabled ? current.filter(t => t !== tool) : [...current, tool]
+                            set('enabledTools', next.join(','))
+                          }}
+                          className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                            enabled
+                              ? 'bg-primary-50 border-primary-300 text-primary-700 font-medium'
+                              : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                          }`}
+                        >
+                          {tool}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Permite que Claude llame funciones del CRM durante la conversación.
+                  </p>
+                </div>
+
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

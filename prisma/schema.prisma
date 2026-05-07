@@ -90,6 +90,7 @@ model Contact {
   tasks         Task[]
   activities    Activity[]
   conversations Conversation[]
+  quotes        Quote[]
 
   @@unique([email, organizationId]) // Email unique per organization
   @@index([organizationId])
@@ -126,6 +127,7 @@ model Deal {
   contact         Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
   tasks           Task[]
   activities      Activity[]
+  quotes          Quote[]
 
   @@index([organizationId])
 }
@@ -350,11 +352,25 @@ model Chatbot {
   primaryColor     String    @default("#2563eb")
   isActive         Boolean   @default(true)
   apiKey           String    @unique @default(cuid()) // used by widget + channel webhooks
+
+  // ── CRM automation ───────────────────────────────────────────────────────
+  // When enabled, a new Contact is auto-created if none is found for the session.
+  autoCreateContact  Boolean  @default(false)
+  // When enabled, a new Deal is opened the first time a (new) contact engages.
+  autoCreateDeal     Boolean  @default(false)
+  defaultDealStage   String?  // stage slug, defaults to 'lead'
+  dealTitleTemplate  String?  // e.g. "Consulta vía WhatsApp" — {channel} interpolated
+
+  // ── Claude tool-use capabilities ─────────────────────────────────────────
+  // Comma-separated list of enabled tool names, e.g. "create_quote,create_contact"
+  enabledTools       String?
+
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
   conversations    Conversation[]
   channelConfigs   ChannelConfig[]
+  quotes           Quote[]
 
   @@index([orgId])
   @@index([kbId])
@@ -380,6 +396,7 @@ model Conversation {
 
   messages     ConversationMessage[]
   events       ConversationEvent[]
+  quotes       Quote[]
 
   @@index([chatbotId])
   @@index([orgId])
@@ -465,4 +482,45 @@ model ChannelConfig {
   @@index([orgId])
   @@index([phoneNumberId])
   @@index([pageId])
+}
+
+// ── Quotes ────────────────────────────────────────────────────────────────────
+// Quotes are created by agents manually or by the chatbot via Claude tool-use.
+// Items are stored as JSON: [{description, qty, unitPrice, total}]
+// The number field uses an org-scoped sequential format: Q-{year}-{seq}
+model Quote {
+  id             Int       @id @default(autoincrement())
+  orgId          Int
+  number         String    // e.g. "Q-2024-001"
+  status         String    @default("draft") // draft | sent | accepted | rejected | expired
+
+  // Optional CRM associations
+  contactId      Int?
+  contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  dealId         Int?
+  deal           Deal?         @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  // Origin — which conversation/chatbot generated this (may be null for manual quotes)
+  conversationId Int?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  chatbotId      Int?
+  chatbot        Chatbot?      @relation(fields: [chatbotId], references: [id], onDelete: SetNull)
+
+  // Line items (JSON array) + totals
+  items          String    // JSON: [{description: string, qty: number, unitPrice: number, total: number}]
+  subtotal       Float     @default(0)
+  taxRate        Float     @default(0)    // e.g. 0.16 for 16% IVA
+  tax            Float     @default(0)
+  total          Float     @default(0)
+  currency       String    @default("MXN")
+  notes          String?
+  validUntil     DateTime?
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([orgId])
+  @@index([contactId])
+  @@index([dealId])
+  @@index([conversationId])
 }

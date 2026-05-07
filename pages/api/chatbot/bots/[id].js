@@ -30,7 +30,13 @@ export default async function handler(req, res) {
 
   // ── PATCH ────────────────────────────────────────────────────────────────
   if (req.method === 'PATCH') {
-    const { name, kbId, greeting, escalationPhrase, primaryColor, isActive } = req.body
+    const {
+      name, kbId, greeting, escalationPhrase, primaryColor, isActive,
+      // CRM automation
+      autoCreateContact, autoCreateDeal, defaultDealStage, dealTitleTemplate,
+      // Tool-use capabilities
+      enabledTools,
+    } = req.body
 
     const data = {}
     if (name !== undefined)             data.name             = name.trim()
@@ -38,6 +44,11 @@ export default async function handler(req, res) {
     if (escalationPhrase !== undefined) data.escalationPhrase = escalationPhrase?.trim() || null
     if (primaryColor !== undefined)     data.primaryColor     = primaryColor
     if (isActive !== undefined)         data.isActive         = Boolean(isActive)
+    if (autoCreateContact !== undefined) data.autoCreateContact = Boolean(autoCreateContact)
+    if (autoCreateDeal !== undefined)    data.autoCreateDeal    = Boolean(autoCreateDeal)
+    if (defaultDealStage !== undefined)  data.defaultDealStage  = defaultDealStage?.trim() || null
+    if (dealTitleTemplate !== undefined) data.dealTitleTemplate = dealTitleTemplate?.trim() || null
+    if (enabledTools !== undefined)      data.enabledTools      = enabledTools?.trim() || null
     if (kbId !== undefined) {
       const kb = await prisma.knowledgeBase.findFirst({ where: { id: parseInt(kbId), orgId: organizationId } })
       if (!kb) return res.status(404).json({ error: 'Base de conocimiento no encontrada' })
