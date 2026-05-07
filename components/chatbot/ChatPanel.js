@@ -23,6 +23,7 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
   const [input, setInput]         = useState('')
   const [loading, setLoading]     = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [resolved, setResolved]   = useState(false)
   const sessionId                 = useRef(uuid()) // stable per mount
   const bottomRef                 = useRef(null)
   const inputRef                  = useRef(null)
@@ -87,6 +88,10 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
 
           if (parsed.error) throw new Error(parsed.error)
 
+          if (parsed.resolved) {
+            setResolved(true)
+          }
+
           if (parsed.delta) {
             setMessages(prev => {
               const next = [...prev]
@@ -110,12 +115,16 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
         return next
       })
     } finally {
-      // Mark assistant message as done (remove loading indicator)
+      // Mark assistant message as done — also strip any stray [RESOLVED] marker from content
       setMessages(prev => {
         const next = [...prev]
         const last = next[next.length - 1]
         if (last?.role === 'assistant') {
-          next[next.length - 1] = { ...last, loading: false }
+          next[next.length - 1] = {
+            ...last,
+            content: last.content.replace(/\n?\[RESOLVED\]\s*$/, '').trim(),
+            loading: false,
+          }
         }
         return next
       })
@@ -127,6 +136,8 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
   function clearChat() {
     setMessages(EMPTY_MESSAGES)
     setInput('')
+    setResolved(false)
+    sessionId.current = uuid() // new session so next message doesn't resume the resolved conv
     inputRef.current?.focus()
   }
 
@@ -153,6 +164,11 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
             <Icons.bot className="w-4 h-4 text-primary-500" />
             <span className="text-sm font-medium text-gray-700">Sandbox del chatbot</span>
             <span className="text-xs text-gray-400 hidden sm:inline">— {kb.name}</span>
+            {resolved && (
+              <span className="text-xs font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
+                Resuelta
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {hasMessages && !collapsed && (

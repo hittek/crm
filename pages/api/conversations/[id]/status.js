@@ -8,6 +8,7 @@
 import prisma from '../../../../lib/prisma'
 import { getSession } from '../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse } from '../../../../lib/planLimits'
+import { summarizeConversation } from '../../../../lib/summarize'
 
 const VALID_STATUSES = ['open', 'resolved', 'escalated']
 
@@ -50,6 +51,14 @@ export default async function handler(req, res) {
         }),
       ] : []),
     ])
+
+    // Generate AI summary async when agent manually resolves
+    if (status === 'resolved') {
+      summarizeConversation(convId).catch(err =>
+        console.error('[status] summarize failed:', err.message)
+      )
+    }
+
     return res.json({ conversation: updated })
   }
 

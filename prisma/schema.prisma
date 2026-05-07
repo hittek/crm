@@ -71,6 +71,7 @@ model Contact {
   status      String    @default("active") // active, inactive, lead, prospect
   tags        String?   // comma-separated tags
   notes       String?
+  aiSummary   String?   // AI-generated customer context from chat conversations
   avatar      String?
   isPrivate   Boolean   @default(false)
   visibility  String    @default("org") // org = visible to all, private = only owner/assigned users
@@ -85,9 +86,10 @@ model Contact {
   updatedBy   String?
 
   // Relations
-  deals       Deal[]
-  tasks       Task[]
-  activities  Activity[]
+  deals         Deal[]
+  tasks         Task[]
+  activities    Activity[]
+  conversations Conversation[]
 
   @@unique([email, organizationId]) // Email unique per organization
   @@index([organizationId])
@@ -367,6 +369,8 @@ model Conversation {
   channel      String    @default("web") // web | sandbox | whatsapp | facebook
   status       String    @default("open") // open | resolved | escalated
   contactId    Int?      // nullable — linked CRM contact
+  contact      Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  summary      String?   // AI-generated summary produced when conversation resolves
   metadata     String?   // JSON (IP, user-agent, etc.)
   // Denormalized current assignee — updated on every pickup / forward
   assignedToId Int?

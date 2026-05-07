@@ -15,6 +15,7 @@
  * SSE frames:
  *   data: {"delta":"..."}              — streamed tokens
  *   data: {"conversationId":N,...}     — first frame when chatbotId provided
+ *   data: {"resolved":true}            — emitted when AI auto-resolves (before DONE)
  *   data: [DONE]
  *   data: {"error":"..."}
  */
@@ -26,6 +27,8 @@ import { checkOrgAccess, orgAccessResponse } from '../../../../lib/planLimits'
 import { searchChunks } from '../../../../lib/rag'
 import { notifications } from '../../../../lib/notifications'
 import { shouldEscalate } from '../../../../lib/escalation'
+import { buildSystemPrompt } from '../../../../lib/channelEngine'
+import { summarizeConversation } from '../../../../lib/summarize'
 
 export const config = { api: { bodyParser: true } }
 
@@ -41,6 +44,28 @@ function getAnthropic() {
     _anthropic = new Anthropic({ apiKey: key })
   }
   return _anthropic
+}
+
+// ── Cross-session memory: last resolved conversation for this session ─────────
+async function loadPrevSessionContext(chatbotId, sessionId) {
+  const prev = await prisma.conversation.findFirst({
+    where:   { chatbotId, sessionId, channel: 'sandbox', status: 'resolved' },
+    orderBy: { updatedAt: 'desc' },
+    include: {
+      messages: {
+        where:   { role: { in: ['user', 'assistant'] } },
+        orderBy: { createdAt: 'desc' },
+        take:    8,
+      },
+    },
+  })
+  if (!prev) return null
+  if (prev.summary) return prev.summary
+  if (!prev.messages.length) return null
+  prev.messages.reverse()
+  return prev.messages
+    .map(m => `${m.role === 'user' ? 'Cliente' : 'Soporte'}: ${m.content.slice(0, 200)}`)
+    .join('\n')
 }
 
 export default async function handler(req, res) {
@@ -79,15 +104,20 @@ export default async function handler(req, res) {
 
   // Optional: find or create conversation for persistence
   let conversationId = null
+  let prevSummary    = null
   if (chatbot && sessionId) {
     let conv = await prisma.conversation.findFirst({
-      where: { chatbotId: chatbot.id, sessionId, status: { in: ['open', 'escalated'] } },
-      select: { id: true, assignedToId: true },
+      where:   { chatbotId: chatbot.id, sessionId, status: { in: ['open', 'escalated'] } },
+      include: { contact: { select: { aiSummary: true, firstName: true, lastName: true } } },
     })
+
     if (!conv) {
+      // Load cross-session memory before creating the new conversation
+      prevSummary = await loadPrevSessionContext(chatbot.id, sessionId)
+
       conv = await prisma.conversation.create({
-        data: { chatbotId: chatbot.id, orgId: organizationId, sessionId, channel: 'sandbox' },
-        select: { id: true, assignedToId: true },
+        data:    { chatbotId: chatbot.id, orgId: organizationId, sessionId, channel: 'sandbox' },
+        include: { contact: { select: { aiSummary: true, firstName: true, lastName: true } } },
       })
     }
     conversationId = conv.id
@@ -103,7 +133,6 @@ export default async function handler(req, res) {
     // Check escalation before AI
     if (chatbot.escalationPhrase && await shouldEscalate(message, chatbot.escalationPhrase)) {
       const escalationReply = 'Un agente se comunicará contigo en breve.'
-      // Persist both messages so agents can see the full thread
       await prisma.conversationMessage.createMany({
         data: [
           { conversationId, role: 'user',      content: message.trim() },
@@ -111,7 +140,6 @@ export default async function handler(req, res) {
         ],
       })
       await prisma.conversation.update({ where: { id: conversationId }, data: { status: 'escalated' } })
-      // Notify all admins/managers (fire-and-forget)
       notifications.chatEscalated({ id: conversationId }, chatbot, organizationId).catch(err =>
         console.error('[chat] chatEscalated notification failed:', err.message)
       )
@@ -137,14 +165,12 @@ export default async function handler(req, res) {
     ? chunks.map((c, i) => `[${i + 1}] ${c.content}`).join('\n\n')
     : '(No se encontró contexto relevante en la base de conocimiento)'
 
-  const botName = chatbot?.name || kb.name
-  const systemPrompt = `Eres ${botName}, un asistente de soporte.
-Responde usando únicamente el siguiente contexto. Si la respuesta no está en el contexto, dilo claramente.
-Sé conciso y directo. Responde en el mismo idioma que el usuario.
-No uses formato markdown: sin asteriscos, sin almohadillas, sin guiones como viñetas. Solo texto plano con saltos de línea cuando sea necesario.
-
-CONTEXTO:
-${contextText}`
+  // Build system prompt via shared helper (includes cross-session + auto-resolve instruction)
+  const systemPrompt = buildSystemPrompt(
+    chatbot ?? { name: kb.name },
+    contextText,
+    { prevSummary },
+  )
 
   res.setHeader('Content-Type',  'text/event-stream; charset=utf-8')
   res.setHeader('Cache-Control', 'no-cache')
@@ -195,20 +221,50 @@ ${contextText}`
       }
     }
 
-    res.write('data: [DONE]\n\n')
-    res.end()
-
   } catch (err) {
     console.error('[chat] Anthropic error:', err.message)
     emit({ error: 'Error generando respuesta. Intenta de nuevo.' })
+    res.write('data: [DONE]\n\n')
     res.end()
-    fullReply = ''
+    return
   }
 
-  // Persist assistant reply (fire-and-forget)
-  if (conversationId && fullReply) {
-    prisma.conversationMessage.create({
-      data: { conversationId, role: 'assistant', content: fullReply },
-    }).catch(() => {})
+  // ── Auto-resolve detection ────────────────────────────────────────────────
+  const autoResolved = fullReply.includes('[RESOLVED]')
+  // Strip the marker from the clean reply that gets persisted and sent to client
+  const cleanReply = fullReply.replace(/\n?\[RESOLVED\]\s*$/, '').trim()
+
+  // Emit resolved event BEFORE [DONE] so client can handle it
+  if (autoResolved && conversationId) {
+    emit({ resolved: true })
+  }
+
+  res.write('data: [DONE]\n\n')
+  res.end()
+
+  // ── Post-stream DB writes (fire-and-forget) ───────────────────────────────
+  if (conversationId && cleanReply) {
+    const ops = [
+      prisma.conversationMessage.create({
+        data: { conversationId, role: 'assistant', content: cleanReply },
+      }),
+    ]
+    if (autoResolved) {
+      ops.push(
+        prisma.conversation.update({
+          where: { id: conversationId },
+          data:  { status: 'resolved' },
+        }),
+      )
+    }
+    Promise.all(ops)
+      .then(() => {
+        if (autoResolved) {
+          summarizeConversation(conversationId).catch(err =>
+            console.error('[chat] summarize failed:', err.message)
+          )
+        }
+      })
+      .catch(err => console.error('[chat] post-stream DB write failed:', err.message))
   }
 }
