@@ -13,34 +13,9 @@
  */
 
 const { test, expect } = require('@playwright/test')
-const { login } = require('./helpers/login')
-const { testUser } = require('./test.config')
+const { login, resetLocale } = require('./helpers/login')
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-/**
- * Login + wait for nav — avoids networkidle (SSE stream keeps connection alive).
- */
-async function loginAndWait(page) {
-  await login(page)  // waits for /contacts + nav
-}
-
-/**
- * Reset locale without networkidle — SSE stream prevents it from resolving.
- */
-async function resetLocaleNoSSE(page, locale = 'es-MX') {
-  await page.evaluate(async (loc) => {
-    await fetch('/api/auth/profile', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locale: loc }),
-      credentials: 'include',
-    })
-    localStorage.setItem('crm_locale', loc)
-  }, locale)
-  await page.reload({ waitUntil: 'load' })
-  await page.waitForSelector('nav', { timeout: 15000 })
-}
 
 /**
  * Create (or reuse) a test chatbot via API.
@@ -64,7 +39,7 @@ test.describe('Chat escalation (API)', () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage()
-    await loginAndWait(page)
+    await login(page)
     ;({ chatbotId, kbId } = await getOrCreateChatbot(page))
   })
 
@@ -170,8 +145,8 @@ test.describe('Chat escalation (API)', () => {
 
 test.describe('Conversations page (UI)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAndWait(page)
-    await resetLocaleNoSSE(page)
+    await login(page)
+    await resetLocale(page)
   })
 
   test('conversations page loads and shows list', async ({ page }) => {
@@ -225,8 +200,8 @@ test.describe('Conversations page (UI)', () => {
 
 test.describe('Notification bell (UI)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAndWait(page)
-    await resetLocaleNoSSE(page)
+    await login(page)
+    await resetLocale(page)
   })
 
   test('bell button is visible in the layout', async ({ page }) => {
