@@ -36,12 +36,8 @@ function BotModal({ bot, kbs, onClose, onSave }) {
     // Tool-use capabilities (comma-separated tool names)
     enabledTools:      bot?.enabledTools      || '',
   })
-  const [saving, setSaving]             = useState(false)
-  const [error, setError]               = useState(null)
-  const [showAutomation, setShowAuto]   = useState(
-    // Auto-expand if any automation field is already set
-    !!(bot?.autoCreateContact || bot?.autoCreateDeal || bot?.enabledTools)
-  )
+  const [saving, setSaving]   = useState(false)
+  const [error, setError]     = useState(null)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -136,17 +132,12 @@ function BotModal({ bot, kbs, onClose, onSave }) {
 
           {/* ── Automation & CRM ──────────────────────────────────────────── */}
           <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowAuto(v => !v)}
-              className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-            >
+            <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100">
+              <Icons.settings className="w-3.5 h-3.5 text-gray-400" />
               <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Automatización CRM</span>
-              <Icons.chevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showAutomation ? 'rotate-180' : ''}`} />
-            </button>
+            </div>
 
-            {showAutomation && (
-              <div className="px-3 py-3 space-y-3 border-t border-gray-100">
+            <div className="px-3 py-3 space-y-3">
 
                 <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
@@ -235,8 +226,7 @@ function BotModal({ bot, kbs, onClose, onSave }) {
                   </p>
                 </div>
 
-              </div>
-            )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
