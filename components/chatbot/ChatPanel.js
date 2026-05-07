@@ -22,6 +22,7 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
   const [messages, setMessages]   = useState(EMPTY_MESSAGES)
   const [input, setInput]         = useState('')
   const [loading, setLoading]     = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const sessionId                 = useRef(uuid()) // stable per mount
   const bottomRef                 = useRef(null)
   const inputRef                  = useRef(null)
@@ -137,88 +138,102 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
     <div
       className={isInline
         ? 'flex flex-col h-full'
-        : 'mx-6 mb-6 flex flex-col border border-gray-200 rounded-xl overflow-hidden bg-white'
+        : 'mx-4 sm:mx-6 mb-4 sm:mb-6 flex flex-col border border-gray-200 rounded-xl overflow-hidden bg-white'
       }
-      style={isInline ? undefined : { height: '420px' }}
+      style={isInline ? undefined : (collapsed ? undefined : { height: '380px' })}
     >
       {/* Header — standalone only */}
       {!isInline && (
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+        <button
+          type="button"
+          onClick={() => setCollapsed(c => !c)}
+          className="flex items-center justify-between w-full px-4 py-2.5 border-b border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
           <div className="flex items-center gap-2">
             <Icons.bot className="w-4 h-4 text-primary-500" />
             <span className="text-sm font-medium text-gray-700">Sandbox del chatbot</span>
-            <span className="text-xs text-gray-400">— {kb.name}</span>
+            <span className="text-xs text-gray-400 hidden sm:inline">— {kb.name}</span>
           </div>
-          {hasMessages && (
-            <button
-              onClick={clearChat}
-              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-              title="Limpiar conversación"
-            >
-              Limpiar
-            </button>
-          )}
-        </div>
+          <div className="flex items-center gap-2">
+            {hasMessages && !collapsed && (
+              <span
+                role="button"
+                tabIndex={-1}
+                onClick={e => { e.stopPropagation(); clearChat() }}
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-1"
+                title="Limpiar conversación"
+              >
+                Limpiar
+              </span>
+            )}
+            <Icons.chevronDown
+              className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${collapsed ? '' : 'rotate-180'}`}
+            />
+          </div>
+        </button>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {!hasMessages && (
-          <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 gap-2">
-            <Icons.bot className="w-8 h-8 opacity-30" />
-            <p className="text-sm">Escribe una pregunta para probar el chatbot</p>
+      {/* Messages + Input — hidden when collapsed */}
+      {!collapsed && (
+        <>
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+            {!hasMessages && (
+              <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 gap-2">
+                <Icons.bot className="w-8 h-8 opacity-30" />
+                <p className="text-sm">Escribe una pregunta para probar el chatbot</p>
+              </div>
+            )}
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={[
+                    'max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-relaxed',
+                    msg.role === 'user'
+                      ? 'bg-primary-600 text-white rounded-br-sm'
+                      : msg.error
+                        ? 'bg-red-50 text-red-700 border border-red-200 rounded-bl-sm'
+                        : 'bg-gray-100 text-gray-800 rounded-bl-sm',
+                  ].join(' ')}
+                >
+                  {msg.content || (msg.loading ? <span className="inline-block w-4 animate-pulse">▋</span> : '')}
+                </div>
+              </div>
+            ))}
+            <div ref={bottomRef} />
           </div>
-        )}
-        {messages.map((msg, idx) => (
-          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div
-              className={[
-                'max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-relaxed',
-                msg.role === 'user'
-                  ? 'bg-primary-600 text-white rounded-br-sm'
-                  : msg.error
-                    ? 'bg-red-50 text-red-700 border border-red-200 rounded-bl-sm'
-                    : 'bg-gray-100 text-gray-800 rounded-bl-sm',
-              ].join(' ')}
-            >
-              {msg.content || (msg.loading ? <span className="inline-block w-4 animate-pulse">▋</span> : '')}
-            </div>
-          </div>
-        ))}
-        <div ref={bottomRef} />
-      </div>
 
-      {/* Input */}
-      <form onSubmit={sendMessage} className="flex items-center gap-2 px-3 py-2.5 border-t border-gray-100">
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="Escribe una pregunta…"
-          disabled={loading}
-          maxLength={2000}
-          className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:opacity-50 disabled:bg-gray-50"
-        />
-        {isInline && hasMessages && (
-          <button
-            type="button"
-            onClick={clearChat}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
-            title="Limpiar"
-          >
-            <Icons.refresh className="w-4 h-4" />
-          </button>
-        )}
-        <button
-          type="submit"
-          disabled={!canSend}
-          className="p-1.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          title="Enviar"
-        >
-          <Icons.send className="w-4 h-4" />
-        </button>
-      </form>
+          <form onSubmit={sendMessage} className="flex items-center gap-2 px-3 py-2.5 border-t border-gray-100">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="Escribe una pregunta…"
+              disabled={loading}
+              maxLength={2000}
+              className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:opacity-50 disabled:bg-gray-50"
+            />
+            {isInline && hasMessages && (
+              <button
+                type="button"
+                onClick={clearChat}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+                title="Limpiar"
+              >
+                <Icons.refresh className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={!canSend}
+              className="p-1.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title="Enviar"
+            >
+              <Icons.send className="w-4 h-4" />
+            </button>
+          </form>
+        </>
+      )}
     </div>
   )
 }
