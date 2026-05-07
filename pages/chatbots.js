@@ -176,8 +176,7 @@ function BotModal({ bot, kbs, onClose, onSave }) {
                         value={form.defaultDealStage} onChange={e => set('defaultDealStage', e.target.value)}
                         className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-300"
                       >
-                        <option value="">lead (predeterminado)</option>
-                        <option value="lead">Lead</option>
+                        <option value="">Lead (predeterminado)</option>
                         <option value="qualified">Calificado</option>
                         <option value="proposal">Propuesta</option>
                         <option value="negotiation">Negociación</option>
