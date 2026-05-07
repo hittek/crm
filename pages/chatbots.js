@@ -67,13 +67,14 @@ function BotModal({ bot, kbs, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-900">{bot ? 'Editar chatbot' : 'Nuevo chatbot'}</h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"><Icons.close className="w-4 h-4" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
           {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
           <div>
@@ -229,7 +230,9 @@ function BotModal({ bot, kbs, onClose, onSave }) {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          </div>{/* end scroll wrapper */}
+
+          <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100 shrink-0">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
               Cancelar
             </button>
