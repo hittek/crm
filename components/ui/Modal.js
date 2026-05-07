@@ -1,6 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import Icons from './Icons'
 
+/**
+ * Shared hook: close modal on Escape key.
+ * Usage: useModalClose(onClose)
+ * Add onClick={onClose} + stopPropagation on the inner panel for click-outside.
+ */
+export function useModalClose(onClose) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+}
+
 export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
   const modalRef = useRef(null)
 

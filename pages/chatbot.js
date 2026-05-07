@@ -4,6 +4,7 @@ import Icons from '../components/ui/Icons'
 import UpgradeWall from '../components/ui/UpgradeWall'
 import ChatPanel from '../components/chatbot/ChatPanel'
 import { useAuth } from '../lib/AuthContext'
+import { useModalClose } from '../components/ui/Modal'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -209,6 +210,7 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
   const [loading, setLoading] = useState(false)
   const [error, setError]   = useState('')
   const fileRef = useRef(null)
+  useModalClose(onClose)
 
   // PDF state
   const [pdfFile, setPdfFile]   = useState(null)
@@ -270,8 +272,8 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
           <h3 className="text-base font-semibold text-gray-900">Agregar fuente</h3>
@@ -398,6 +400,7 @@ function CreateKBModal({ onClose, onCreate }) {
   const [desc, setDesc]       = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
+  useModalClose(onClose)
 
   async function submit(e) {
     e.preventDefault()
@@ -419,8 +422,8 @@ function CreateKBModal({ onClose, onCreate }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
           <h3 className="text-base font-semibold text-gray-900">Nueva base de conocimiento</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">

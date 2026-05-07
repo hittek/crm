@@ -4,6 +4,7 @@ import Head from 'next/head'
 import Icons from '../components/ui/Icons'
 import { Spinner } from '../components/ui/Spinner'
 import { useAuth } from '../lib/AuthContext'
+import { useModalClose } from '../components/ui/Modal'
 import { FiCheck, FiArrowRight } from 'react-icons/fi'
 
 const COLOR_MAP = {
@@ -311,6 +312,7 @@ export default function SettingsPage() {
     setEditingUser(null)
     setUserForm({ name: '', email: '', password: '', role: 'user', isActive: true })
   }
+  useModalClose(() => { if (showUserModal) closeUserModal() })
 
   const saveUser = async () => {
     if (!userForm.name || !userForm.email) {
@@ -837,8 +839,8 @@ export default function SettingsPage() {
 
               {/* User Modal */}
               {showUserModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={closeUserModal}>
+                  <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
                     <div className="p-6 border-b border-gray-200">
                       <h3 className="text-lg font-semibold text-gray-900">
                         {editingUser ? 'Editar usuario' : 'Nuevo usuario'}

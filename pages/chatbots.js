@@ -5,6 +5,7 @@ import Icons from '../components/ui/Icons'
 import { useAuth } from '../lib/AuthContext'
 import { useDealStages } from '../lib/SettingsContext'
 import { PageLoader } from '../components/ui/Spinner'
+import { useModalClose } from '../components/ui/Modal'
 import ChatPanel, { ChatPanelInline } from '../components/chatbot/ChatPanel'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -39,6 +40,7 @@ function BotModal({ bot, kbs, dealStages, onClose, onSave }) {
   })
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState(null)
+  useModalClose(onClose)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -67,8 +69,8 @@ function BotModal({ bot, kbs, dealStages, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-900">{bot ? 'Editar chatbot' : 'Nuevo chatbot'}</h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"><Icons.close className="w-4 h-4" /></button>
@@ -264,6 +266,7 @@ function ChannelsModal({ bot, onClose }) {
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState(null)
   const [copied, setCopied]     = useState(false)
+  useModalClose(onClose)
 
   useEffect(() => {
     fetch(`/api/chatbot/bots/${bot.id}/channels`)
