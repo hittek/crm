@@ -29,7 +29,27 @@ Fix: wrap both messages + form in a single fragment `{!collapsed && (<>...</>)}`
 
 ---
 
-## Selling price formula (Product catalog)
+## API route boilerplate pattern
+
+All API routes follow this import pattern:
+
+```js
+import { getSession } from '../../../lib/auth'           // iron-session wrapper
+import prisma from '../../../lib/prisma'                  // default export, not getPrisma
+import { checkOrgAccess } from '../../../lib/planLimits' // not lib/orgAccess
+
+export default async function handler(req, res) {
+  const session = await getSession(req, res)
+  if (!session.user) return res.status(401).json({ error: 'No autenticado' })
+  const { organizationId: orgId, role } = session.user   // note: organizationId not orgId
+
+  const access = await checkOrgAccess(prisma, orgId)
+  if (access.blocked) return res.status(402).json({ error: access.reason })
+  // ...
+}
+```
+
+
 
 `sellingPrice = costPrice × (1 + feePercent/100) × (1 + marginPercent/100)`
 
