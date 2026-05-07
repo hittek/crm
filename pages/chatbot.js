@@ -522,7 +522,7 @@ export default function ChatbotPage() {
     <>
       <Head><title>Chatbot | CRM</title></Head>
 
-      <div className="flex h-full">
+      <div className="flex flex-1 overflow-hidden">
         {/* ── Left panel: KB list ─────────────────────────────────────── */}
         <div className={`${showDetail ? 'hidden sm:flex' : 'flex'} sm:w-80 w-full shrink-0 border-r border-gray-200 bg-gray-50 flex-col`}>
           {/* Header */}
@@ -561,7 +561,7 @@ export default function ChatbotPage() {
         </div>
 
         {/* ── Right panel: documents ──────────────────────────────────── */}
-        <div className={`${showDetail ? 'flex' : 'hidden sm:flex'} flex-1 flex-col min-w-0 bg-white`}>
+        <div className={`${showDetail ? 'flex' : 'hidden sm:flex'} flex-1 flex-col min-w-0 bg-white overflow-hidden`}>
           {!activeKb && !loadingKbs && kbs.length === 0 ? (
             <EmptyKBState onCreate={() => setShowCreate(true)} />
           ) : !activeKb ? (

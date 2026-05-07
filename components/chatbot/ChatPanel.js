@@ -140,7 +140,7 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
         ? 'flex flex-col h-full'
         : 'mx-4 sm:mx-6 mb-4 sm:mb-6 flex flex-col border border-gray-200 rounded-xl overflow-hidden bg-white'
       }
-      style={isInline ? undefined : (collapsed ? undefined : { height: '380px' })}
+      style={isInline ? undefined : (collapsed ? undefined : { height: '340px' })}
     >
       {/* Header — standalone only */}
       {!isInline && (
