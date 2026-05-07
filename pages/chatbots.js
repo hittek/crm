@@ -33,7 +33,7 @@ function BotModal({ bot, kbs, dealStages, onClose, onSave }) {
     autoCreateContact: bot?.autoCreateContact ?? false,
     autoCreateDeal:    bot?.autoCreateDeal    ?? false,
     defaultDealStage:  bot?.defaultDealStage  || '',
-    dealTitleTemplate: bot?.dealTitleTemplate || '',
+    dealTitleTemplate: bot?.dealTitleTemplate || 'Consulta vía {channel}',
     // Tool-use capabilities (comma-separated tool names)
     enabledTools:      bot?.enabledTools      || '',
   })
@@ -191,7 +191,6 @@ function BotModal({ bot, kbs, dealStages, onClose, onSave }) {
                       <input
                         type="text" value={form.dealTitleTemplate}
                         onChange={e => set('dealTitleTemplate', e.target.value)}
-                        placeholder="Consulta vía {channel}"
                         className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
                       />
                       <p className="text-xs text-gray-400 mt-0.5">Usa {'{channel}'} para el canal (whatsapp, telegram…)</p>
