@@ -102,51 +102,102 @@ function KBCard({ kb, isActive, onClick, onDelete }) {
 }
 
 function DocumentRow({ doc, onDelete, onRetry }) {
+  const [expanded, setExpanded] = useState(false)
   const DocIcon = DOC_ICONS[doc.type] ?? Icons.fileText
   const ds = DOC_STATUS[doc.status] ?? DOC_STATUS.pending
+
+  // Only show expand toggle when there's something to show
+  const canExpand = doc.status === 'indexed' && (doc.answer || doc.content)
+
+  // Preview text for URL/PDF: first 2000 chars of extracted content
+  const previewText = doc.type !== 'qa' ? (doc.content ?? '').slice(0, 2000) : null
+  const previewTruncated = doc.content && doc.content.length > 2000
+
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 group">
-      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-        <DocIcon className="w-4 h-4 text-gray-500" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-gray-800 truncate">{doc.title}</p>
-        <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
-          <span className={`font-medium ${ds.color}`}>{ds.label}</span>
-          {doc.chunkCount > 0 && <span>· {doc.chunkCount} fragmentos</span>}
-          {doc.fileSize > 0 && <span>· {fmt(doc.fileSize)}</span>}
-          {doc.sourceUrl && (
-            <a href={doc.sourceUrl} target="_blank" rel="noopener noreferrer"
-               className="hover:text-primary-500 flex items-center gap-0.5"
-               onClick={e => e.stopPropagation()}>
-              <Icons.external className="w-3 h-3" /> ver
-            </a>
+    <div className="border-b border-gray-100 last:border-0">
+      {/* Row header */}
+      <div className="flex items-center gap-3 py-3 group">
+        <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+          <DocIcon className="w-4 h-4 text-gray-500" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-gray-800 truncate">{doc.title}</p>
+          <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5 flex-wrap">
+            <span className={`font-medium ${ds.color}`}>{ds.label}</span>
+            {doc.chunkCount > 0 && <span>· {doc.chunkCount} fragmentos</span>}
+            {doc.fileSize > 0 && <span>· {fmt(doc.fileSize)}</span>}
+            {doc.sourceUrl && (
+              <a href={doc.sourceUrl} target="_blank" rel="noopener noreferrer"
+                 className="hover:text-primary-500 flex items-center gap-0.5"
+                 onClick={e => e.stopPropagation()}>
+                <Icons.external className="w-3 h-3" /> ver
+              </a>
+            )}
+            {doc.status === 'error' && doc.errorMessage && (
+              <span className="text-red-400 truncate max-w-xs" title={doc.errorMessage}>
+                {doc.errorMessage.slice(0, 60)}{doc.errorMessage.length > 60 ? '…' : ''}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          {canExpand && (
+            <button
+              onClick={() => setExpanded(e => !e)}
+              className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              title={expanded ? 'Ocultar contenido' : 'Ver contenido indexado'}
+            >
+              <Icons.chevronDown className={`w-4 h-4 transition-transform duration-150 ${expanded ? 'rotate-180' : ''}`} />
+            </button>
           )}
-          {doc.status === 'error' && doc.errorMessage && (
-            <span className="text-red-400 truncate max-w-xs" title={doc.errorMessage}>
-              {doc.errorMessage.slice(0, 60)}{doc.errorMessage.length > 60 ? '…' : ''}
-            </span>
-          )}
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+            {doc.status === 'error' && onRetry && (
+              <button
+                onClick={() => onRetry(doc)}
+                className="p-1.5 rounded hover:bg-yellow-50 hover:text-yellow-600 text-gray-400 transition-colors"
+                title="Reintentar"
+              >
+                <Icons.refresh className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={() => onDelete(doc)}
+              className="p-1.5 rounded hover:bg-red-50 hover:text-red-500 text-gray-400 transition-colors"
+              title="Eliminar documento"
+            >
+              <Icons.delete className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-        {doc.status === 'error' && onRetry && (
-          <button
-            onClick={() => onRetry(doc)}
-            className="p-1.5 rounded hover:bg-yellow-50 hover:text-yellow-600 text-gray-400 transition-colors"
-            title="Reintentar"
-          >
-            <Icons.refresh className="w-4 h-4" />
-          </button>
-        )}
-        <button
-          onClick={() => onDelete(doc)}
-          className="p-1.5 rounded hover:bg-red-50 hover:text-red-500 text-gray-400 transition-colors"
-          title="Eliminar documento"
-        >
-          <Icons.delete className="w-4 h-4" />
-        </button>
-      </div>
+
+      {/* Expanded content */}
+      {expanded && canExpand && (
+        <div className="mb-3 ml-11 rounded-lg bg-gray-50 border border-gray-200 overflow-hidden text-xs">
+          {doc.type === 'qa' ? (
+            <div>
+              <div className="px-3 py-2.5 border-b border-gray-200">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Pregunta</p>
+                <p className="text-gray-800 leading-relaxed">{doc.title}</p>
+              </div>
+              <div className="px-3 py-2.5">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Respuesta</p>
+                <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{doc.answer}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="px-3 py-2.5">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Contenido indexado</p>
+              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap font-mono text-[11px]">{previewText}</p>
+              {previewTruncated && (
+                <p className="mt-2 text-gray-400 italic">
+                  … contenido truncado ({Math.round(doc.content.length / 1000)}k caracteres totales)
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

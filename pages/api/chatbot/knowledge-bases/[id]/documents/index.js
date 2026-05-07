@@ -368,7 +368,8 @@ export default async function handler(req, res) {
       select: {
         id: true, type: true, title: true, status: true,
         chunkCount: true, fileSize: true, sourceUrl: true,
-        question: true, errorMessage: true, createdAt: true,
+        question: true, answer: true, content: true,
+        errorMessage: true, createdAt: true,
       },
     })
     return res.status(200).json(docs)
