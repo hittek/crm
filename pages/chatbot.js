@@ -515,13 +515,16 @@ export default function ChatbotPage() {
     )
   }
 
+  // Mobile: show right panel when a KB is active
+  const showDetail = !!activeKb
+
   return (
     <>
       <Head><title>Chatbot | CRM</title></Head>
 
       <div className="flex h-full">
         {/* ── Left panel: KB list ─────────────────────────────────────── */}
-        <div className="w-80 shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col">
+        <div className={`${showDetail ? 'hidden sm:flex' : 'flex'} sm:w-80 w-full shrink-0 border-r border-gray-200 bg-gray-50 flex-col`}>
           {/* Header */}
           <div className="px-4 py-4 border-b border-gray-200 bg-white flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -558,7 +561,7 @@ export default function ChatbotPage() {
         </div>
 
         {/* ── Right panel: documents ──────────────────────────────────── */}
-        <div className="flex-1 flex flex-col min-w-0 bg-white">
+        <div className={`${showDetail ? 'flex' : 'hidden sm:flex'} flex-1 flex-col min-w-0 bg-white`}>
           {!activeKb && !loadingKbs && kbs.length === 0 ? (
             <EmptyKBState onCreate={() => setShowCreate(true)} />
           ) : !activeKb ? (
@@ -567,11 +570,20 @@ export default function ChatbotPage() {
             </div>
           ) : (
             <>
+              {/* Mobile back button */}
+              <button
+                onClick={() => setActiveKb(null)}
+                className="sm:hidden flex items-center gap-2 px-4 py-3 text-sm font-medium text-primary-600 border-b border-gray-200 hover:bg-gray-50 shrink-0"
+              >
+                <Icons.chevronLeft className="w-4 h-4" />
+                Bases de conocimiento
+              </button>
+
               {/* KB header */}
-              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold text-gray-900 truncate">{activeKb.name}</h2>
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{activeKb.name}</h2>
                     <StatusBadge status={activeKb.status} />
                   </div>
                   {activeKb.description && (
@@ -582,12 +594,14 @@ export default function ChatbotPage() {
                   onClick={() => setShowAddDoc(true)}
                   className="btn-primary shrink-0"
                 >
-                  <Icons.plus className="w-4 h-4 mr-2" /> Agregar fuente
+                  <Icons.plus className="w-4 h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Agregar fuente</span>
+                  <span className="sm:hidden">Agregar</span>
                 </button>
               </div>
 
               {/* Documents */}
-              <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
                 {loadingDocs ? (
                   <div className="py-8 flex justify-center">
                     <Icons.refresh className="w-5 h-5 text-gray-400 animate-spin" />
@@ -618,7 +632,7 @@ export default function ChatbotPage() {
                 <ChatPanel kb={activeKb} />
               )}
               {activeKb?.status !== 'ready' && (
-                <div className="mx-6 mb-4 px-4 py-3 bg-primary-50 border border-primary-100 rounded-xl flex items-center gap-3">
+                <div className="mx-4 sm:mx-6 mb-4 px-4 py-3 bg-primary-50 border border-primary-100 rounded-xl flex items-center gap-3">
                   <Icons.bot className="w-5 h-5 text-primary-500 shrink-0" />
                   <p className="text-sm text-primary-700">
                     Agrega y procesa documentos para habilitar el chatbot.

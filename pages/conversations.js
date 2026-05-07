@@ -308,7 +308,7 @@ function Thread({ conv, onStatusChange, currentUser }) {
   return (
     <div className="flex flex-col h-full">
       {/* Thread header */}
-      <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3 shrink-0">
+      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 flex items-start justify-between gap-3 shrink-0">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-sm font-semibold text-gray-900">{conv.chatbot?.name}</h2>
@@ -321,22 +321,22 @@ function Thread({ conv, onStatusChange, currentUser }) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {canReply && (
             <button
               onClick={() => setShowForward(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
               title="Transferir a otro agente"
             >
               <Icons.send className="w-3.5 h-3.5" />
-              Transferir
+              <span className="hidden sm:inline">Transferir</span>
             </button>
           )}
           {conv.status === 'resolved' ? (
             <button
               onClick={() => updateStatus('open')}
               disabled={updatingStatus}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+              className="px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 transition-colors"
             >
               Reabrir
             </button>
@@ -344,10 +344,11 @@ function Thread({ conv, onStatusChange, currentUser }) {
             <button
               onClick={() => updateStatus('resolved')}
               disabled={updatingStatus}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 disabled:opacity-40 transition-colors"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 disabled:opacity-40 transition-colors"
             >
               <Icons.check className="w-3.5 h-3.5" />
-              Marcar resuelta
+              <span className="hidden sm:inline">Marcar resuelta</span>
+              <span className="sm:hidden">Resolver</span>
             </button>
           )}
         </div>
@@ -499,6 +500,9 @@ export default function ConversationsPage() {
 
   const totalPages = Math.ceil(total / 30)
 
+  // Mobile: show thread panel when a conv is selected
+  const showThread = !!selected
+
   if (authLoading) return <PageLoader />
 
   return (
@@ -507,8 +511,8 @@ export default function ConversationsPage() {
 
       <div className="flex flex-col flex-1 overflow-hidden">
 
-        {/* Top bar */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-white flex items-center justify-between gap-4 shrink-0">
+        {/* Top bar — hidden on mobile when thread is open */}
+        <div className={`px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-white shrink-0 ${showThread ? 'hidden sm:flex' : 'flex'} flex-col sm:flex-row sm:items-center sm:justify-between gap-2`}>
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-bold text-gray-900">Conversaciones</h1>
             {total > 0 && (
@@ -516,10 +520,10 @@ export default function ConversationsPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <select
               value={filterChannel} onChange={e => setFilterChannel(e.target.value)}
-              className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-300"
+              className="flex-1 sm:flex-none text-sm px-3 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-300"
             >
               <option value="">Todos los canales</option>
               {CHANNELS.filter(Boolean).map(c => (
@@ -528,7 +532,7 @@ export default function ConversationsPage() {
             </select>
             <select
               value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-              className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-300"
+              className="flex-1 sm:flex-none text-sm px-3 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-300"
             >
               <option value="">Todos los estados</option>
               {STATUSES.filter(Boolean).map(s => (
@@ -539,10 +543,12 @@ export default function ConversationsPage() {
         </div>
 
         {/* Master-detail body */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden relative">
 
-          {/* LEFT — conversation list */}
-          <div className="w-80 shrink-0 border-r border-gray-200 bg-white flex flex-col overflow-hidden">
+          {/* LEFT — conversation list
+              Mobile: full width, hidden when a thread is open
+              Desktop: fixed 320px sidebar  */}
+          <div className={`${showThread ? 'hidden sm:flex' : 'flex'} sm:w-80 w-full shrink-0 border-r border-gray-200 bg-white flex-col overflow-hidden`}>
             {loading && (
               <div className="flex justify-center items-center flex-1">
                 <PageLoader />
@@ -591,9 +597,22 @@ export default function ConversationsPage() {
             )}
           </div>
 
-          {/* RIGHT — thread */}
-          <div className="flex-1 bg-white overflow-hidden">
-            <Thread conv={selected} onStatusChange={handleStatusChange} currentUser={user} />
+          {/* RIGHT — thread
+              Mobile: full-width overlay when a conv is selected  */}
+          <div className={`${showThread ? 'flex' : 'hidden sm:flex'} flex-1 bg-white overflow-hidden flex-col`}>
+            {/* Mobile back button */}
+            {showThread && (
+              <button
+                onClick={() => setSelected(null)}
+                className="sm:hidden flex items-center gap-2 px-4 py-3 text-sm font-medium text-primary-600 border-b border-gray-200 hover:bg-gray-50 shrink-0"
+              >
+                <Icons.chevronLeft className="w-4 h-4" />
+                Conversaciones
+              </button>
+            )}
+            <div className="flex-1 overflow-hidden">
+              <Thread conv={selected} onStatusChange={handleStatusChange} currentUser={user} />
+            </div>
           </div>
         </div>
       </div>
