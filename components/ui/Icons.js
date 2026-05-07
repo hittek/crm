@@ -1,4 +1,4 @@
-import { FiMail, FiPhone, FiCalendar, FiFileText, FiCheck, FiEdit3, FiTrendingUp, FiX, FiPlus, FiSearch, FiUser, FiUsers, FiBriefcase, FiCheckSquare, FiPieChart, FiSettings, FiChevronRight, FiChevronDown, FiChevronUp, FiMoreHorizontal, FiTrash2, FiClock, FiAlertCircle, FiStar, FiFilter, FiDownload, FiUpload, FiExternalLink, FiLink, FiMessageSquare, FiActivity, FiHome, FiGrid, FiList, FiColumns, FiRefreshCw, FiSave, FiArrowLeft, FiArrowRight, FiChevronLeft, FiLogOut, FiBell, FiHelpCircle, FiCommand, FiImage, FiMove, FiMenu, FiEye, FiEyeOff, FiCreditCard, FiCpu, FiDatabase, FiGlobe, FiBookOpen, FiSend, FiLock, FiCopy } from 'react-icons/fi'
+import { FiMail, FiPhone, FiCalendar, FiFileText, FiCheck, FiEdit3, FiTrendingUp, FiX, FiPlus, FiSearch, FiUser, FiUsers, FiBriefcase, FiCheckSquare, FiPieChart, FiSettings, FiChevronRight, FiChevronDown, FiChevronUp, FiMoreHorizontal, FiTrash2, FiClock, FiAlertCircle, FiStar, FiFilter, FiDownload, FiUpload, FiExternalLink, FiLink, FiMessageSquare, FiActivity, FiHome, FiGrid, FiList, FiColumns, FiRefreshCw, FiSave, FiArrowLeft, FiArrowRight, FiChevronLeft, FiLogOut, FiBell, FiHelpCircle, FiCommand, FiImage, FiMove, FiMenu, FiEye, FiEyeOff, FiCreditCard, FiCpu, FiDatabase, FiGlobe, FiBookOpen, FiSend, FiLock, FiCopy, FiShoppingBag, FiPackage, FiTruck } from 'react-icons/fi'
 
 export const Icons = {
   // Navigation
@@ -76,6 +76,10 @@ export const Icons = {
   database: FiDatabase,
   globe: FiGlobe,
   bookOpen: FiBookOpen,
+  // Catalog
+  catalog: FiShoppingBag,
+  package: FiPackage,
+  truck: FiTruck,
 }
 
 export default Icons

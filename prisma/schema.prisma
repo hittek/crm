@@ -47,6 +47,8 @@ model Organization {
   knowledgeBases KnowledgeBase[]
   chatbots      Chatbot[]
   channelConfigs ChannelConfig[]
+  providers     Provider[]
+  products      Product[]
 }
 
 // Contact model - the core entity in a contacts-first CRM
@@ -328,7 +330,7 @@ model KnowledgeBaseChunk {
   chunkIndex  Int
   tokenCount  Int                    @default(0)
   embedded    Boolean                @default(false) // true once Voyage embedding stored
-  embedding   Unsupported("vector(512)")?  // voyage-3-lite = 512 dims
+  embedding   Unsupported("vector(1024)")?  // voyage-4-lite = 1024 dims
   metadata    String?                // JSON (page number, heading, etc.)
   createdAt   DateTime               @default(now())
 
@@ -482,6 +484,55 @@ model ChannelConfig {
   @@index([orgId])
   @@index([phoneNumberId])
   @@index([pageId])
+}
+
+// ── Providers ─────────────────────────────────────────────────────────────────
+// Suppliers / vendors whose price lists feed the product catalog.
+// Optional — service-only orgs never need this.
+model Provider {
+  id          Int          @id @default(autoincrement())
+  orgId       Int
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  website     String?
+  notes       String?
+  isActive    Boolean      @default(true)
+  products    Product[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([orgId])
+}
+
+// ── Products ──────────────────────────────────────────────────────────────────
+// Unified catalog for physical products AND services.
+// type=service: sellingPrice entered directly (costPrice/fee/margin not used)
+// type=product: sellingPrice = costPrice × (1 + feePercent/100) × (1 + marginPercent/100)
+model Product {
+  id            Int          @id @default(autoincrement())
+  orgId         Int
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  providerId    Int?
+  provider      Provider?    @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  name          String
+  description   String?
+  sku           String?
+  type          String       @default("service")  // product | service
+  unit          String       @default("unit")     // unit | hr | kg | m | m2 | lt | service | month
+  costPrice     Float?                            // null = service with direct price
+  feePercent    Float        @default(0)
+  marginPercent Float        @default(0)
+  sellingPrice  Float        @default(0)          // always the price used in quotes
+  currency      String       @default("MXN")
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([orgId])
+  @@index([providerId])
 }
 
 // ── Quotes ────────────────────────────────────────────────────────────────────

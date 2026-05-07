@@ -75,6 +75,20 @@ export default function Layout({ children }) {
     if (isAiRoute) setAiExpanded(true)
   }, [isAiRoute])
 
+  const catalogSubNav = [
+    { name: t('nav.providers'), href: '/providers', icon: Icons.truck },
+    { name: t('nav.products'), href: '/products', icon: Icons.package },
+  ]
+
+  const catalogRoutes = catalogSubNav.map(i => i.href)
+  const isCatalogRoute = catalogRoutes.some(h => isNavActive(h, router.pathname))
+
+  const [catalogExpanded, setCatalogExpanded] = useState(isCatalogRoute)
+
+  useEffect(() => {
+    if (isCatalogRoute) setCatalogExpanded(true)
+  }, [isCatalogRoute])
+
   // Filter navigation based on user role - hide admin-only items for regular users
   const navigation = baseNavigation.filter(item => !item.adminOnly || permissions?.canManageSettings)
 
@@ -204,6 +218,39 @@ export default function Layout({ children }) {
                           {item.badge > 99 ? '99+' : item.badge}
                         </span>
                       )}
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Catalog group */}
+          <div>
+            <button
+              onClick={() => setCatalogExpanded(e => !e)}
+              className={`sidebar-link w-full ${isCatalogRoute ? 'text-primary-600' : ''}`}
+            >
+              <Icons.catalog className="w-5 h-5" />
+              <span className="flex-1 text-left">{t('nav.catalog')}</span>
+              <Icons.chevronDown className={`w-4 h-4 transition-transform duration-150 ${catalogExpanded ? 'rotate-180' : ''}`} />
+            </button>
+            {catalogExpanded && (
+              <div className="mt-0.5 ml-3 pl-3 border-l border-gray-200 space-y-0.5">
+                {catalogSubNav.map(item => {
+                  const isActive = isNavActive(item.href, router.pathname)
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4 shrink-0" />
+                      <span className="flex-1">{item.name}</span>
                     </Link>
                   )
                 })}
