@@ -6,7 +6,7 @@ import { checkOrgAccess, orgAccessResponse, checkPlanLimit, planLimitResponse } 
 import { chunkText, chunkQA } from '../../../../../../lib/chunker'
 import { embedTexts } from '../../../../../../lib/embeddings'
 
-export const config = { api: { bodyParser: false } }
+export const config = { api: { bodyParser: false }, maxDuration: 60 }
 
 // ── startup cleanup ──────────────────────────────────────────────────────────
 ;(async () => {

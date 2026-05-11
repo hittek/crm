@@ -21,6 +21,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import { waitUntil } from '@vercel/functions'
 import prisma from '../../../../lib/prisma'
 import { getSession } from '../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse } from '../../../../lib/planLimits'
@@ -30,7 +31,7 @@ import { shouldEscalate } from '../../../../lib/escalation'
 import { buildSystemPrompt } from '../../../../lib/channelEngine'
 import { summarizeConversation } from '../../../../lib/summarize'
 
-export const config = { api: { bodyParser: true } }
+export const config = { api: { bodyParser: true }, maxDuration: 60 }
 
 const MODEL      = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 800
@@ -85,22 +86,26 @@ export default async function handler(req, res) {
   if (!message?.trim())       return res.status(400).json({ error: 'message requerido' })
   if (message.length > 2000)  return res.status(400).json({ error: 'message demasiado largo (máx 2000 chars)' })
 
-  // Verify KB belongs to org
-  const kb = await prisma.knowledgeBase.findFirst({
-    where:  { id: kbId, orgId: organizationId },
-    select: { id: true, name: true, status: true },
-  })
+  // Parallel fan-out: KB + chatbot + RAG search run concurrently (saves ~400-900ms)
+  const [kb, chatbot, chunksResult] = await Promise.all([
+    prisma.knowledgeBase.findFirst({
+      where:  { id: kbId, orgId: organizationId },
+      select: { id: true, name: true, status: true },
+    }),
+    chatbotId
+      ? prisma.chatbot.findFirst({
+          where:  { id: parseInt(chatbotId), orgId: organizationId },
+          select: { id: true, name: true, greeting: true, escalationPhrase: true },
+        })
+      : Promise.resolve(null),
+    searchChunks({ query: message, kbId, orgId: organizationId, limit: TOP_K })
+      .catch(err => { console.error('[chat] RAG search error:', err.message); return null }),
+  ])
+
   if (!kb) return res.status(404).json({ error: 'Base de conocimiento no encontrada' })
   if (kb.status === 'empty') return res.status(422).json({ error: 'La base de conocimiento está vacía. Agrega documentos primero.' })
-
-  // Optional: load chatbot config for name/greeting/escalation
-  let chatbot = null
-  if (chatbotId) {
-    chatbot = await prisma.chatbot.findFirst({
-      where:  { id: parseInt(chatbotId), orgId: organizationId },
-      select: { id: true, name: true, greeting: true, escalationPhrase: true },
-    })
-  }
+  if (chunksResult === null) return res.status(500).json({ error: 'Error buscando contexto relevante' })
+  const chunks = chunksResult
 
   // Optional: find or create conversation for persistence
   let conversationId = null
@@ -150,15 +155,6 @@ export default async function handler(req, res) {
     prisma.conversationMessage.create({
       data: { conversationId, role: 'user', content: message.trim() },
     }).catch(() => {})
-  }
-
-  // RAG: 1 Voyage call + 1 SQL
-  let chunks
-  try {
-    chunks = await searchChunks({ query: message, kbId, orgId: organizationId, limit: TOP_K })
-  } catch (err) {
-    console.error('[chat] RAG search error:', err.message)
-    return res.status(500).json({ error: 'Error buscando contexto relevante' })
   }
 
   const contextText = chunks.length > 0
@@ -257,14 +253,17 @@ export default async function handler(req, res) {
         }),
       )
     }
-    Promise.all(ops)
-      .then(() => {
-        if (autoResolved) {
-          summarizeConversation(conversationId).catch(err =>
-            console.error('[chat] summarize failed:', err.message)
-          )
-        }
-      })
-      .catch(err => console.error('[chat] post-stream DB write failed:', err.message))
+    // waitUntil keeps the Lambda alive for post-stream DB writes and summarization
+    waitUntil(
+      Promise.all(ops)
+        .then(() => {
+          if (autoResolved) {
+            return summarizeConversation(conversationId).catch(err =>
+              console.error('[chat] summarize failed:', err.message)
+            )
+          }
+        })
+        .catch(err => console.error('[chat] post-stream DB write failed:', err.message))
+    )
   }
 }
