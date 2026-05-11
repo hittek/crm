@@ -21,6 +21,7 @@ function ImportModal({ provider, onDone, onClose }) {
   const [selected, setSelected] = useState(new Set()) // _id set of checked rows
   const [search, setSearch] = useState('')
   const [result, setResult] = useState(null)        // { imported, updated }
+  const [extractMeta, setExtractMeta] = useState(null) // { mode, warning }
 
   // ── Step 1: upload ────────────────────────────────────────────────────────
   async function handleFile(file) {
@@ -50,6 +51,7 @@ function ImportModal({ provider, onDone, onClose }) {
       const all = data.rows
       setRows(all)
       setSelected(new Set(all.map(r => r._id)))
+      setExtractMeta({ mode: data.mode, warning: data.warning || null })
       setStep('review')
     } catch (err) {
       setError(`Error de red: ${err.message}`); setStep('upload')
@@ -152,6 +154,18 @@ function ImportModal({ provider, onDone, onClose }) {
       {/* Review */}
       {step === 'review' && (
         <div className="space-y-3">
+          {extractMeta?.warning && (
+            <div className="flex gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              <Icons.alert className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{extractMeta.warning}</span>
+            </div>
+          )}
+          {extractMeta?.mode === 'vision' && !extractMeta?.warning && (
+            <div className="flex gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+              <Icons.eye className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>PDF escaneado detectado — se usó visión para extraer los datos. Revisa con cuidado.</span>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="text-sm text-gray-600">
               <strong>{selected.size}</strong> de {rows.length} productos seleccionados

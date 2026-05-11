@@ -1,16 +1,17 @@
 /**
  * POST /api/providers/[id]/extract-prices
  *
- * Accepts a PDF price list, extracts text with pdftotext (zero LLM tokens),
- * then sends the plain text to haiku with CSV output format.
+ * Quality-adaptive extraction pipeline:
  *
- * Cost profile: ~$0.023/extraction vs ~$0.18 for PDF→Sonnet (8× cheaper).
+ *   ┌─ PDF upload
+ *   │
+ *   ├─ pdftotext → text ≥ 200 chars?
+ *   │     YES → haiku + plain text   (~$0.023, ~25s)  ← most vendor PDFs
+ *   │     NO  → sonnet + PDF binary  (~$0.15, ~50s)   ← scanned / image PDFs
+ *   │
+ *   └─ CSV output → parse → sanitize → { rows, total, mode }
  *
- * Extraction pipeline:
- *   PDF upload → pdftotext (text extraction, no LLM) → haiku CSV extraction
- *   → parse CSV → sanitize rows → return JSON for review UI
- *
- * Response: { rows: [{sku, name, unit, costPrice, currency}], total: N }
+ * Response includes `mode: 'text'|'vision'` and optional `warning` for UI.
  */
 
 import { execSync } from 'child_process'
@@ -22,12 +23,19 @@ import { checkOrgAccess } from '../../../../lib/planLimits'
 
 const _require = eval('require') // eslint-disable-line no-eval
 
-export const config = { api: { bodyParser: false }, maxDuration: 60 }
+export const config = { api: { bodyParser: false }, maxDuration: 120 }
 
-const MODEL         = 'claude-haiku-4-5-20251001'
+// haiku for text-based PDFs (cheap); sonnet for image/scanned PDFs (vision)
+const TEXT_MODEL   = 'claude-haiku-4-5-20251001'
+const VISION_MODEL = 'claude-sonnet-4-20250514'
+
+// Minimum chars from pdftotext to trust text path.
+// A 5-page scanned PDF typically returns < 50 chars; a real price list > 500.
+const MIN_TEXT_CHARS = 200
+
 const MAX_FILE_SIZE = 20 * 1024 * 1024
 const VALID_UNITS   = ['m2', 'm', 'unidad', 'rollo', 'kg', 'par', 'juego', 'mes',
-                       'servicio', 'lt', 'hr', 'pieza', 'ml']
+                       'servicio', 'lt', 'hr', 'pieza', 'ml', 'kit', 'pza', 'jgo']
 
 // ── Text extraction ──────────────────────────────────────────────────────────
 
@@ -35,12 +43,33 @@ function extractTextWithPdftotext(filePath) {
   try {
     return execSync(`pdftotext "${filePath}" -`, { timeout: 15_000 }).toString()
   } catch {
-    return null // pdftotext not available (unlikely on Linux/macOS, use PDF fallback)
+    return null
   }
 }
 
+function isTextUsable(text) {
+  if (!text) return false
+  const trimmed = text.trim()
+  if (trimmed.length < MIN_TEXT_CHARS) return false
+  // Require at least a few digit-like tokens to confirm it's not all garbage chars
+  const digitTokens = (trimmed.match(/\d+/g) || []).length
+  return digitTokens >= 5
+}
+
+// ── CSV prompt (same for both paths) ─────────────────────────────────────────
+
+const CSV_PROMPT = `Extrae todos los productos de esta lista de precios.
+
+Responde SOLO con CSV sin encabezado: sku,name,unit,price
+- sku: código/modelo exacto del producto (vacío si no hay)
+- name: nombre del producto, máx 70 chars, incluye modelo + variante si aplica
+- unit: m2|unidad|rollo|m|hr|pieza|ml|kg|mes|kit (inferir del contexto; default: unidad)
+- price: número decimal sin símbolo de moneda ni separadores de miles (vacío si no hay precio)
+- Encierra en comillas dobles si el campo contiene comas
+- Si un producto tiene múltiples precios por variante, crea una fila por variante`
+
 // ── CSV parser ───────────────────────────────────────────────────────────────
-// Handles quoted fields with embedded commas. Minimal, no external deps.
+// Handles quoted fields with embedded commas. No external deps.
 function parseCsvLine(line) {
   const fields = []
   let cur = '', inQuote = false
@@ -73,7 +102,7 @@ export default async function handler(req, res) {
   const provider = await prisma.provider.findFirst({ where: { id, orgId } })
   if (!provider) return res.status(404).json({ error: 'Proveedor no encontrado' })
 
-  // Parse multipart upload
+  // ── 1. Parse multipart upload ─────────────────────────────────────────────
   let file
   try {
     const { IncomingForm } = _require('formidable')
@@ -94,49 +123,44 @@ export default async function handler(req, res) {
   const isPdf = file.mimetype?.includes('pdf') || file.originalFilename?.toLowerCase().endsWith('.pdf')
   if (!isPdf) return res.status(400).json({ error: 'Solo se aceptan archivos PDF' })
 
-  // ── 1. Extract text from PDF (no LLM cost) ─────────────────────────────
-  let pdfText = extractTextWithPdftotext(file.filepath)
+  // ── 2. Quality-adaptive path selection ───────────────────────────────────
+  const pdfText = extractTextWithPdftotext(file.filepath)
+  const useTextPath = isTextUsable(pdfText)
 
-  // Fallback: if pdftotext unavailable, send raw PDF to Claude as a document block
-  let useFallback = !pdfText?.trim()
+  let model, messageContent, mode, warning
 
-  // Cleanup temp file after extraction
-  const tempPath = file.filepath
-  if (!useFallback) {
-    try { fs.unlinkSync(tempPath) } catch (_) {}
+  if (useTextPath) {
+    // TEXT PATH — haiku reads plain text (~$0.023, ~25s)
+    model          = TEXT_MODEL
+    mode           = 'text'
+    messageContent = `${CSV_PROMPT}\n\n<lista>\n${pdfText}\n</lista>`
+    try { fs.unlinkSync(file.filepath) } catch (_) {}
+  } else {
+    // VISION PATH — sonnet reads PDF binary (~$0.15, ~50s)
+    // Handles scanned documents, image-heavy catalogs, non-selectable text.
+    model   = VISION_MODEL
+    mode    = 'vision'
+    warning = 'Este PDF parece ser escaneado o de imagen. Se usó visión para extraer los productos; revisa los resultados con cuidado.'
+    let base64
+    try {
+      base64 = fs.readFileSync(file.filepath).toString('base64')
+    } finally {
+      try { fs.unlinkSync(file.filepath) } catch (_) {}
+    }
+    messageContent = [
+      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+      { type: 'text',     text: CSV_PROMPT },
+    ]
   }
 
-  // ── 2. Send to haiku — CSV format (much cheaper than JSON) ─────────────
+  // ── 3. Claude extraction ──────────────────────────────────────────────────
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  const csvPrompt = `Extrae todos los productos de esta lista de precios.
-
-Responde SOLO con CSV sin encabezado: sku,name,unit,price
-- sku: código/modelo exacto del producto (vacío si no hay)
-- name: nombre del producto, máx 70 chars, incluye modelo + variante si aplica
-- unit: m2|unidad|rollo|m|hr|pieza|ml|kg|mes (inferir del contexto)
-- price: número decimal sin símbolo de moneda ni comas (vacío si no hay precio definido)
-- Encierra en comillas dobles si el campo contiene comas`
-
   let rawCsv
   try {
-    let messageContent
-
-    if (useFallback) {
-      // PDF document block — more expensive but works without pdftotext
-      const base64 = fs.readFileSync(tempPath).toString('base64')
-      try { fs.unlinkSync(tempPath) } catch (_) {}
-      messageContent = [
-        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
-        { type: 'text',     text: csvPrompt },
-      ]
-    } else {
-      messageContent = `${csvPrompt}\n\n<lista>\n${pdfText}\n</lista>`
-    }
-
     const response = await anthropic.messages.create({
-      model:    MODEL,
+      model,
       max_tokens: 8192,
-      messages: [{ role: 'user', content: messageContent }],
+      messages:   [{ role: 'user', content: messageContent }],
     })
     rawCsv = response.content[0]?.text?.trim() ?? ''
   } catch (err) {
@@ -144,7 +168,7 @@ Responde SOLO con CSV sin encabezado: sku,name,unit,price
     return res.status(502).json({ error: `Error al analizar el PDF: ${err.message}` })
   }
 
-  // ── 3. Parse CSV → objects ──────────────────────────────────────────────
+  // ── 4. Parse CSV → objects ────────────────────────────────────────────────
   const lines = rawCsv
     .split('\n')
     .map(l => l.trim())
@@ -155,12 +179,13 @@ Responde SOLO con CSV sin encabezado: sku,name,unit,price
       const [sku, name, unit, price] = parseCsvLine(line)
       if (!name?.trim()) return null
       const costPrice = price ? parseFloat(price.replace(/,/g, '')) : null
+      const unitNorm  = unit?.trim().toLowerCase()
       return {
         _id:         i,
         sku:         sku?.trim().slice(0, 100) || null,
         name:        name.trim().slice(0, 200),
         description: null,
-        unit:        VALID_UNITS.includes(unit?.trim()) ? unit.trim() : 'unidad',
+        unit:        VALID_UNITS.includes(unitNorm) ? unitNorm : 'unidad',
         costPrice:   Number.isFinite(costPrice) && costPrice >= 0 ? Math.round(costPrice * 100) / 100 : null,
         currency:    'MXN',
       }
@@ -169,8 +194,17 @@ Responde SOLO con CSV sin encabezado: sku,name,unit,price
     .slice(0, 1000)
 
   if (rows.length === 0) {
-    return res.status(422).json({ error: 'No se encontraron productos en el PDF. Verifica que sea una lista de precios legible.' })
+    return res.status(422).json({
+      error: 'No se encontraron productos en el PDF. Verifica que sea una lista de precios legible.',
+    })
   }
 
-  return res.status(200).json({ rows, total: rows.length })
+  // Count rows without prices — high ratio signals poor extraction quality
+  const missingPrices = rows.filter(r => r.costPrice === null).length
+  const missingRatio  = missingPrices / rows.length
+  if (missingRatio > 0.5 && !warning) {
+    warning = `${missingPrices} de ${rows.length} productos no tienen precio. Revisa y completa antes de importar.`
+  }
+
+  return res.status(200).json({ rows, total: rows.length, mode, ...(warning ? { warning } : {}) })
 }
