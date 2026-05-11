@@ -72,47 +72,32 @@ export default function NotificationBell() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // SSE stream — real-time push for new notifications
-  // Falls back gracefully if EventSource unavailable (SSR, old browsers)
+  // Poll for new notifications every 10s — works correctly on serverless
+  // (replaces SSE stream which caused Vercel timeout errors every 55s)
   useEffect(() => {
     fetchNotifications()
 
-    if (typeof window === 'undefined' || !window.EventSource) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/notifications?limit=10')
+        if (!res.ok) return
+        const data = await res.json()
+        const notifs = data.data || []
 
-    let es
-    let reconnectTimer
+        // Detect and surface genuinely new notifications
+        notifs.forEach(n => {
+          if (!seenIdsRef.current.has(n.id)) {
+            seenIdsRef.current.add(n.id)
+            if (!n.isRead) fireBrowserNotif(n)
+          }
+        })
 
-    function connect() {
-      es = new EventSource('/api/notifications/stream')
+        setNotifications(notifs)
+        setUnreadCount(data.unreadCount || 0)
+      } catch (_) {}
+    }, 10_000)
 
-      es.addEventListener('notification', (e) => {
-        try {
-          const notif = JSON.parse(e.data)
-          if (seenIdsRef.current.has(notif.id)) return
-          seenIdsRef.current.add(notif.id)
-
-          // Append to list + bump unread badge
-          setNotifications(prev => [notif, ...prev].slice(0, 10))
-          if (!notif.isRead) setUnreadCount(prev => prev + 1)
-
-          // OS-level notification
-          fireBrowserNotif(notif)
-        } catch (_) {}
-      })
-
-      es.onerror = () => {
-        es.close()
-        // Auto-reconnect after 5s (handles Vercel 55s timeout gracefully)
-        reconnectTimer = setTimeout(connect, 5000)
-      }
-    }
-
-    connect()
-
-    return () => {
-      clearTimeout(reconnectTimer)
-      if (es) es.close()
-    }
+    return () => clearInterval(interval)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
