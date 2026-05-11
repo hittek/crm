@@ -1,10 +1,310 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Head from 'next/head'
 import Icons from '../components/ui/Icons'
 import { Modal } from '../components/ui/Modal'
 import { Spinner } from '../components/ui/Spinner'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useAuth } from '../lib/AuthContext'
+
+const UNIT_LABELS = {
+  m2: 'm²', m: 'm', unidad: 'Unidad', rollo: 'Rollo', kg: 'kg',
+  par: 'Par', juego: 'Juego', mes: 'Mes', servicio: 'Servicio',
+  lt: 'Litro', hr: 'Hora', pieza: 'Pieza',
+}
+
+// ── ImportModal — multi-step PDF price list import ────────────────────────────
+function ImportModal({ provider, onDone, onClose }) {
+  const fileRef      = useRef(null)
+  const [step, setStep]     = useState('upload')   // upload | extracting | review | importing | done
+  const [error, setError]   = useState(null)
+  const [rows, setRows]     = useState([])          // extracted rows (mutable)
+  const [selected, setSelected] = useState(new Set()) // _id set of checked rows
+  const [search, setSearch] = useState('')
+  const [result, setResult] = useState(null)        // { imported, updated }
+
+  // ── Step 1: upload ────────────────────────────────────────────────────────
+  async function handleFile(file) {
+    if (!file) return
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setError('Solo se aceptan archivos PDF'); return
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setError('El archivo excede el límite de 20 MB'); return
+    }
+    setError(null)
+    setStep('extracting')
+
+    const fd = new FormData()
+    fd.append('file', file)
+
+    try {
+      const r = await fetch(`/api/providers/${provider.id}/extract-prices`, {
+        method: 'POST', body: fd,
+      })
+      const data = await r.json()
+      if (!r.ok) { setError(data.error || 'Error al analizar el PDF'); setStep('upload'); return }
+      if (!data.rows?.length) {
+        setError('No se encontraron productos en el PDF. Verifica que sea una lista de precios.')
+        setStep('upload'); return
+      }
+      const all = data.rows
+      setRows(all)
+      setSelected(new Set(all.map(r => r._id)))
+      setStep('review')
+    } catch (err) {
+      setError(`Error de red: ${err.message}`); setStep('upload')
+    }
+  }
+
+  // ── Step 3: review helpers ────────────────────────────────────────────────
+  function updateRow(id, field, value) {
+    setRows(prev => prev.map(r => r._id === id ? { ...r, [field]: value } : r))
+  }
+
+  function toggleRow(id) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const filtered = rows.filter(r =>
+    !search ||
+    r.name.toLowerCase().includes(search.toLowerCase()) ||
+    r.sku?.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const allVisible    = filtered.length > 0 && filtered.every(r => selected.has(r._id))
+  const someVisible   = filtered.some(r => selected.has(r._id))
+
+  function toggleAll() {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (allVisible) { filtered.forEach(r => next.delete(r._id)) }
+      else            { filtered.forEach(r => next.add(r._id)) }
+      return next
+    })
+  }
+
+  // ── Step 4: import ────────────────────────────────────────────────────────
+  async function handleImport() {
+    const toSend = rows.filter(r => selected.has(r._id))
+    if (!toSend.length) return
+    setStep('importing')
+    setError(null)
+
+    try {
+      const r = await fetch(`/api/providers/${provider.id}/import-products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: toSend }),
+      })
+      const data = await r.json()
+      if (!r.ok) { setError(data.error || 'Error al importar'); setStep('review'); return }
+      setResult(data)
+      setStep('done')
+      onDone()
+    } catch (err) {
+      setError(`Error de red: ${err.message}`); setStep('review')
+    }
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  return (
+    <div>
+      {/* Upload */}
+      {step === 'upload' && (
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Sube la lista de precios PDF de <strong>{provider.name}</strong>. Claude extraerá los productos automáticamente.
+          </p>
+          {error && (
+            <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
+          )}
+          <div
+            className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-primary-400 hover:bg-primary-50 transition-colors"
+            onClick={() => fileRef.current?.click()}
+            onDragOver={e => e.preventDefault()}
+            onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]) }}
+          >
+            <Icons.upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+            <p className="text-sm font-medium text-gray-700">Arrastra tu PDF aquí o haz clic para seleccionar</p>
+            <p className="text-xs text-gray-400 mt-1">Máx. 20 MB</p>
+          </div>
+          <input ref={fileRef} type="file" accept=".pdf" className="hidden"
+            onChange={e => handleFile(e.target.files[0])} />
+          <div className="flex justify-end">
+            <button onClick={onClose} className="btn-ghost">Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Extracting */}
+      {step === 'extracting' && (
+        <div className="py-12 text-center space-y-4">
+          <Spinner size="lg" />
+          <p className="text-sm font-medium text-gray-700">Analizando lista de precios…</p>
+          <p className="text-xs text-gray-400">Claude está extrayendo los productos. Puede tomar hasta 30 segundos.</p>
+        </div>
+      )}
+
+      {/* Review */}
+      {step === 'review' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-sm text-gray-600">
+              <strong>{selected.size}</strong> de {rows.length} productos seleccionados
+            </div>
+            <div className="relative">
+              <Icons.search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                className="input pl-8 py-1.5 text-sm w-48"
+                placeholder="Buscar…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
+          )}
+
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            {/* Table header */}
+            <div className="grid grid-cols-[32px_1fr_80px_80px_100px] gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500">
+              <div className="flex items-center">
+                <input type="checkbox" className="rounded"
+                  checked={allVisible} ref={el => el && (el.indeterminate = !allVisible && someVisible)}
+                  onChange={toggleAll} />
+              </div>
+              <div>Nombre / SKU</div>
+              <div>Unidad</div>
+              <div className="text-right">Precio</div>
+              <div></div>
+            </div>
+
+            {/* Table body */}
+            <div className="divide-y divide-gray-100 max-h-[40vh] overflow-y-auto">
+              {filtered.length === 0 && (
+                <div className="px-4 py-6 text-sm text-gray-400 text-center">Sin resultados</div>
+              )}
+              {filtered.map(row => (
+                <div key={row._id}
+                  className={`grid grid-cols-[32px_1fr_80px_80px_100px] gap-2 px-3 py-2 items-start text-sm ${
+                    selected.has(row._id) ? '' : 'opacity-40'
+                  }`}
+                >
+                  {/* Checkbox */}
+                  <div className="pt-1">
+                    <input type="checkbox" className="rounded"
+                      checked={selected.has(row._id)}
+                      onChange={() => toggleRow(row._id)} />
+                  </div>
+
+                  {/* Name + SKU */}
+                  <div className="min-w-0 space-y-1">
+                    <input
+                      className="w-full text-sm font-medium text-gray-900 bg-transparent border-0 border-b border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-none px-0 py-0"
+                      value={row.name}
+                      onChange={e => updateRow(row._id, 'name', e.target.value)}
+                    />
+                    {row.sku && (
+                      <input
+                        className="w-full text-xs text-gray-400 bg-transparent border-0 border-b border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-none px-0 py-0"
+                        value={row.sku}
+                        onChange={e => updateRow(row._id, 'sku', e.target.value)}
+                        placeholder="SKU"
+                      />
+                    )}
+                  </div>
+
+                  {/* Unit */}
+                  <div>
+                    <select
+                      className="text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:border-primary-500 w-full"
+                      value={row.unit}
+                      onChange={e => updateRow(row._id, 'unit', e.target.value)}
+                    >
+                      {Object.entries(UNIT_LABELS).map(([v, l]) => (
+                        <option key={v} value={v}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Price */}
+                  <div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="text-xs text-right border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:border-primary-500 w-full"
+                      value={row.costPrice ?? ''}
+                      placeholder="—"
+                      onChange={e => updateRow(row._id, 'costPrice', e.target.value === '' ? null : parseFloat(e.target.value))}
+                    />
+                  </div>
+
+                  {/* Remove */}
+                  <div className="flex justify-end">
+                    <button
+                      className="p-1 text-gray-300 hover:text-red-500 transition-colors"
+                      onClick={() => { setRows(prev => prev.filter(r => r._id !== row._id)); setSelected(prev => { const n = new Set(prev); n.delete(row._id); return n }) }}
+                      title="Eliminar fila"
+                    >
+                      <Icons.close className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <button onClick={() => { setStep('upload'); setRows([]); setSelected(new Set()); setSearch('') }}
+              className="btn-ghost text-sm">
+              ← Cambiar archivo
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={selected.size === 0}
+              className="btn-primary disabled:opacity-50"
+            >
+              Importar {selected.size} producto{selected.size !== 1 ? 's' : ''}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Importing */}
+      {step === 'importing' && (
+        <div className="py-12 text-center space-y-4">
+          <Spinner size="lg" />
+          <p className="text-sm font-medium text-gray-700">Importando productos…</p>
+        </div>
+      )}
+
+      {/* Done */}
+      {step === 'done' && result && (
+        <div className="py-8 text-center space-y-4">
+          <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+            <Icons.check className="w-7 h-7 text-green-600" />
+          </div>
+          <div>
+            <p className="text-base font-semibold text-gray-900">¡Importación completa!</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {result.imported > 0 && <span>{result.imported} producto{result.imported !== 1 ? 's' : ''} nuevos</span>}
+              {result.imported > 0 && result.updated > 0 && <span> · </span>}
+              {result.updated > 0 && <span>{result.updated} actualizados</span>}
+            </p>
+          </div>
+          <button onClick={onClose} className="btn-primary">Listo</button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ── ProviderForm (rendered inside <Modal>) ────────────────────────────────────
 function ProviderForm({ provider, onSave, onClose }) {
@@ -103,6 +403,7 @@ export default function ProvidersPage() {
   const [loading, setLoading]     = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editProvider, setEditProvider] = useState(null)
+  const [importProvider, setImportProvider] = useState(null)
   const [search, setSearch]       = useState('')
 
   const canWrite = user?.role === 'admin' || user?.role === 'manager'
@@ -123,6 +424,8 @@ export default function ProvidersPage() {
   function openNew() { setEditProvider(null); setShowModal(true) }
   function openEdit(p) { setEditProvider(p); setShowModal(true) }
   function closeModal() { setShowModal(false); setEditProvider(null) }
+  function openImport(p) { setImportProvider(p) }
+  function closeImport() { setImportProvider(null) }
 
   function handleSave(saved) {
     setProviders(prev => {
@@ -240,6 +543,16 @@ export default function ProvidersPage() {
                   <div className="flex items-center gap-1 shrink-0">
                     {canWrite && (
                       <button
+                        onClick={() => openImport(p)}
+                        className="btn-ghost btn-sm hidden sm:inline-flex gap-1.5"
+                        title="Importar lista de precios"
+                      >
+                        <Icons.upload className="w-3.5 h-3.5" />
+                        <span className="hidden lg:inline">Importar precios</span>
+                      </button>
+                    )}
+                    {canWrite && (
+                      <button
                         onClick={() => toggleActive(p)}
                         className="btn-ghost btn-sm hidden sm:inline-flex"
                         title={p.isActive ? 'Desactivar' : 'Activar'}
@@ -276,6 +589,21 @@ export default function ProvidersPage() {
           onSave={handleSave}
           onClose={closeModal}
         />
+      </Modal>
+
+      <Modal
+        isOpen={!!importProvider}
+        onClose={closeImport}
+        title={`Importar lista de precios — ${importProvider?.name ?? ''}`}
+        size="xl"
+      >
+        {importProvider && (
+          <ImportModal
+            provider={importProvider}
+            onDone={load}
+            onClose={closeImport}
+          />
+        )}
       </Modal>
     </>
   )
