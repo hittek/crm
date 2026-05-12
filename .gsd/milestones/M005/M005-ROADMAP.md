@@ -2,10 +2,10 @@
 
 ## Slices
 
-- [ ] **S01: Provider + Product Catalog** `risk:medium` `depends:[]`
+- [x] **S01: Provider + Product Catalog** `risk:medium` `depends:[]`
   > After this: org can create Providers and Products/Services with cost price, fee %, margin % → computed selling price. CRUD UI in Settings (or dedicated /products page). Schema migrated.
 
-- [ ] **S02: AI Price List Import** `risk:high` `depends:[S01]`
+- [x] **S02: AI Price List Import** `risk:high` `depends:[S01]`
   > After this: upload a provider PDF price list → Claude extracts structured product rows (sku, name, unit, costPrice) → review UI → one-click import into catalog. Reuses existing PDF processing pipeline.
 
 - [ ] **S03: Quote Builder** `risk:high` `depends:[S01]`
