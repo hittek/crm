@@ -207,6 +207,7 @@ function BotModal({ bot, kbs, dealStages, onClose, onSave }) {
                   <div className="flex flex-wrap gap-1.5">
                     {['create_contact', 'create_quote'].map(tool => {
                       const enabled = (form.enabledTools || '').split(',').map(t => t.trim()).includes(tool)
+                      const isQuote = tool === 'create_quote'
                       return (
                         <button
                           key={tool} type="button"
@@ -222,6 +223,9 @@ function BotModal({ bot, kbs, dealStages, onClose, onSave }) {
                           }`}
                         >
                           {tool}
+                          {isQuote && enabled && (
+                            <span className="ml-1 opacity-60">+ lookup_products</span>
+                          )}
                         </button>
                       )
                     })}
