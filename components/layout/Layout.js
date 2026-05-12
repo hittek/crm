@@ -316,6 +316,16 @@ export default function Layout({ children }) {
                   <Icons.user className="w-4 h-4" />
                   {t('nav.profile')}
                 </Link>
+                {user?.isSuperAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full px-3 py-2 text-left text-sm text-purple-700 hover:bg-purple-50 flex items-center gap-2"
+                  >
+                    <Icons.settings className="w-4 h-4" />
+                    Panel superadmin
+                  </Link>
+                )}
                 <button
                   onClick={() => {
                     setShowUserMenu(false)
