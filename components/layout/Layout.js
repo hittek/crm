@@ -78,6 +78,7 @@ export default function Layout({ children }) {
   const catalogSubNav = [
     { name: t('nav.providers'), href: '/providers', icon: Icons.truck },
     { name: t('nav.products'), href: '/products', icon: Icons.package },
+    { name: t('nav.quotes'), href: '/quotes', icon: Icons.fileText },
   ]
 
   const catalogRoutes = catalogSubNav.map(i => i.href)
