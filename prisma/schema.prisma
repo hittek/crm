@@ -566,6 +566,7 @@ model Quote {
   currency       String    @default("MXN")
   notes          String?
   validUntil     DateTime?
+  shareToken     String?   @unique  // public shareable link token
 
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

@@ -384,12 +384,30 @@ function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
 // ── QuoteCard ──────────────────────────────────────────────────────────────────
 function QuoteCard({ quote, canWrite, canDelete, onEdit, onDelete, onStatusChange }) {
   const [busy, setBusy] = useState(false)
+  const [shareUrl, setShareUrl] = useState(quote.shareToken ? `/q/${quote.shareToken}` : null)
+  const [sharing, setSharing]   = useState(false)
+  const [copied, setCopied]     = useState(false)
   const nextStatuses = NEXT_STATUSES[quote.status] || []
 
   async function changeStatus(value) {
     setBusy(true)
     await onStatusChange(quote.id, value)
     setBusy(false)
+  }
+
+  async function handleShare() {
+    setSharing(true)
+    const r = await fetch(`/api/quotes/${quote.id}/share`, { method: 'POST' })
+    const data = await r.json()
+    if (r.ok) setShareUrl(data.url)
+    setSharing(false)
+  }
+
+  async function copyUrl() {
+    const url = shareUrl.startsWith('http') ? shareUrl : `${window.location.origin}${shareUrl}`
+    await navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -464,6 +482,17 @@ function QuoteCard({ quote, canWrite, canDelete, onEdit, onDelete, onStatusChang
             Editar
           </button>
         )}
+
+        {/* Share / copy link */}
+        <button
+          onClick={shareUrl ? copyUrl : handleShare}
+          disabled={sharing}
+          className="btn-ghost btn-sm inline-flex items-center gap-1 text-xs"
+          title={shareUrl ? 'Copiar enlace' : 'Generar enlace compartible'}
+        >
+          <Icons.external className="w-3 h-3" />
+          {sharing ? '…' : copied ? '¡Copiado!' : shareUrl ? 'Copiar enlace' : 'Compartir'}
+        </button>
 
         {canDelete && (
           <button

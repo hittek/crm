@@ -42,8 +42,29 @@ function QuoteDetailModal({ quote, products, onClose, onUpdate, onDelete }) {
   const { user } = useAuth()
   const [q, setQ] = useState(quote)
   const [busy, setBusy] = useState(false)
+  const [shareUrl, setShareUrl] = useState(null)
+  const [sharing, setSharing]   = useState(false)
+  const [copied, setCopied]     = useState(false)
   const canWrite = ['admin', 'manager', 'agent'].includes(user?.role)
   const canDelete = ['admin', 'manager'].includes(user?.role)
+
+  async function handleShare() {
+    setSharing(true)
+    const r = await fetch(`/api/quotes/${q.id}/share`, { method: 'POST' })
+    const data = await r.json()
+    if (r.ok) setShareUrl(data.url)
+    setSharing(false)
+  }
+
+  async function copyShareUrl() {
+    await navigator.clipboard.writeText(shareUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  function openPublicPage() {
+    window.open(shareUrl, '_blank')
+  }
 
   const nextStatuses = NEXT_STATUSES[q.status] || []
 
@@ -161,6 +182,26 @@ function QuoteDetailModal({ quote, products, onClose, onUpdate, onDelete }) {
         </div>
       )}
 
+      {/* Share URL display */}
+      {shareUrl && (
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+          <span className="text-xs text-gray-500 truncate flex-1 font-mono">{shareUrl}</span>
+          <button
+            onClick={copyShareUrl}
+            className="shrink-0 text-xs text-primary-600 hover:text-primary-800 font-medium"
+          >
+            {copied ? '¡Copiado!' : 'Copiar'}
+          </button>
+          <button
+            onClick={openPublicPage}
+            className="shrink-0 p-1 text-gray-400 hover:text-gray-700 rounded"
+            title="Abrir en nueva pestaña"
+          >
+            <Icons.external className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-gray-100">
         {nextStatuses.map(ns => (
@@ -177,6 +218,17 @@ function QuoteDetailModal({ quote, products, onClose, onUpdate, onDelete }) {
             {ns.label}
           </button>
         ))}
+
+        {/* Share button */}
+        <button
+          onClick={shareUrl ? openPublicPage : handleShare}
+          disabled={sharing}
+          className="btn-ghost btn-sm inline-flex items-center gap-1.5"
+        >
+          <Icons.external className="w-3.5 h-3.5" />
+          {sharing ? 'Generando…' : shareUrl ? 'Ver enlace' : 'Compartir'}
+        </button>
+
         {canDelete && (
           <button
             onClick={() => { onDelete(q.id); onClose() }}
