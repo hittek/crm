@@ -5,6 +5,7 @@ import { Avatar } from '../ui/Avatar'
 import { StatusChip, PriorityChip } from '../ui/Chip'
 import { InlineEdit, InlineTextarea } from '../ui/InlineEdit'
 import ActivityTimeline from '../contacts/ActivityTimeline'
+import QuoteTab from './QuoteTab'
 import { formatCurrency, formatSmartDate, formatDate } from '../../lib/utils'
 import { useDealStages, useOrganization } from '../../lib/SettingsContext'
 import { useAuth } from '../../lib/AuthContext'
@@ -185,6 +186,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
               { id: 'details', label: 'Detalles' },
               { id: 'activity', label: 'Actividad' },
               { id: 'tasks', label: 'Tareas' },
+              { id: 'quotes', label: 'Cotizaciones' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -282,6 +284,10 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
                 Crear tarea
               </button>
             </div>
+          )}
+
+          {activeTab === 'quotes' && (
+            <QuoteTab deal={localDeal} />
           )}
 
           {/* Quick actions */}
