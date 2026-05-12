@@ -181,7 +181,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-gray-200">
+          <div className="flex border-b border-gray-200 overflow-x-auto scrollbar-hide">
             {[
               { id: 'details', label: 'Detalles' },
               { id: 'activity', label: 'Actividad' },
@@ -191,7 +191,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.id
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
