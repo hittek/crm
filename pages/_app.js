@@ -9,6 +9,8 @@ import UpgradeWall from '../components/ui/UpgradeWall'
 
 // Pages that don't require authentication
 const PUBLIC_PAGES = ['/login', '/signup', '/', '/privacidad']
+// Prefix patterns that are always public (shareable quote links, widget)
+const PUBLIC_PREFIXES = ['/q/']
 
 function AuthenticatedApp({ Component, pageProps }) {
   const router = useRouter()
@@ -24,7 +26,7 @@ function AuthenticatedApp({ Component, pageProps }) {
   }
 
   // Public pages don't need authentication check
-  if (PUBLIC_PAGES.includes(router.pathname)) {
+  if (PUBLIC_PAGES.includes(router.pathname) || PUBLIC_PREFIXES.some(p => router.pathname.startsWith(p))) {
     if (Component.getLayout) {
       return Component.getLayout(<Component {...pageProps} />)
     }
