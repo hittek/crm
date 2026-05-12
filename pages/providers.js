@@ -186,8 +186,8 @@ function ImportModal({ provider, onDone, onClose }) {
           )}
 
           <div className="border border-gray-200 rounded-lg overflow-hidden">
-            {/* Table header */}
-            <div className="grid grid-cols-[32px_1fr_80px_80px_100px] gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500">
+            {/* Table header — hidden on mobile, shown sm+ */}
+            <div className="hidden sm:grid sm:grid-cols-[32px_1fr_80px_80px_100px] gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500">
               <div className="flex items-center">
                 <input type="checkbox" className="rounded"
                   checked={allVisible} ref={el => el && (el.indeterminate = !allVisible && someVisible)}
@@ -198,6 +198,13 @@ function ImportModal({ provider, onDone, onClose }) {
               <div className="text-right">Precio</div>
               <div></div>
             </div>
+            {/* Mobile-only: select-all row */}
+            <div className="sm:hidden flex items-center gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200">
+              <input type="checkbox" className="rounded"
+                checked={allVisible} ref={el => el && (el.indeterminate = !allVisible && someVisible)}
+                onChange={toggleAll} />
+              <span className="text-xs text-gray-500">Seleccionar todos los visibles</span>
+            </div>
 
             {/* Table body */}
             <div className="divide-y divide-gray-100 max-h-[40vh] overflow-y-auto">
@@ -205,70 +212,106 @@ function ImportModal({ provider, onDone, onClose }) {
                 <div className="px-4 py-6 text-sm text-gray-400 text-center">Sin resultados</div>
               )}
               {filtered.map(row => (
-                <div key={row._id}
-                  className={`grid grid-cols-[32px_1fr_80px_80px_100px] gap-2 px-3 py-2 items-start text-sm ${
-                    selected.has(row._id) ? '' : 'opacity-40'
-                  }`}
-                >
-                  {/* Checkbox */}
-                  <div className="pt-1">
-                    <input type="checkbox" className="rounded"
-                      checked={selected.has(row._id)}
-                      onChange={() => toggleRow(row._id)} />
-                  </div>
-
-                  {/* Name + SKU */}
-                  <div className="min-w-0 space-y-1">
-                    <input
-                      className="w-full text-sm font-medium text-gray-900 bg-transparent border-0 border-b border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-none px-0 py-0"
-                      value={row.name}
-                      onChange={e => updateRow(row._id, 'name', e.target.value)}
-                    />
-                    {row.sku && (
+                <div key={row._id} className={selected.has(row._id) ? '' : 'opacity-40'}>
+                  {/* Desktop row (sm+) */}
+                  <div className="hidden sm:grid sm:grid-cols-[32px_1fr_80px_80px_100px] gap-2 px-3 py-2 items-start text-sm">
+                    <div className="pt-1">
+                      <input type="checkbox" className="rounded"
+                        checked={selected.has(row._id)}
+                        onChange={() => toggleRow(row._id)} />
+                    </div>
+                    <div className="min-w-0 space-y-1">
                       <input
-                        className="w-full text-xs text-gray-400 bg-transparent border-0 border-b border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-none px-0 py-0"
-                        value={row.sku}
-                        onChange={e => updateRow(row._id, 'sku', e.target.value)}
-                        placeholder="SKU"
+                        className="w-full text-sm font-medium text-gray-900 bg-transparent border-0 border-b border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-none px-0 py-0"
+                        value={row.name}
+                        onChange={e => updateRow(row._id, 'name', e.target.value)}
                       />
-                    )}
+                      {row.sku && (
+                        <input
+                          className="w-full text-xs text-gray-400 bg-transparent border-0 border-b border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-none px-0 py-0"
+                          value={row.sku}
+                          onChange={e => updateRow(row._id, 'sku', e.target.value)}
+                          placeholder="SKU"
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <select
+                        className="text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:border-primary-500 w-full"
+                        value={row.unit}
+                        onChange={e => updateRow(row._id, 'unit', e.target.value)}
+                      >
+                        {Object.entries(UNIT_LABELS).map(([v, l]) => (
+                          <option key={v} value={v}>{l}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <input
+                        type="number" step="0.01" min="0"
+                        className="text-xs text-right border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:border-primary-500 w-full"
+                        value={row.costPrice ?? ''}
+                        placeholder="—"
+                        onChange={e => updateRow(row._id, 'costPrice', e.target.value === '' ? null : parseFloat(e.target.value))}
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        className="p-1 text-gray-300 hover:text-red-500 transition-colors"
+                        onClick={() => { setRows(prev => prev.filter(r => r._id !== row._id)); setSelected(prev => { const n = new Set(prev); n.delete(row._id); return n }) }}
+                        title="Eliminar fila"
+                      >
+                        <Icons.close className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Unit */}
-                  <div>
-                    <select
-                      className="text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:border-primary-500 w-full"
-                      value={row.unit}
-                      onChange={e => updateRow(row._id, 'unit', e.target.value)}
-                    >
-                      {Object.entries(UNIT_LABELS).map(([v, l]) => (
-                        <option key={v} value={v}>{l}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Price */}
-                  <div>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="text-xs text-right border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:border-primary-500 w-full"
-                      value={row.costPrice ?? ''}
-                      placeholder="—"
-                      onChange={e => updateRow(row._id, 'costPrice', e.target.value === '' ? null : parseFloat(e.target.value))}
-                    />
-                  </div>
-
-                  {/* Remove */}
-                  <div className="flex justify-end">
-                    <button
-                      className="p-1 text-gray-300 hover:text-red-500 transition-colors"
-                      onClick={() => { setRows(prev => prev.filter(r => r._id !== row._id)); setSelected(prev => { const n = new Set(prev); n.delete(row._id); return n }) }}
-                      title="Eliminar fila"
-                    >
-                      <Icons.close className="w-3.5 h-3.5" />
-                    </button>
+                  {/* Mobile row (stacked card) */}
+                  <div className="sm:hidden px-3 py-2.5 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <input type="checkbox" className="rounded mt-1 shrink-0"
+                        checked={selected.has(row._id)}
+                        onChange={() => toggleRow(row._id)} />
+                      <div className="flex-1 min-w-0">
+                        <input
+                          className="w-full text-sm font-medium text-gray-900 bg-transparent border-0 border-b border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-none px-0 py-0"
+                          value={row.name}
+                          onChange={e => updateRow(row._id, 'name', e.target.value)}
+                        />
+                        {row.sku && (
+                          <input
+                            className="w-full text-xs text-gray-400 bg-transparent border-0 border-b border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-none px-0 py-0 mt-0.5"
+                            value={row.sku}
+                            onChange={e => updateRow(row._id, 'sku', e.target.value)}
+                            placeholder="SKU"
+                          />
+                        )}
+                      </div>
+                      <button
+                        className="p-1 text-gray-300 hover:text-red-500 transition-colors shrink-0"
+                        onClick={() => { setRows(prev => prev.filter(r => r._id !== row._id)); setSelected(prev => { const n = new Set(prev); n.delete(row._id); return n }) }}
+                      >
+                        <Icons.close className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="flex gap-2 pl-6">
+                      <select
+                        className="text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:border-primary-500 flex-1"
+                        value={row.unit}
+                        onChange={e => updateRow(row._id, 'unit', e.target.value)}
+                      >
+                        {Object.entries(UNIT_LABELS).map(([v, l]) => (
+                          <option key={v} value={v}>{l}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="number" step="0.01" min="0"
+                        className="text-xs text-right border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:border-primary-500 w-28"
+                        value={row.costPrice ?? ''}
+                        placeholder="Precio"
+                        onChange={e => updateRow(row._id, 'costPrice', e.target.value === '' ? null : parseFloat(e.target.value))}
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -558,7 +601,7 @@ export default function ProvidersPage() {
                     {canWrite && (
                       <button
                         onClick={() => openImport(p)}
-                        className="btn-ghost btn-sm hidden sm:inline-flex gap-1.5"
+                        className="btn-ghost btn-sm inline-flex items-center gap-1.5"
                         title="Importar lista de precios"
                       >
                         <Icons.upload className="w-3.5 h-3.5" />
@@ -568,10 +611,13 @@ export default function ProvidersPage() {
                     {canWrite && (
                       <button
                         onClick={() => toggleActive(p)}
-                        className="btn-ghost btn-sm hidden sm:inline-flex"
+                        className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
                         title={p.isActive ? 'Desactivar' : 'Activar'}
                       >
-                        {p.isActive ? 'Desactivar' : 'Activar'}
+                        {p.isActive
+                          ? <Icons.eyeOff className="w-4 h-4" />
+                          : <Icons.eye className="w-4 h-4" />
+                        }
                       </button>
                     )}
                     {canWrite && (

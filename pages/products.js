@@ -325,7 +325,7 @@ export default function ProductsPage() {
             {providers.length > 0 && (
               <select
                 value={provFilter} onChange={e => setProvFilter(e.target.value)}
-                className="input py-1.5 w-auto"
+                className="input py-1.5 w-full sm:w-auto"
               >
                 <option value="">Todos los proveedores</option>
                 {providers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -333,7 +333,7 @@ export default function ProductsPage() {
             )}
 
             {/* Search */}
-            <div className="relative flex-1 min-w-[160px]">
+            <div className="relative flex-1 min-w-full sm:min-w-[160px]">
               <Icons.search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 className="input pl-9 py-1.5" type="text" value={search}
@@ -395,12 +395,14 @@ export default function ProductsPage() {
                       {p.provider?.name && <span>{p.provider.name}</span>}
                       <span className="capitalize">{p.unit}</span>
                       {p.costPrice != null && (
-                        <span>Costo: {fmt(p.costPrice)}</span>
+                        <span className="hidden sm:inline">Costo: {fmt(p.costPrice)}</span>
                       )}
+                      {/* Price shown inline on mobile */}
+                      <span className="font-semibold text-gray-900 sm:hidden">{fmt(p.sellingPrice)}</span>
                     </div>
                   </div>
 
-                  {/* Price */}
+                  {/* Price — desktop column */}
                   <div className="text-right shrink-0 mr-2 hidden sm:block">
                     <div className="font-semibold text-gray-900">{fmt(p.sellingPrice)}</div>
                     <div className="text-xs text-gray-400">{p.currency}</div>
@@ -411,9 +413,13 @@ export default function ProductsPage() {
                     {canWrite && (
                       <button
                         onClick={() => toggleActive(p)}
-                        className="btn-ghost btn-sm hidden sm:inline-flex"
+                        className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+                        title={p.isActive ? 'Desactivar' : 'Activar'}
                       >
-                        {p.isActive ? 'Desactivar' : 'Activar'}
+                        {p.isActive
+                          ? <Icons.eyeOff className="w-4 h-4" />
+                          : <Icons.eye className="w-4 h-4" />
+                        }
                       </button>
                     )}
                     {canWrite && (
