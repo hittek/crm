@@ -9,6 +9,7 @@ import prisma from '../../../../lib/prisma'
 import { getSession } from '../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse } from '../../../../lib/planLimits'
 import { summarizeConversation } from '../../../../lib/summarize'
+import { logConversationActivity } from '../../../../lib/channelEngine'
 
 const VALID_STATUSES = ['open', 'resolved', 'escalated']
 
@@ -52,11 +53,19 @@ export default async function handler(req, res) {
       ] : []),
     ])
 
-    // Generate AI summary async when agent manually resolves
+    // Generate AI summary + log CRM activity when agent manually resolves
     if (status === 'resolved') {
       summarizeConversation(convId).catch(err =>
         console.error('[status] summarize failed:', err.message)
       )
+      if (conv.contactId) {
+        logConversationActivity(convId, {
+          orgId:     organizationId,
+          contactId: conv.contactId,
+          outcome:   'resolved',
+          channel:   conv.channel,
+        }).catch(() => {})
+      }
     }
 
     return res.json({ conversation: updated })
