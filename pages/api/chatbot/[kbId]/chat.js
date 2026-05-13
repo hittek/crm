@@ -4,12 +4,10 @@
  * Internal RAG chat endpoint — requires CRM session auth.
  * Used by the sandbox ChatPanel on the KB management page.
  *
- * SPENDING GUARDS
- * ──────────────
- * Per user message, exactly:
- *   • 1 Voyage API call  — embed the query (via searchChunks)
- *   • 1 Anthropic call   — generate reply, max_tokens: 800 hard cap
- * No retries, no loops, no polling.
+ * Flow when chatbot has tools enabled:
+ *   1. Non-streaming call with tools → execute any tool_use blocks (≤3 rounds)
+ *   2. Stream final text via SSE
+ * Flow with no tools: single streaming call (unchanged).
  *
  * Body:  { message, sessionId?, chatbotId? }
  * SSE frames:
@@ -28,14 +26,16 @@ import { checkOrgAccess, orgAccessResponse } from '../../../../lib/planLimits'
 import { searchChunks } from '../../../../lib/rag'
 import { notifications } from '../../../../lib/notifications'
 import { shouldEscalate } from '../../../../lib/escalation'
-import { buildSystemPrompt } from '../../../../lib/channelEngine'
+import { buildSystemPrompt, logConversationActivity } from '../../../../lib/channelEngine'
 import { summarizeConversation } from '../../../../lib/summarize'
+import { getEnabledTools, executeToolCall } from '../../../../lib/chatbotTools'
 
 export const config = { api: { bodyParser: true }, maxDuration: 60 }
 
 const MODEL      = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 800
 const TOP_K      = 5
+const MAX_TOOL_ROUNDS = 3
 
 let _anthropic = null
 function getAnthropic() {
@@ -86,7 +86,7 @@ export default async function handler(req, res) {
   if (!message?.trim())       return res.status(400).json({ error: 'message requerido' })
   if (message.length > 2000)  return res.status(400).json({ error: 'message demasiado largo (máx 2000 chars)' })
 
-  // Parallel fan-out: KB + chatbot + RAG search run concurrently (saves ~400-900ms)
+  // Parallel fan-out: KB + chatbot + RAG search run concurrently
   const [kb, chatbot, chunksResult] = await Promise.all([
     prisma.knowledgeBase.findFirst({
       where:  { id: kbId, orgId: organizationId },
@@ -95,7 +95,11 @@ export default async function handler(req, res) {
     chatbotId
       ? prisma.chatbot.findFirst({
           where:  { id: parseInt(chatbotId), orgId: organizationId },
-          select: { id: true, name: true, greeting: true, escalationPhrase: true },
+          select: {
+            id: true, name: true, greeting: true, escalationPhrase: true,
+            enabledTools: true, autoCreateContact: true, autoCreateDeal: true,
+            defaultDealStage: true, dealTitleTemplate: true,
+          },
         })
       : Promise.resolve(null),
     searchChunks({ query: message, kbId, orgId: organizationId, limit: TOP_K })
@@ -109,17 +113,16 @@ export default async function handler(req, res) {
 
   // Optional: find or create conversation for persistence
   let conversationId = null
+  let conv           = null
   let prevSummary    = null
   if (chatbot && sessionId) {
-    let conv = await prisma.conversation.findFirst({
+    conv = await prisma.conversation.findFirst({
       where:   { chatbotId: chatbot.id, sessionId, status: { in: ['open', 'escalated'] } },
       include: { contact: { select: { aiSummary: true, firstName: true, lastName: true } } },
     })
 
     if (!conv) {
-      // Load cross-session memory before creating the new conversation
       prevSummary = await loadPrevSessionContext(chatbot.id, sessionId)
-
       conv = await prisma.conversation.create({
         data:    { chatbotId: chatbot.id, orgId: organizationId, sessionId, channel: 'sandbox' },
         include: { contact: { select: { aiSummary: true, firstName: true, lastName: true } } },
@@ -148,6 +151,13 @@ export default async function handler(req, res) {
       notifications.chatEscalated({ id: conversationId }, chatbot, organizationId).catch(err =>
         console.error('[chat] chatEscalated notification failed:', err.message)
       )
+      logConversationActivity(conversationId, {
+        orgId:     organizationId,
+        contactId: conv.contactId ?? null,
+        outcome:   'escalated',
+        channel:   'sandbox',
+        chatbotName: chatbot.name,
+      }).catch(() => {})
       return res.json({ conversationId, reply: escalationReply })
     }
 
@@ -161,13 +171,40 @@ export default async function handler(req, res) {
     ? chunks.map((c, i) => `[${i + 1}] ${c.content}`).join('\n\n')
     : '(No se encontró contexto relevante en la base de conocimiento)'
 
-  // Build system prompt via shared helper (includes cross-session + auto-resolve instruction)
   const systemPrompt = buildSystemPrompt(
     chatbot ?? { name: kb.name },
     contextText,
     { prevSummary },
   )
 
+  // ── Tool definitions ──────────────────────────────────────────────────────
+  const toolDefs    = chatbot ? getEnabledTools(chatbot) : []
+  const hasTools    = toolDefs.length > 0
+  const appUrl      = process.env.NEXT_PUBLIC_APP_URL || ''
+  const toolContext = {
+    orgId:         organizationId,
+    conversationId,
+    contactId:     conv?.contactId ?? null,
+    dealId:        null,
+    appUrl,
+  }
+
+  // Load conversation history (last 6 turns)
+  let historyMessages = []
+  if (conversationId) {
+    const rows = await prisma.conversationMessage.findMany({
+      where:   { conversationId, role: { in: ['user', 'assistant'] } },
+      orderBy: { createdAt: 'desc' },
+      take:    12,
+    })
+    rows.reverse()
+    historyMessages = rows.slice(0, -1).map(m => ({
+      role:    m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.content,
+    }))
+  }
+
+  // ── SSE setup ─────────────────────────────────────────────────────────────
   res.setHeader('Content-Type',  'text/event-stream; charset=utf-8')
   res.setHeader('Cache-Control', 'no-cache')
   res.setHeader('Connection',    'keep-alive')
@@ -175,32 +212,134 @@ export default async function handler(req, res) {
 
   const emit = data => res.write(`data: ${JSON.stringify(data)}\n\n`)
 
-  // Load conversation history (last 6 turns) so the AI can follow the thread
-  let historyMessages = []
-  if (conversationId) {
-    const rows = await prisma.conversationMessage.findMany({
-      where:   { conversationId, role: { in: ['user', 'assistant'] } },
-      orderBy: { createdAt: 'desc' },
-      take:    12,  // 6 turns × 2 roles
-    })
-    rows.reverse()
-    // Drop the last entry — it's the user message we just saved
-    historyMessages = rows.slice(0, -1).map(m => ({
-      role:    m.role === 'assistant' ? 'assistant' : 'user',
-      content: m.content,
-    }))
+  // ── Tool-use phase (non-streaming) — runs only when tools are enabled ─────
+  let toolMessages = [
+    ...historyMessages,
+    { role: 'user', content: message.trim() },
+  ]
+  let fullReply = ''
+
+  if (hasTools) {
+    try {
+      let rounds = 0
+      while (rounds < MAX_TOOL_ROUNDS) {
+        rounds++
+        const response = await getAnthropic().messages.create({
+          model:      MODEL,
+          max_tokens: MAX_TOKENS,
+          system:     systemPrompt,
+          tools:      toolDefs,
+          messages:   toolMessages,
+        })
+
+        const toolUseBlocks = response.content.filter(b => b.type === 'tool_use')
+
+        if (!toolUseBlocks.length) {
+          // No tools — extract final text
+          const textBlock = response.content.find(b => b.type === 'text')
+          fullReply = textBlock?.text?.trim() || ''
+          break
+        }
+
+        // Execute all tool calls and collect results
+        const toolResults = []
+        for (const block of toolUseBlocks) {
+          const result = await executeToolCall(block.name, block.input, toolContext)
+
+          // Propagate new contactId back into context so create_quote can link it
+          if (block.name === 'create_contact' && result.ok && result.data?.contactId) {
+            toolContext.contactId = result.data.contactId
+            await prisma.conversation.update({
+              where: { id: conversationId },
+              data:  { contactId: result.data.contactId },
+            }).catch(() => {})
+          }
+
+          toolResults.push({
+            type:        'tool_result',
+            tool_use_id: block.id,
+            content:     result.message,
+          })
+        }
+
+        toolMessages = [
+          ...toolMessages,
+          { role: 'assistant', content: response.content },
+          { role: 'user',      content: toolResults },
+        ]
+      }
+    } catch (err) {
+      console.error('[chat] tool-use error:', err.message)
+      fullReply = ''
+    }
+
+    // If we got a reply from tool path, stream it as SSE deltas and finish
+    if (fullReply) {
+      const autoResolved = fullReply.includes('[RESOLVED]')
+      const cleanReply   = fullReply.replace(/\n?\[RESOLVED\]\s*$/, '').trim()
+
+      // Emit first frame with conversationId, then rest as plain deltas
+      const CHUNK_SIZE = 8
+      let first = true
+      for (let i = 0; i < cleanReply.length; i += CHUNK_SIZE) {
+        const chunk = cleanReply.slice(i, i + CHUNK_SIZE)
+        if (first && conversationId) {
+          emit({ conversationId, delta: chunk })
+          first = false
+        } else {
+          emit({ delta: chunk })
+        }
+      }
+
+      if (autoResolved && conversationId) emit({ resolved: true })
+      res.write('data: [DONE]\n\n')
+      res.end()
+
+      // Post-stream DB writes
+      if (conversationId && cleanReply) {
+        const ops = [
+          prisma.conversationMessage.create({
+            data: { conversationId, role: 'assistant', content: cleanReply },
+          }),
+        ]
+        if (autoResolved) {
+          ops.push(prisma.conversation.update({
+            where: { id: conversationId },
+            data:  { status: 'resolved' },
+          }))
+        }
+        waitUntil(
+          Promise.all(ops)
+            .then(() => {
+              if (autoResolved) {
+                logConversationActivity(conversationId, {
+                  orgId:     organizationId,
+                  contactId: toolContext.contactId,
+                  outcome:   'resolved',
+                  channel:   'sandbox',
+                  chatbotName: chatbot?.name,
+                }).catch(() => {})
+                return summarizeConversation(conversationId).catch(err =>
+                  console.error('[chat] summarize failed:', err.message)
+                )
+              }
+            })
+            .catch(err => console.error('[chat] post-stream DB write failed:', err.message))
+        )
+      }
+      return
+    }
+    // Fall through to streaming if tool phase produced no text (shouldn't happen)
   }
 
-  let fullReply = ''
+  // ── Streaming path (no tools, or tool phase fell through) ─────────────────
   try {
     const stream = getAnthropic().messages.stream({
       model:      MODEL,
       max_tokens: MAX_TOKENS,
       system:     systemPrompt,
-      messages:   [
-        ...historyMessages,
-        { role: 'user', content: message.trim() },
-      ],
+      messages:   toolMessages,
+      ...(hasTools && toolDefs.length ? { tools: toolDefs } : {}),
     })
 
     let firstFrame = true
@@ -227,13 +366,9 @@ export default async function handler(req, res) {
 
   // ── Auto-resolve detection ────────────────────────────────────────────────
   const autoResolved = fullReply.includes('[RESOLVED]')
-  // Strip the marker from the clean reply that gets persisted and sent to client
-  const cleanReply = fullReply.replace(/\n?\[RESOLVED\]\s*$/, '').trim()
+  const cleanReply   = fullReply.replace(/\n?\[RESOLVED\]\s*$/, '').trim()
 
-  // Emit resolved event BEFORE [DONE] so client can handle it
-  if (autoResolved && conversationId) {
-    emit({ resolved: true })
-  }
+  if (autoResolved && conversationId) emit({ resolved: true })
 
   res.write('data: [DONE]\n\n')
   res.end()
@@ -246,18 +381,22 @@ export default async function handler(req, res) {
       }),
     ]
     if (autoResolved) {
-      ops.push(
-        prisma.conversation.update({
-          where: { id: conversationId },
-          data:  { status: 'resolved' },
-        }),
-      )
+      ops.push(prisma.conversation.update({
+        where: { id: conversationId },
+        data:  { status: 'resolved' },
+      }))
     }
-    // waitUntil keeps the Lambda alive for post-stream DB writes and summarization
     waitUntil(
       Promise.all(ops)
         .then(() => {
           if (autoResolved) {
+            logConversationActivity(conversationId, {
+              orgId:     organizationId,
+              contactId: toolContext.contactId ?? conv?.contactId ?? null,
+              outcome:   'resolved',
+              channel:   'sandbox',
+              chatbotName: chatbot?.name,
+            }).catch(() => {})
             return summarizeConversation(conversationId).catch(err =>
               console.error('[chat] summarize failed:', err.message)
             )
