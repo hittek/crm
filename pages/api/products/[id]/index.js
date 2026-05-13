@@ -1,7 +1,7 @@
 
-import { getSession } from '../../../lib/auth'
-import prisma from '../../../lib/prisma'
-import { checkOrgAccess } from '../../../lib/planLimits'
+import { getSession } from '../../../../lib/auth'
+import prisma from '../../../../lib/prisma'
+import { checkOrgAccess } from '../../../../lib/planLimits'
 
 function computeSellingPrice(costPrice, feePercent = 0, marginPercent = 0) {
   if (costPrice == null) return null
