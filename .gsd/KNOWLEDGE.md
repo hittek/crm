@@ -32,7 +32,22 @@ or `npx prisma db execute` on this project — all fail with ERR_REQUIRE_ESM on 
 
 ---
 
-## ChatPanel (components/chatbot/ChatPanel.js)
+## Pre-push build check
+
+Always run a local build before pushing to avoid Vercel compile failures:
+
+```bash
+node_modules/.bin/next build 2>&1 | tail -20
+```
+
+Common gotchas:
+- Moving a file deeper in the directory tree shifts relative import depths (`../../../` → `../../../../`)
+- After restructuring `pages/api/products/[id].js` → `pages/api/products/[id]/index.js`,
+  all `../../../lib/*` imports needed one extra `../`
+
+---
+
+
 
 Two separate `{!collapsed && (...)}` blocks caused SWC parse error.
 Fix: wrap both messages + form in a single fragment `{!collapsed && (<>...</>)}`.
