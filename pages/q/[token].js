@@ -167,29 +167,49 @@ export default function PublicQuotePage() {
             )}
 
             {/* Line items table */}
-            <table className="w-full text-sm mb-6">
-              <thead>
-                <tr style={{ borderBottom: `2px solid ${org.primaryColor || '#2563eb'}` }}>
-                  <th className="text-left py-2.5 font-semibold text-gray-700">Descripción</th>
-                  <th className="text-right py-2.5 font-semibold text-gray-700 w-16">Cant.</th>
-                  <th className="text-right py-2.5 font-semibold text-gray-700 w-28">P. Unit.</th>
-                  <th className="text-right py-2.5 font-semibold text-gray-700 w-28">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {q.items.map((it, i) => (
-                  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="py-3 pr-4">
-                      <div className="font-medium text-gray-900">{it.description}</div>
-                      {it.sku && <div className="text-xs text-gray-400 font-mono mt-0.5">{it.sku}</div>}
-                    </td>
-                    <td className="py-3 text-right text-gray-600">{it.qty}</td>
-                    <td className="py-3 text-right text-gray-600">{fmt(it.unitPrice, q.currency)}</td>
-                    <td className="py-3 text-right font-semibold text-gray-900">{fmt(it.total, q.currency)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {(() => {
+              const hasImages = q.items.some(it => it.imageUrl)
+              return (
+                <table className="w-full text-sm mb-6">
+                  <thead>
+                    <tr style={{ borderBottom: `2px solid ${org.primaryColor || '#2563eb'}` }}>
+                      {hasImages && <th className="py-2.5 w-20" />}
+                      <th className="text-left py-2.5 font-semibold text-gray-700">Descripción</th>
+                      <th className="text-right py-2.5 font-semibold text-gray-700 w-16">Cant.</th>
+                      <th className="text-right py-2.5 font-semibold text-gray-700 w-28">P. Unit.</th>
+                      <th className="text-right py-2.5 font-semibold text-gray-700 w-28">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {q.items.map((it, i) => (
+                      <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        {hasImages && (
+                          <td className="py-2 pr-3 w-20">
+                            {it.imageUrl ? (
+                              <img
+                                src={it.imageUrl}
+                                alt={it.description}
+                                className="w-16 h-12 object-cover rounded-lg border border-gray-100"
+                                style={{ display: 'block' }}
+                              />
+                            ) : (
+                              <div className="w-16 h-12 rounded-lg bg-gray-100" />
+                            )}
+                          </td>
+                        )}
+                        <td className="py-3 pr-4">
+                          <div className="font-medium text-gray-900">{it.description}</div>
+                          {it.sku && <div className="text-xs text-gray-400 font-mono mt-0.5">{it.sku}</div>}
+                        </td>
+                        <td className="py-3 text-right text-gray-600">{it.qty}</td>
+                        <td className="py-3 text-right text-gray-600">{fmt(it.unitPrice, q.currency)}</td>
+                        <td className="py-3 text-right font-semibold text-gray-900">{fmt(it.total, q.currency)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
+            })()}
 
             {/* Totals */}
             <div className="flex justify-end mb-8">

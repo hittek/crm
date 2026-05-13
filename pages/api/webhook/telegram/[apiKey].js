@@ -10,7 +10,7 @@
 import prisma               from '../../../../lib/prisma'
 import { decryptJSON }      from '../../../../lib/crypto'
 import { processMessage }   from '../../../../lib/channelEngine'
-import { sendMessage }      from '../../../../lib/channels/telegram'
+import { sendMessage, sendMediaGroup } from '../../../../lib/channels/telegram'
 
 export default async function handler(req, res) {
   // Telegram requires 200 even on error — otherwise it retries for 24h
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     const sessionId = `tg-${chatId}`
 
     // Process through RAG engine
-    const { reply } = await processMessage({
+    const { reply, imageAttachments } = await processMessage({
       chatbot,
       channel:     'telegram',
       sessionId,
@@ -56,6 +56,13 @@ export default async function handler(req, res) {
         fromUsername:    msg.from?.username  || '',
       },
     })
+
+    // Send product images first (before the text reply), if any
+    if (imageAttachments?.length) {
+      await sendMediaGroup(botToken, chatId, imageAttachments).catch(err =>
+        console.error('[webhook/telegram] sendMediaGroup failed:', err.message)
+      )
+    }
 
     // Reply on Telegram (skip if agent has taken over)
     if (reply) {

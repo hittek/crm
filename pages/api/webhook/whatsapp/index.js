@@ -8,6 +8,24 @@ import prisma             from '../../../../lib/prisma'
 import { decryptJSON }    from '../../../../lib/crypto'
 import { processMessage } from '../../../../lib/channelEngine'
 
+async function sendWhatsAppImage(phoneNumberId, accessToken, to, imageUrl, caption) {
+  const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`
+  const r = await fetch(url, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body:    JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'image',
+      image: { link: imageUrl, ...(caption && { caption }) },
+    }),
+  })
+  if (!r.ok) {
+    const err = await r.text()
+    console.error('[webhook/whatsapp] sendImage error:', err)
+  }
+}
+
 async function sendWhatsApp(phoneNumberId, accessToken, to, text) {
   const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`
   const r = await fetch(url, {
@@ -75,13 +93,22 @@ export default async function handler(req, res) {
 
       const { accessToken } = decryptJSON(config.credentials)
 
-      const { reply } = await processMessage({
+      const { reply, imageAttachments } = await processMessage({
         chatbot:     config.chatbot,
         channel:     'whatsapp',
         sessionId:   `wa-${from}`,
         userMessage: text,
         metadata:    { whatsappFrom: from, phoneNumberId, displayPhone: value?.metadata?.display_phone_number },
       })
+
+      // Send product images first (before text), if any
+      if (imageAttachments?.length) {
+        for (const img of imageAttachments) {
+          await sendWhatsAppImage(phoneNumberId, accessToken, from, img.url, img.caption).catch(err =>
+            console.error('[webhook/whatsapp] sendImage failed:', err.message)
+          )
+        }
+      }
 
       if (reply) {
         await sendWhatsApp(phoneNumberId, accessToken, from, reply)

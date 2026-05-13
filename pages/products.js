@@ -41,9 +41,11 @@ function ProductForm({ product, providers, onSave, onClose }) {
     marginPercent: product?.marginPercent?.toString() || '0',
     sellingPrice: product?.sellingPrice?.toString() || '',
     currency: product?.currency || 'MXN',
+    imageUrl: product?.imageUrl || '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [uploadingImg, setUploadingImg] = useState(false)
 
   const isProduct = form.type === 'product'
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -85,6 +87,7 @@ function ProductForm({ product, providers, onSave, onClose }) {
         marginPercent: parseFloat(form.marginPercent) || 0,
         sellingPrice: sp,
         currency: form.currency,
+        imageUrl: form.imageUrl || null,
       }
       const url = product ? `/api/products/${product.id}` : '/api/products'
       const r = await fetch(url, {
@@ -99,6 +102,34 @@ function ProductForm({ product, providers, onSave, onClose }) {
       setError(err.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // For new products (no id yet): store as data URL for preview, upload after save
+    if (!product?.id) {
+      const reader = new FileReader()
+      reader.onload = ev => set('imageUrl', ev.target.result)
+      reader.readAsDataURL(file)
+      return
+    }
+    // For existing products: upload immediately
+    setUploadingImg(true)
+    try {
+      const r = await fetch(`/api/products/${product.id}/upload-image?filename=product-${product.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error || 'Error al subir imagen')
+      set('imageUrl', data.url)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setUploadingImg(false)
     }
   }
 
@@ -208,6 +239,36 @@ function ProductForm({ product, providers, onSave, onClose }) {
             <option value="USD">USD</option>
             <option value="EUR">EUR</option>
           </select>
+        </div>
+      </div>
+
+      {/* Image */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Imagen del producto</label>
+        <div className="flex items-center gap-3">
+          {form.imageUrl ? (
+            <div className="relative shrink-0">
+              <img src={form.imageUrl} alt="preview" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+              <button
+                type="button"
+                onClick={() => set('imageUrl', '')}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center leading-none hover:bg-red-600"
+              >×</button>
+            </div>
+          ) : (
+            <div className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-300 shrink-0">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors ${uploadingImg ? 'opacity-50 pointer-events-none' : ''}`}>
+              {uploadingImg ? 'Subiendo…' : 'Subir imagen'}
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImg} />
+            </label>
+            <p className="mt-1 text-xs text-gray-400">JPG, PNG, WebP · máx 4 MB</p>
+          </div>
         </div>
       </div>
 
@@ -365,14 +426,20 @@ export default function ProductsPage() {
             <div className="divide-y divide-gray-100">
               {filtered.map(p => (
                 <div key={p.id} className="flex items-center gap-3 px-4 lg:px-6 py-3 hover:bg-gray-50 transition-colors">
-                  {/* Type icon */}
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                    p.type === 'service' ? 'bg-blue-100' : 'bg-orange-100'
-                  }`}>
-                    {p.type === 'service'
-                      ? <Icons.truck className="w-4 h-4 text-blue-600" />
-                      : <Icons.package className="w-4 h-4 text-orange-600" />
-                    }
+                  {/* Thumbnail or type icon */}
+                  <div className="shrink-0">
+                    {p.imageUrl ? (
+                      <img src={p.imageUrl} alt={p.name} className="w-9 h-9 rounded-lg object-cover border border-gray-100" />
+                    ) : (
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                        p.type === 'service' ? 'bg-blue-100' : 'bg-orange-100'
+                      }`}>
+                        {p.type === 'service'
+                          ? <Icons.truck className="w-4 h-4 text-blue-600" />
+                          : <Icons.package className="w-4 h-4 text-orange-600" />
+                        }
+                      </div>
+                    )}
                   </div>
 
                   {/* Info */}
