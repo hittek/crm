@@ -5,20 +5,30 @@
 `prisma migrate dev` always fails against the Postgres DB because early migration files
 contain SQLite syntax (`AUTOINCREMENT`) that the shadow database rejects (P3006).
 
+**`npx prisma generate` and `npx prisma migrate diff` also fail** — the `npx` wrapper
+forces Node 20 which hits an ESM conflict in `@prisma/dev@0.20.0` (`ERR_REQUIRE_ESM`).
+`npx prisma db execute` fails the same way.
+
 **Correct workflow for schema changes:**
 ```bash
 # 1. Edit prisma/schema.prisma
-# 2. Generate SQL diff against live DB
-npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script \
-  | grep -v "^Now using\|^Loaded\|^---" > /tmp/migration.sql
-# 3. Execute directly (no shadow DB validation)
-npx prisma db execute --file /tmp/migration.sql
-# 4. Regenerate client
-npx prisma generate
-# 5. Restart dev server to pick up new client
+
+# 2. Apply DDL directly via the apply-migration API endpoint
+#    (requires superadmin session cookie in /tmp/cookies.txt)
+curl -s -b /tmp/cookies.txt -X POST http://localhost:3000/api/internal/apply-migration \
+  -H 'Content-Type: application/json' \
+  -d '{"sql":"ALTER TABLE \"MyModel\" ADD COLUMN IF NOT EXISTS \"myField\" TEXT"}'
+
+# 3. Regenerate Prisma client — use Node 24 + pnpm binary directly
+PRISMA_BIN=$(find node_modules/.pnpm -name "index.js" -path "*/prisma@7.3.0*/build/index.js" | head -1)
+~/.nvm/versions/node/v24.14.0/bin/node "$PRISMA_BIN" generate
+
+# 4. Restart dev server to pick up new client
+# (bg_shell restart with the crm-dev process id)
 ```
 
-Never use `prisma migrate dev` or `prisma migrate deploy` on this project.
+Never use `npx prisma migrate dev`, `npx prisma migrate deploy`, `npx prisma generate`,
+or `npx prisma db execute` on this project — all fail with ERR_REQUIRE_ESM on Node 20.
 
 ---
 
