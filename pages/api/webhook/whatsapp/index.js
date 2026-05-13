@@ -69,7 +69,7 @@ export default async function handler(req, res) {
       // Look up ChannelConfig by phoneNumberId
       const config = await prisma.channelConfig.findFirst({
         where:   { phoneNumberId, channel: 'whatsapp', isActive: true },
-        include: { chatbot: { select: { id: true, orgId: true, kbId: true, name: true, greeting: true, escalationPhrase: true, isActive: true } } },
+        include: { chatbot: { select: { id: true, orgId: true, kbId: true, name: true, greeting: true, escalationPhrase: true, isActive: true, enabledTools: true, autoCreateContact: true, autoCreateDeal: true, defaultDealStage: true, dealTitleTemplate: true } } },
       })
       if (!config || !config.chatbot?.isActive) return
 

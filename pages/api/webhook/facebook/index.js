@@ -62,7 +62,7 @@ export default async function handler(req, res) {
 
           const config = await prisma.channelConfig.findFirst({
             where:   { pageId, channel: 'facebook', isActive: true },
-            include: { chatbot: { select: { id: true, orgId: true, kbId: true, name: true, greeting: true, escalationPhrase: true, isActive: true } } },
+            include: { chatbot: { select: { id: true, orgId: true, kbId: true, name: true, greeting: true, escalationPhrase: true, isActive: true, enabledTools: true, autoCreateContact: true, autoCreateDeal: true, defaultDealStage: true, dealTitleTemplate: true } } },
           })
           if (!config || !config.chatbot?.isActive) continue
 

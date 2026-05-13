@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     // Resolve chatbot + channel config
     const chatbot = await prisma.chatbot.findUnique({
       where:  { apiKey },
-      select: { id: true, orgId: true, kbId: true, name: true, greeting: true, escalationPhrase: true, isActive: true },
+      select: { id: true, orgId: true, kbId: true, name: true, greeting: true, escalationPhrase: true, isActive: true, enabledTools: true, autoCreateContact: true, autoCreateDeal: true, defaultDealStage: true, dealTitleTemplate: true },
     })
     if (!chatbot || !chatbot.isActive) return res.status(200).end()
 
