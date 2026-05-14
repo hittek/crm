@@ -455,7 +455,7 @@ export default function SettingsPage() {
         <title>Configuración | CRM</title>
       </Head>
 
-      <div className="flex flex-col lg:flex-row h-full">
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0">
         {/* Settings Sidebar */}
         <div className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-gray-200 bg-gray-50 p-4">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 hidden lg:block">Configuración</h2>
@@ -963,55 +963,72 @@ export default function SettingsPage() {
                         <div
                           key={stage.id}
                           data-testid="deal-stage"
-                          className={`flex items-center gap-4 p-3 rounded-lg ${
+                          className={`p-3 rounded-lg ${
                             isTerminal ? 'bg-gray-100' : 'bg-gray-50'
                           }`}
                         >
-                          {!isTerminal && (
-                            <div className="flex flex-col">
-                              <button
-                                onClick={() => moveDealStage(index, -1)}
-                                className="text-gray-400 hover:text-gray-600"
-                                disabled={index === 0}
-                              >
-                                <Icons.chevronUp className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => moveDealStage(index, 1)}
-                                className="text-gray-400 hover:text-gray-600"
-                                disabled={index >= dealStages.length - 3}
-                              >
-                                <Icons.chevronDown className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )}
-                          
-                          {/* Color picker */}
-                          <input
-                            type="color"
-                            value={getColorHex(stage.color)}
-                            onChange={(e) => updateDealStage(index, 'color', e.target.value)}
-                            className={`color-picker-circle ${isTerminal ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={isTerminal}
-                          />
-
-                          <input
-                            type="text"
-                            className={`flex-1 bg-transparent border-none text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded px-2 py-1 ${
-                              isTerminal ? 'cursor-not-allowed' : ''
-                            }`}
-                            value={stage.label}
-                            onChange={(e) => updateDealStage(index, 'label', e.target.value)}
-                            disabled={isTerminal}
-                          />
-
+                          {/* Main row: reorder + color + label + delete */}
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">Prob:</span>
+                            {!isTerminal ? (
+                              <div className="flex flex-col shrink-0">
+                                <button
+                                  onClick={() => moveDealStage(index, -1)}
+                                  className="text-gray-400 hover:text-gray-600"
+                                  disabled={index === 0}
+                                >
+                                  <Icons.chevronUp className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => moveDealStage(index, 1)}
+                                  className="text-gray-400 hover:text-gray-600"
+                                  disabled={index >= dealStages.length - 3}
+                                >
+                                  <Icons.chevronDown className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="w-4 shrink-0" />
+                            )}
+
+                            {/* Color picker */}
+                            <input
+                              type="color"
+                              value={getColorHex(stage.color)}
+                              onChange={(e) => updateDealStage(index, 'color', e.target.value)}
+                              className={`color-picker-circle shrink-0 ${isTerminal ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              disabled={isTerminal}
+                            />
+
+                            <input
+                              type="text"
+                              className={`flex-1 min-w-0 bg-transparent border-none text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded px-2 py-1 ${
+                                isTerminal ? 'cursor-not-allowed' : ''
+                              }`}
+                              value={stage.label}
+                              onChange={(e) => updateDealStage(index, 'label', e.target.value)}
+                              disabled={isTerminal}
+                            />
+
+                            {!isTerminal ? (
+                              <button
+                                onClick={() => removeDealStage(index)}
+                                className="text-gray-400 hover:text-red-500 shrink-0"
+                              >
+                                <Icons.trash className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <div className="w-4 shrink-0" />
+                            )}
+                          </div>
+
+                          {/* Probability row (below on all sizes) */}
+                          <div className="mt-2 flex items-center gap-2 pl-10">
+                            <span className="text-xs text-gray-500">Probabilidad:</span>
                             <input
                               type="number"
                               min="0"
                               max="100"
-                              className={`w-16 text-sm text-center bg-white border border-gray-200 rounded px-2 py-1 ${
+                              className={`w-14 text-sm text-center bg-white border border-gray-200 rounded px-2 py-1 ${
                                 isTerminal ? 'cursor-not-allowed bg-gray-100' : ''
                               }`}
                               value={stage.probability}
@@ -1020,17 +1037,6 @@ export default function SettingsPage() {
                             />
                             <span className="text-xs text-gray-500">%</span>
                           </div>
-
-                          {!isTerminal ? (
-                            <button
-                              onClick={() => removeDealStage(index)}
-                              className="text-gray-400 hover:text-red-500"
-                            >
-                              <Icons.trash className="w-4 h-4" />
-                            </button>
-                          ) : (
-                            <div className="w-4" /> 
-                          )}
                         </div>
                       )
                     })}

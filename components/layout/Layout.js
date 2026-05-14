@@ -307,7 +307,9 @@ export default function Layout({ children }) {
               <div className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                 <div className="px-3 py-2 border-b border-gray-100">
                   <p className="text-xs text-gray-500">{t('nav.connectedAs')}</p>
-                  <p className="text-sm font-medium text-gray-900 capitalize">{user?.role || 'usuario'}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {{ admin: 'Administrador', manager: 'Manager', user: 'Usuario' }[user?.role] || user?.role || 'Usuario'}
+                  </p>
                 </div>
                 <Link
                   href="/profile"
