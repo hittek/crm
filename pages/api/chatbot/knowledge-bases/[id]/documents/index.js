@@ -1,4 +1,5 @@
 import fs from 'fs'
+import pdfParse from 'pdf-parse'
 import { waitUntil } from '@vercel/functions'
 import prisma from '../../../../../../lib/prisma'
 import { getSession } from '../../../../../../lib/auth'
@@ -55,12 +56,7 @@ export const config = { api: { bodyParser: false }, maxDuration: 60 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-// eval('require') bypasses webpack/turbopack static analysis so these
-// server-only packages are never included in the client bundle.
-const _require = eval('require') // eslint-disable-line no-eval
-
 async function extractPdf(filePath) {
-  const pdfParse = _require('pdf-parse')
   const data = await pdfParse(fs.readFileSync(filePath))
   return data.text ?? ''
 }

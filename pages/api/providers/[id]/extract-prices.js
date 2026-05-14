@@ -14,14 +14,13 @@
  * Response includes `mode: 'text'|'vision'` and optional `warning` for UI.
  */
 
-import { execSync } from 'child_process'
-import Anthropic      from '@anthropic-ai/sdk'
-import fs             from 'fs'
-import prisma         from '../../../../lib/prisma'
-import { getSession } from '../../../../lib/auth'
+import { execSync }    from 'child_process'
+import Anthropic        from '@anthropic-ai/sdk'
+import fs               from 'fs'
+import { IncomingForm } from 'formidable'
+import prisma           from '../../../../lib/prisma'
+import { getSession }   from '../../../../lib/auth'
 import { checkOrgAccess } from '../../../../lib/planLimits'
-
-const _require = eval('require') // eslint-disable-line no-eval
 
 export const config = { api: { bodyParser: false }, maxDuration: 120 }
 
@@ -105,7 +104,6 @@ export default async function handler(req, res) {
   // ── 1. Parse multipart upload ─────────────────────────────────────────────
   let file
   try {
-    const { IncomingForm } = _require('formidable')
     const form = new IncomingForm({ maxFileSize: MAX_FILE_SIZE })
     await new Promise((resolve, reject) => {
       form.parse(req, (err, _fields, files) => {
