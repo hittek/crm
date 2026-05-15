@@ -79,7 +79,7 @@ export default async function handler(req, res) {
       })
     })
 
-    const updated = await prisma.$transaction(updates)
+    const updated = await Promise.all(updates)
     return res.status(200).json(updated)
   } catch (err) {
     console.error('[bulk] error:', err)
