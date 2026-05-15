@@ -45,13 +45,14 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-black bg-opacity-25" onClick={onClose} />
-      <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="fixed inset-0 bg-black bg-opacity-25" />
+      <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
         <div
           ref={modalRef}
-          className={`relative bg-white rounded-t-xl sm:rounded-xl shadow-xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto`}
+          className={`relative bg-white rounded-t-xl sm:rounded-xl shadow-xl w-full ${sizeClasses[size]}`}
           role="dialog"
           aria-modal="true"
+          onClick={e => e.stopPropagation()}
         >
           {title && (
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
