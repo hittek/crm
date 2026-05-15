@@ -245,7 +245,7 @@ function ProductForm({ product, providers, onSave, onClose }) {
       {/* Image */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Imagen del producto</label>
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3 flex-wrap">
           {form.imageUrl ? (
             <div className="relative shrink-0">
               <img src={form.imageUrl} alt="preview" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
@@ -263,7 +263,7 @@ function ProductForm({ product, providers, onSave, onClose }) {
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors ${uploadingImg ? 'opacity-50 pointer-events-none' : ''}`}>
+            <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors max-w-full ${uploadingImg ? 'opacity-50 pointer-events-none' : ''}`}>
               {uploadingImg ? 'Subiendo…' : 'Subir imagen'}
               <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImg} />
             </label>
@@ -297,6 +297,13 @@ export default function ProductsPage() {
   const canWrite = user?.role === 'admin' || user?.role === 'manager'
   const canDelete = user?.role === 'admin'
 
+  // ── Bulk selection ─────────────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [bulkField, setBulkField]     = useState(null)  // null | 'marginPercent' | 'feePercent'
+  const [bulkValue, setBulkValue]     = useState('')
+  const [bulkSaving, setBulkSaving]   = useState(false)
+  const [bulkError, setBulkError]     = useState(null)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -329,6 +336,53 @@ export default function ProductsPage() {
     if (!confirm('¿Eliminar este producto/servicio?')) return
     await fetch(`/api/products/${id}`, { method: 'DELETE' })
     setProducts(prev => prev.filter(p => p.id !== id))
+  }
+
+  // ── Bulk helpers ───────────────────────────────────────────────────────────
+  function toggleSelect(id) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === filtered.length && filtered.length > 0) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filtered.map(p => p.id)))
+    }
+  }
+
+  async function handleBulkUpdate(patch) {
+    setBulkSaving(true)
+    setBulkError(null)
+    try {
+      const r = await fetch('/api/products/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [...selectedIds], patch }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error || 'Error al actualizar')
+      const map = Object.fromEntries(data.map(u => [u.id, u]))
+      setProducts(prev => prev.map(p => map[p.id] ?? p))
+      setSelectedIds(new Set())
+      setBulkField(null)
+      setBulkValue('')
+    } catch (err) {
+      setBulkError(err.message)
+    } finally {
+      setBulkSaving(false)
+    }
+  }
+
+  function closeBulk() {
+    setSelectedIds(new Set())
+    setBulkField(null)
+    setBulkValue('')
+    setBulkError(null)
   }
 
   async function toggleActive(p) {
@@ -406,6 +460,89 @@ export default function ProductsPage() {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto">
+
+          {/* ── Bulk action bar ─────────────────────────────────────────── */}
+          {canWrite && selectedIds.size > 0 && (
+            <div className="sticky top-0 z-10 flex items-center gap-2 px-4 lg:px-6 py-2.5 bg-primary-50 border-b border-primary-200 flex-wrap">
+              {/* Select-all checkbox */}
+              <input
+                type="checkbox"
+                checked={selectedIds.size === filtered.length && filtered.length > 0}
+                onChange={toggleSelectAll}
+                className="h-4 w-4 rounded border-gray-400 text-primary-600 cursor-pointer shrink-0"
+              />
+              <span className="text-sm font-medium text-primary-800 shrink-0">
+                {selectedIds.size} seleccionado{selectedIds.size !== 1 ? 's' : ''}
+              </span>
+
+              {bulkField === 'marginPercent' ? (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs text-gray-600 shrink-0">Ganancia %</span>
+                  <input
+                    autoFocus
+                    type="number" min="0" step="0.1"
+                    value={bulkValue}
+                    onChange={e => setBulkValue(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleBulkUpdate({ marginPercent: parseFloat(bulkValue) || 0 })}
+                    className="input py-1 w-20 text-sm"
+                  />
+                  <button
+                    onClick={() => handleBulkUpdate({ marginPercent: parseFloat(bulkValue) || 0 })}
+                    disabled={bulkSaving}
+                    className="btn-primary py-1 px-2.5 text-xs"
+                  >{bulkSaving ? '…' : 'Aplicar'}</button>
+                  <button onClick={() => { setBulkField(null); setBulkError(null) }} className="btn-ghost py-1 px-2 text-xs">Cancelar</button>
+                </div>
+              ) : bulkField === 'feePercent' ? (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs text-gray-600 shrink-0">Cargo %</span>
+                  <input
+                    autoFocus
+                    type="number" min="0" step="0.1"
+                    value={bulkValue}
+                    onChange={e => setBulkValue(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleBulkUpdate({ feePercent: parseFloat(bulkValue) || 0 })}
+                    className="input py-1 w-20 text-sm"
+                  />
+                  <button
+                    onClick={() => handleBulkUpdate({ feePercent: parseFloat(bulkValue) || 0 })}
+                    disabled={bulkSaving}
+                    className="btn-primary py-1 px-2.5 text-xs"
+                  >{bulkSaving ? '…' : 'Aplicar'}</button>
+                  <button onClick={() => { setBulkField(null); setBulkError(null) }} className="btn-ghost py-1 px-2 text-xs">Cancelar</button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => { setBulkField('marginPercent'); setBulkValue('') }}
+                    className="btn-ghost py-1 px-2.5 text-xs"
+                  >Ganancia %</button>
+                  <button
+                    onClick={() => { setBulkField('feePercent'); setBulkValue('') }}
+                    className="btn-ghost py-1 px-2.5 text-xs"
+                  >Cargo %</button>
+                  <button
+                    onClick={() => handleBulkUpdate({ isActive: true })}
+                    disabled={bulkSaving}
+                    className="btn-ghost py-1 px-2.5 text-xs text-green-700 hover:bg-green-50"
+                  >{bulkSaving ? '…' : 'Activar'}</button>
+                  <button
+                    onClick={() => handleBulkUpdate({ isActive: false })}
+                    disabled={bulkSaving}
+                    className="btn-ghost py-1 px-2.5 text-xs text-red-600 hover:bg-red-50"
+                  >{bulkSaving ? '…' : 'Desactivar'}</button>
+                </div>
+              )}
+
+              {bulkError && (
+                <span className="text-xs text-red-600 shrink-0">{bulkError}</span>
+              )}
+
+              <button onClick={closeBulk} className="ml-auto btn-ghost py-1 px-2 text-xs text-gray-500 shrink-0">
+                ✕
+              </button>
+            </div>
+          )}
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <Spinner size="lg" />
@@ -426,6 +563,16 @@ export default function ProductsPage() {
             <div className="divide-y divide-gray-100">
               {filtered.map(p => (
                 <div key={p.id} className="flex items-center gap-3 px-4 lg:px-6 py-3 hover:bg-gray-50 transition-colors">
+                  {/* Checkbox */}
+                  {canWrite && (
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(p.id)}
+                      onChange={() => toggleSelect(p.id)}
+                      className="shrink-0 h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer"
+                      onClick={e => e.stopPropagation()}
+                    />
+                  )}
                   {/* Thumbnail or type icon */}
                   <div className="shrink-0">
                     {p.imageUrl ? (
