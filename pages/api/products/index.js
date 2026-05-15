@@ -50,7 +50,7 @@ export default async function handler(req, res) {
     const {
       name, description, sku, type = 'service', unit = 'unit',
       providerId, costPrice, feePercent = 0, marginPercent = 0,
-      sellingPrice: manualSellingPrice, currency = 'MXN',
+      sellingPrice: manualSellingPrice, currency = 'MXN', ivaPercent = 16,
     } = req.body
 
     if (!name?.trim()) return res.status(400).json({ error: 'Nombre requerido' })
@@ -75,6 +75,7 @@ export default async function handler(req, res) {
         marginPercent: margin,
         sellingPrice,
         currency,
+        ivaPercent: parseFloat(ivaPercent) || 0,
       },
       include: { provider: { select: { id: true, name: true } } },
     })

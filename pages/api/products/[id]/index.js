@@ -40,7 +40,7 @@ export default async function handler(req, res) {
     const {
       name, description, sku, type, unit, providerId,
       costPrice, feePercent, marginPercent, sellingPrice: manualSellingPrice,
-      currency, isActive, imageUrl,
+      currency, isActive, imageUrl, ivaPercent,
     } = req.body
 
     const cp = costPrice !== undefined ? (costPrice != null ? parseFloat(costPrice) : null) : product.costPrice
@@ -65,6 +65,7 @@ export default async function handler(req, res) {
         ...(currency !== undefined && { currency }),
         ...(isActive !== undefined && { isActive }),
         ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
+        ...(ivaPercent !== undefined && { ivaPercent: parseFloat(ivaPercent) || 0 }),
       },
       include: { provider: { select: { id: true, name: true } } },
     })

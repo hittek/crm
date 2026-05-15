@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       items = [],
       notes,
       validUntil,
-      taxRate = 0.16,
+      taxRate,       // legacy / override; ignored when items carry ivaAmount
       currency = 'MXN',
     } = req.body
 
@@ -56,9 +56,14 @@ export default async function handler(req, res) {
     })
     const number = `Q-${year}-${String(count + 1).padStart(3, '0')}`
 
-    const rate = parseFloat(taxRate) || 0
     const subtotal = items.reduce((s, it) => s + (parseFloat(it.total) || 0), 0)
-    const tax = parseFloat((subtotal * rate).toFixed(4))
+
+    // Use per-item ivaAmount when available; fall back to legacy taxRate
+    const hasPerItemIva = items.some(it => it.ivaAmount !== undefined)
+    const tax = hasPerItemIva
+      ? parseFloat(items.reduce((s, it) => s + (parseFloat(it.ivaAmount) || 0), 0).toFixed(4))
+      : parseFloat((subtotal * (parseFloat(taxRate) || 0)).toFixed(4))
+    const blendedRate = subtotal > 0 ? tax / subtotal : (parseFloat(taxRate) || 0)
     const total = parseFloat((subtotal + tax).toFixed(4))
 
     const quote = await prisma.quote.create({
@@ -70,7 +75,7 @@ export default async function handler(req, res) {
         contactId: contactId ? parseInt(contactId) : null,
         items: JSON.stringify(items),
         subtotal,
-        taxRate: rate,
+        taxRate: blendedRate,
         tax,
         total,
         currency: currency || 'MXN',

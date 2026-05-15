@@ -218,10 +218,19 @@ export default function PublicQuotePage() {
                   <span>Subtotal</span>
                   <span>{fmt(subtotal, q.currency)}</span>
                 </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>IVA ({Math.round((q.taxRate || 0) * 100)}%)</span>
-                  <span>{fmt(q.tax, q.currency)}</span>
-                </div>
+                {(() => {
+                  const groups = {}
+                  q.items.forEach(it => {
+                    const pct = it.ivaPercent ?? Math.round((q.taxRate || 0) * 100)
+                    groups[pct] = (groups[pct] || 0) + (it.ivaAmount ?? (it.total * pct / 100))
+                  })
+                  return Object.entries(groups).sort(([a],[b]) => b-a).map(([pct, amt]) => (
+                    <div key={pct} className="flex justify-between text-gray-600">
+                      <span>IVA {pct}%</span>
+                      <span>{fmt(amt, q.currency)}</span>
+                    </div>
+                  ))
+                })()}
                 <div
                   className="flex justify-between font-bold text-base pt-2 mt-1"
                   style={{ borderTop: `2px solid ${org.primaryColor || '#2563eb'}`, color: org.primaryColor || '#2563eb' }}

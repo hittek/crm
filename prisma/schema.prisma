@@ -525,6 +525,7 @@ model Product {
   costPrice     Float?                            // null = service with direct price
   feePercent    Float        @default(0)
   marginPercent Float        @default(0)
+  ivaPercent    Float        @default(16)          // 0 or 16 (Mexico IVA rate for this product)
   sellingPrice  Float        @default(0)          // always the price used in quotes
   currency      String       @default("MXN")
   imageUrl      String?                           // CDN URL for product photo

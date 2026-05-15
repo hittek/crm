@@ -28,16 +28,19 @@ export default async function handler(req, res) {
     if (currency !== undefined) data.currency = currency
 
     if (items !== undefined) {
-      const rate = taxRate !== undefined ? parseFloat(taxRate) : quote.taxRate
       const subtotal = items.reduce((s, it) => s + (parseFloat(it.total) || 0), 0)
-      const tax = parseFloat((subtotal * rate).toFixed(4))
+      const hasPerItemIva = items.some(it => it.ivaAmount !== undefined)
+      const tax = hasPerItemIva
+        ? parseFloat(items.reduce((s, it) => s + (parseFloat(it.ivaAmount) || 0), 0).toFixed(4))
+        : parseFloat((subtotal * (taxRate !== undefined ? parseFloat(taxRate) : quote.taxRate)).toFixed(4))
+      const blendedRate = subtotal > 0 ? tax / subtotal : quote.taxRate
       data.items = JSON.stringify(items)
       data.subtotal = subtotal
-      data.taxRate = rate
+      data.taxRate = blendedRate
       data.tax = tax
       data.total = parseFloat((subtotal + tax).toFixed(4))
     } else if (taxRate !== undefined) {
-      // Only taxRate changed — recalculate on existing items
+      // Legacy: taxRate-only change — recalculate on existing items
       const rate = parseFloat(taxRate)
       const existingItems = JSON.parse(quote.items || '[]')
       const subtotal = existingItems.reduce((s, it) => s + (parseFloat(it.total) || 0), 0)

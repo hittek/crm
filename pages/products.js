@@ -39,6 +39,7 @@ function ProductForm({ product, providers, onSave, onClose }) {
     costPrice: product?.costPrice?.toString() || '',
     feePercent: product?.feePercent?.toString() || '0',
     marginPercent: product?.marginPercent?.toString() || '0',
+    ivaPercent: product?.ivaPercent?.toString() ?? '16',
     sellingPrice: product?.sellingPrice?.toString() || '',
     currency: product?.currency || 'MXN',
     imageUrl: product?.imageUrl || '',
@@ -85,6 +86,7 @@ function ProductForm({ product, providers, onSave, onClose }) {
         costPrice: isProduct && form.costPrice !== '' ? parseFloat(form.costPrice) : null,
         feePercent: parseFloat(form.feePercent) || 0,
         marginPercent: parseFloat(form.marginPercent) || 0,
+        ivaPercent: parseFloat(form.ivaPercent) || 0,
         sellingPrice: sp,
         currency: form.currency,
         imageUrl: form.imageUrl || null,
@@ -269,6 +271,21 @@ function ProductForm({ product, providers, onSave, onClose }) {
             </label>
             <p className="mt-1 text-xs text-gray-400">JPG, PNG, WebP · máx 4 MB</p>
           </div>
+        </div>
+      </div>
+
+      {/* IVA */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
+        <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
+          {[['16', '16% (gravado)'], ['0', '0% (exento)']].map(([v, l]) => (
+            <button
+              key={v} type="button" onClick={() => set('ivaPercent', v)}
+              className={`flex-1 py-2 font-medium transition-colors ${
+                form.ivaPercent === v ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >{l}</button>
+          ))}
         </div>
       </div>
 

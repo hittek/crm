@@ -7,7 +7,7 @@ function computeSellingPrice(costPrice, feePercent = 0, marginPercent = 0) {
   return costPrice * (1 + feePercent / 100) * (1 + marginPercent / 100)
 }
 
-const ALLOWED_FIELDS = ['feePercent', 'marginPercent', 'currency', 'isActive']
+const ALLOWED_FIELDS = ['feePercent', 'marginPercent', 'currency', 'isActive', 'ivaPercent']
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

@@ -155,15 +155,20 @@ function QuoteDetailModal({ quote, products, onClose, onUpdate, onDelete }) {
                 <td colSpan={2} className="px-3 py-2 text-right text-gray-500 sm:hidden">Subtotal</td>
                 <td className="px-3 py-2 text-right">{fmt(subtotal, q.currency)}</td>
               </tr>
-              <tr>
-                <td colSpan={3} className="px-3 py-2 text-right text-gray-500 hidden sm:table-cell">
-                  IVA {Math.round((q.taxRate || 0) * 100)}%
-                </td>
-                <td colSpan={2} className="px-3 py-2 text-right text-gray-500 sm:hidden">
-                  IVA {Math.round((q.taxRate || 0) * 100)}%
-                </td>
-                <td className="px-3 py-2 text-right">{fmt(q.tax, q.currency)}</td>
-              </tr>
+              {(() => {
+                const groups = {}
+                q.items.forEach(it => {
+                  const pct = it.ivaPercent ?? Math.round((q.taxRate || 0) * 100)
+                  groups[pct] = (groups[pct] || 0) + (it.ivaAmount ?? (it.total * pct / 100))
+                })
+                return Object.entries(groups).sort(([a],[b]) => b-a).map(([pct, amt]) => (
+                  <tr key={pct}>
+                    <td colSpan={3} className="px-3 py-2 text-right text-gray-500 hidden sm:table-cell">IVA {pct}%</td>
+                    <td colSpan={2} className="px-3 py-2 text-right text-gray-500 sm:hidden">IVA {pct}%</td>
+                    <td className="px-3 py-2 text-right">{fmt(amt, q.currency)}</td>
+                  </tr>
+                ))
+              })()}
               <tr className="font-semibold text-gray-900">
                 <td colSpan={3} className="px-3 py-2.5 text-right hidden sm:table-cell">Total</td>
                 <td colSpan={2} className="px-3 py-2.5 text-right sm:hidden">Total</td>

@@ -34,7 +34,7 @@ let _seq = 0
 function uid() { return `item-${Date.now()}-${++_seq}` }
 
 function makeItem(overrides = {}) {
-  return { _id: uid(), productId: null, description: '', sku: '', unit: 'unit', qty: 1, unitPrice: 0, total: 0, ...overrides }
+  return { _id: uid(), productId: null, description: '', sku: '', unit: 'unit', qty: 1, unitPrice: 0, ivaPercent: 16, ivaAmount: 0, total: 0, ...overrides }
 }
 
 // ── StatusBadge ────────────────────────────────────────────────────────────────
@@ -131,8 +131,8 @@ function LineItemRow({ item, idx, onUpdate, onRemove, onPickCatalog }) {
         </button>
       </div>
 
-      {/* Qty / Price / Total */}
-      <div className="grid grid-cols-3 gap-2 text-xs">
+      {/* Qty / Price / IVA / Total */}
+      <div className="grid grid-cols-4 gap-2 text-xs">
         <div>
           <label className="text-gray-400 block mb-0.5">Cantidad</label>
           <input
@@ -152,6 +152,17 @@ function LineItemRow({ item, idx, onUpdate, onRemove, onPickCatalog }) {
           />
         </div>
         <div>
+          <label className="text-gray-400 block mb-0.5">IVA %</label>
+          <select
+            className="w-full border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-primary-500 bg-white"
+            value={item.ivaPercent ?? 16}
+            onChange={e => onUpdate(idx, 'ivaPercent', e.target.value)}
+          >
+            <option value={16}>16%</option>
+            <option value={0}>0%</option>
+          </select>
+        </div>
+        <div>
           <label className="text-gray-400 block mb-0.5">Total</label>
           <div className="w-full border border-gray-100 bg-gray-50 rounded px-2 py-1 text-right font-semibold text-gray-900">
             {fmt(item.total)}
@@ -165,9 +176,14 @@ function LineItemRow({ item, idx, onUpdate, onRemove, onPickCatalog }) {
 // ── QuoteForm ──────────────────────────────────────────────────────────────────
 function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
   const [items, setItems] = useState(() =>
-    quote ? quote.items.map(it => ({ ...it, _id: uid() })) : [makeItem()]
+    quote ? quote.items.map(it => ({
+      ...it,
+      _id: uid(),
+      // backward compat: old items may not have ivaPercent
+      ivaPercent: it.ivaPercent ?? Math.round((quote.taxRate || 0) * 100),
+      ivaAmount:  it.ivaAmount  ?? parseFloat(((it.total || 0) * (it.ivaPercent ?? quote.taxRate ?? 0)).toFixed(4)),
+    })) : [makeItem()]
   )
-  const [taxRate, setTaxRate] = useState(quote?.taxRate ?? 0.16)
   const [currency, setCurrency] = useState(quote?.currency ?? 'MXN')
   const [notes, setNotes] = useState(quote?.notes ?? '')
   const [validUntil, setValidUntil] = useState(
@@ -178,17 +194,19 @@ function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
   const [catalogTarget, setCatalogTarget] = useState(null) // idx | 'new' | null
 
   const subtotal = items.reduce((s, it) => s + (parseFloat(it.total) || 0), 0)
-  const tax = subtotal * taxRate
-  const total = subtotal + tax
+  const tax      = items.reduce((s, it) => s + (parseFloat(it.ivaAmount) || 0), 0)
+  const total    = subtotal + tax
 
   function updateItem(idx, key, value) {
     setItems(prev => {
       const next = [...prev]
       const item = { ...next[idx], [key]: value }
-      if (key === 'qty' || key === 'unitPrice') {
-        const qty = parseFloat(key === 'qty' ? value : item.qty) || 0
+      if (key === 'qty' || key === 'unitPrice' || key === 'ivaPercent') {
+        const qty   = parseFloat(key === 'qty'       ? value : item.qty)       || 0
         const price = parseFloat(key === 'unitPrice' ? value : item.unitPrice) || 0
-        item.total = parseFloat((qty * price).toFixed(4))
+        const iva   = parseFloat(key === 'ivaPercent'? value : item.ivaPercent)|| 0
+        item.total     = parseFloat((qty * price).toFixed(4))
+        item.ivaAmount = parseFloat((item.total * iva / 100).toFixed(4))
       }
       next[idx] = item
       return next
@@ -196,14 +214,19 @@ function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
   }
 
   function addFromCatalog(product) {
+    const price = parseFloat(product.sellingPrice) || 0
+    const iva   = product.ivaPercent ?? 16
     const newItem = makeItem({
-      productId: product.id,
+      productId:   product.id,
       description: product.name,
-      sku: product.sku || '',
-      unit: product.unit || 'unit',
-      qty: 1,
-      unitPrice: parseFloat(product.sellingPrice) || 0,
-      total: parseFloat(product.sellingPrice) || 0,
+      sku:         product.sku || '',
+      unit:        product.unit || 'unit',
+      qty:         1,
+      unitPrice:   price,
+      ivaPercent:  iva,
+      ivaAmount:   parseFloat((price * iva / 100).toFixed(4)),
+      total:       price,
+      imageUrl:    product.imageUrl || null,
     })
     if (catalogTarget !== null && catalogTarget !== 'new') {
       setItems(prev => prev.map((it, i) => i === catalogTarget ? newItem : it))
@@ -219,12 +242,10 @@ function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
     if (hasEmpty) { setError('Todos los ítems necesitan descripción'); return }
     setSaving(true); setError(null)
     try {
-      // Strip internal _id before sending
       const cleanItems = items.map(({ _id, ...rest }) => rest)
       const body = {
         dealId, contactId,
         items: cleanItems,
-        taxRate,
         currency,
         notes: notes.trim() || null,
         validUntil: validUntil || null,
@@ -311,21 +332,22 @@ function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
           <span>Subtotal</span>
           <span>{fmt(subtotal, currency)}</span>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-gray-600">IVA</span>
-          <div className="flex items-center gap-2">
-            <select
-              className="text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:border-primary-500 bg-white"
-              value={taxRate}
-              onChange={e => setTaxRate(parseFloat(e.target.value))}
-            >
-              <option value={0}>0%</option>
-              <option value={0.08}>8%</option>
-              <option value={0.16}>16%</option>
-            </select>
-            <span className="text-gray-600">{fmt(tax, currency)}</span>
-          </div>
-        </div>
+        {/* IVA breakdown by rate */}
+        {(() => {
+          const groups = {}
+          items.forEach(it => {
+            const pct = parseFloat(it.ivaPercent) || 0
+            groups[pct] = (groups[pct] || 0) + (parseFloat(it.ivaAmount) || 0)
+          })
+          return Object.entries(groups)
+            .sort(([a], [b]) => b - a)
+            .map(([pct, amt]) => (
+              <div key={pct} className="flex justify-between text-gray-500">
+                <span>IVA {pct}%</span>
+                <span>{fmt(amt, currency)}</span>
+              </div>
+            ))
+        })()}
         <div className="flex justify-between font-semibold text-gray-900 border-t border-gray-200 pt-1.5">
           <span>Total</span>
           <span>{fmt(total, currency)}</span>
