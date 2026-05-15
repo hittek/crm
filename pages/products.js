@@ -264,8 +264,8 @@ function ProductForm({ product, providers, onSave, onClose }) {
               </svg>
             </div>
           )}
-          <div className="flex-1 min-w-0">
-            <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors max-w-full ${uploadingImg ? 'opacity-50 pointer-events-none' : ''}`}>
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors w-full ${uploadingImg ? 'opacity-50 pointer-events-none' : ''}`}>
               {uploadingImg ? 'Subiendo…' : 'Subir imagen'}
               <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImg} />
             </label>
