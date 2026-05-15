@@ -41,36 +41,48 @@ export default async function handler(req, res) {
   }
 
   const intIds = ids.map(id => parseInt(id)).filter(id => !isNaN(id))
+  if (intIds.length === 0) {
+    return res.status(400).json({ error: 'No se proporcionaron IDs válidos' })
+  }
 
-  // Fetch only products that belong to this org
-  const products = await prisma.product.findMany({
-    where: { id: { in: intIds }, orgId },
-    select: { id: true, costPrice: true, feePercent: true, marginPercent: true },
-  })
+  try {
+    // Fetch only products that belong to this org
+    const products = await prisma.product.findMany({
+      where: { id: { in: intIds }, orgId },
+      select: { id: true, costPrice: true, feePercent: true, marginPercent: true },
+    })
 
-  const updates = products.map(p => {
-    const fee      = patch.feePercent      !== undefined ? (parseFloat(patch.feePercent) || 0)      : p.feePercent
-    const margin   = patch.marginPercent   !== undefined ? (parseFloat(patch.marginPercent) || 0)   : p.marginPercent
-    const derived  = computeSellingPrice(p.costPrice, fee, margin)
-
-    const data = {}
-    if (patch.feePercent    !== undefined) data.feePercent    = fee
-    if (patch.marginPercent !== undefined) data.marginPercent = margin
-    if (patch.currency      !== undefined) data.currency      = patch.currency
-    if (patch.isActive      !== undefined) data.isActive      = patch.isActive
-
-    // Recompute sellingPrice only for product-type items (costPrice set)
-    if (derived !== null && (patch.feePercent !== undefined || patch.marginPercent !== undefined)) {
-      data.sellingPrice = derived
+    if (products.length === 0) {
+      return res.status(200).json([])
     }
 
-    return prisma.product.update({
-      where: { id: p.id },
-      data,
-      include: { provider: { select: { id: true, name: true } } },
-    })
-  })
+    const updates = products.map(p => {
+      const fee    = patch.feePercent    !== undefined ? (parseFloat(patch.feePercent) || 0)    : p.feePercent
+      const margin = patch.marginPercent !== undefined ? (parseFloat(patch.marginPercent) || 0) : p.marginPercent
+      const derived = computeSellingPrice(p.costPrice, fee, margin)
 
-  const updated = await prisma.$transaction(updates)
-  return res.status(200).json(updated)
+      const data = {}
+      if (patch.feePercent    !== undefined) data.feePercent    = fee
+      if (patch.marginPercent !== undefined) data.marginPercent = margin
+      if (patch.currency      !== undefined) data.currency      = patch.currency
+      if (patch.isActive      !== undefined) data.isActive      = patch.isActive
+
+      // Recompute sellingPrice only for product-type items (costPrice set)
+      if (derived !== null && (patch.feePercent !== undefined || patch.marginPercent !== undefined)) {
+        data.sellingPrice = derived
+      }
+
+      return prisma.product.update({
+        where: { id: p.id },
+        data,
+        include: { provider: { select: { id: true, name: true } } },
+      })
+    })
+
+    const updated = await prisma.$transaction(updates)
+    return res.status(200).json(updated)
+  } catch (err) {
+    console.error('[bulk] error:', err)
+    return res.status(500).json({ error: err.message || 'Error interno' })
+  }
 }
