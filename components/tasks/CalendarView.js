@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Icons from '../ui/Icons'
 import { getFullName } from '../../lib/utils'
 import { useTaskTypes } from '../../lib/SettingsContext'
+import { useI18n } from '../../lib/i18n'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -52,16 +53,29 @@ const PRIORITY_DOT = {
   low:    'bg-green-400',
 }
 
-const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
-const WEEKDAYS_LONG = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+// Derive locale-aware names at runtime
+function getWeekdayNames(locale, format = 'short') {
+  // Mon-first order: start from 2026-01-05 (Monday)
+  return Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(locale, { weekday: format }).format(new Date(2026, 0, 5 + i))
+  )
+}
+
+function getMonthName(locale, year, month) {
+  return new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(year, month, 1))
+}
 
 // ── CalendarView ──────────────────────────────────────────────────────────────
 
 export default function CalendarView({ onNewTask, onTaskSelect }) {
   const today = new Date()
+  const { t, locale } = useI18n()
   const taskTypes = useTaskTypes()
-  const getTypeEmoji = (typeId) => taskTypes.find(t => t.id === typeId)?.emoji || '✅'
+  const getTypeEmoji = (typeId) => taskTypes.find(tp => tp.id === typeId)?.emoji || '✅'
+
+  // Locale-aware weekday and month names (memoised — only recompute when locale changes)
+  const weekdaysShort = useMemo(() => getWeekdayNames(locale, 'narrow'), [locale])
+  const weekdaysLong  = useMemo(() => getWeekdayNames(locale, 'short'),  [locale])
 
   const [year,        setYear]        = useState(today.getFullYear())
   const [month,       setMonth]       = useState(today.getMonth())
@@ -120,26 +134,26 @@ export default function CalendarView({ onNewTask, onTaskSelect }) {
       {/* ── Header ── */}
       <div className="px-3 sm:px-4 lg:px-6 py-2.5 border-b border-gray-200 flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 leading-tight">
-            {MONTHS[month]} {year}
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 leading-tight capitalize">
+            {getMonthName(locale, year, month)} {year}
           </h2>
           <button
             onClick={goToday}
             className="px-2 py-0.5 text-xs font-medium rounded-md border border-gray-200 hover:bg-gray-50 transition-colors"
           >
-            Hoy
+            {t('common.today')}
           </button>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Mes anterior">
+          <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" aria-label={t('tasks.calendar.prevMonth')}>
             <Icons.chevronLeft className="w-4 h-4 text-gray-600" />
           </button>
-          <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Mes siguiente">
+          <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" aria-label={t('tasks.calendar.nextMonth')}>
             <Icons.chevronRight className="w-4 h-4 text-gray-600" />
           </button>
           <button onClick={onNewTask} className="btn-primary py-1.5 px-2.5 sm:px-3 text-xs sm:text-sm ml-1">
             <Icons.add className="w-4 h-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Nueva tarea</span>
+            <span className="hidden sm:inline">{t('tasks.newTask')}</span>
           </button>
         </div>
       </div>
@@ -148,16 +162,16 @@ export default function CalendarView({ onNewTask, onTaskSelect }) {
       <div className="shrink-0">
         {/* Weekday headers */}
         <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
-          {WEEKDAYS.map((d, i) => (
+          {weekdaysShort.map((d, i) => (
             <div key={i} className="py-1.5 text-center">
               <span className="sm:hidden text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{d}</span>
-              <span className="hidden sm:inline text-xs font-semibold text-gray-500 uppercase tracking-wide">{WEEKDAYS_LONG[i]}</span>
+              <span className="hidden sm:inline text-xs font-semibold text-gray-500 uppercase tracking-wide">{weekdaysLong[i]}</span>
             </div>
           ))}
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-48 text-sm text-gray-400">Cargando…</div>
+          <div className="flex items-center justify-center h-48 text-sm text-gray-400">{t('common.loading')}</div>
         ) : (
           <div className="grid grid-cols-7 divide-x divide-gray-100">
             {grid.map(({ date, isCurrentMonth }, idx) => {
@@ -243,7 +257,7 @@ export default function CalendarView({ onNewTask, onTaskSelect }) {
                     })}
                     {dayTasks.length > MAX_DESK && (
                       <span className="text-[10px] text-gray-400 font-medium pl-1">
-                        +{dayTasks.length - MAX_DESK} más
+                        {t('tasks.calendar.overflowMore', { count: dayTasks.length - MAX_DESK })}
                       </span>
                     )}
                   </div>
@@ -263,17 +277,19 @@ export default function CalendarView({ onNewTask, onTaskSelect }) {
             {/* Panel header */}
             <div className="px-3 sm:px-4 lg:px-6 py-2 flex items-center justify-between border-b border-gray-100 shrink-0 bg-white">
               <h3 className="text-sm font-semibold text-gray-900 capitalize">
-                {selectedDay.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
-                {selectedDayTasks.length > 0 && (
-                  <span className="ml-2 text-xs font-normal text-gray-400">{selectedDayTasks.length} tarea{selectedDayTasks.length !== 1 ? 's' : ''}</span>
-                )}
+                {selectedDay.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}
+                  {selectedDayTasks.length > 0 && (
+                    <span className="ml-2 text-xs font-normal text-gray-400">
+                      {t('tasks.calendar.taskCount', { count: selectedDayTasks.length })}
+                    </span>
+                  )}
               </h3>
               <div className="flex items-center gap-2">
                 <button
                   onClick={onNewTask}
                   className="text-xs text-primary-600 hover:text-primary-700 font-medium px-2 py-1 rounded hover:bg-primary-50 transition-colors"
                 >
-                  + Nueva
+                  {t('tasks.calendar.addNew')}
                 </button>
                 <button onClick={() => setSelectedDay(null)} className="p-1 rounded hover:bg-gray-100">
                   <Icons.close className="w-3.5 h-3.5 text-gray-400" />
@@ -286,12 +302,12 @@ export default function CalendarView({ onNewTask, onTaskSelect }) {
               {selectedDayTasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full py-6 px-4 text-center">
                   <span className="text-2xl mb-2">📭</span>
-                  <p className="text-sm text-gray-400">Sin tareas este día</p>
+                  <p className="text-sm text-gray-400">{t('tasks.calendar.noTasksDay')}</p>
                   <button
                     onClick={onNewTask}
                     className="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium"
                   >
-                    + Agregar tarea para este día
+                    {t('tasks.calendar.addTaskDay')}
                   </button>
                 </div>
               ) : (
@@ -339,7 +355,7 @@ export default function CalendarView({ onNewTask, onTaskSelect }) {
         ) : (
           /* No day selected — subtle prompt */
           <div className="flex-1 flex items-center justify-center py-4">
-            <p className="text-xs text-gray-300 font-medium">Toca un día para ver las tareas</p>
+            <p className="text-xs text-gray-300 font-medium">{t('tasks.calendar.tapToSeeDay')}</p>
           </div>
         )}
       </div>

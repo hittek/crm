@@ -76,7 +76,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
       newErrors.title = t('errors.validationError')
     }
     if (requiresContact && !formData.contactId) {
-      newErrors.contactId = 'Este tipo de tarea requiere vincular un contacto'
+      newErrors.contactId = t('tasks.contactRequired')
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -152,21 +152,21 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
               value={formData.title}
               onChange={(e) => handleTitleChange(e.target.value)}
               className={`input ${errors.title ? 'input-error' : ''}`}
-              placeholder='Ej: "Llamar a Juan mañana a las 10am"'
+              placeholder={t('tasks.titlePlaceholder')}
               autoFocus
             />
             {errors.title && (
               <p className="text-xs text-red-500 mt-1">{errors.title}</p>
             )}
             <p className="text-xs text-gray-500 mt-1">
-              Tip: Escribe "mañana", "próxima semana" o una fecha y la detectamos automáticamente
+              {t('tasks.titleTip')}
             </p>
           </div>
 
           {/* Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo
+              {t('tasks.type')}
             </label>
             <div className="flex flex-wrap gap-2">
               {taskTypes.map((type) => (
@@ -190,16 +190,16 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
           {/* Contact picker — shown always, but required when type.requiresContact */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contacto {requiresContact && <span className="text-red-500">*</span>}
+              {t('tasks.relatedContact')} {requiresContact && <span className="text-red-500">*</span>}
             </label>
             <input
               type="text"
               value={contactSearch}
               onChange={e => { setContactSearch(e.target.value); if (!e.target.value) handleChange('contactId', '') }}
-              placeholder="Buscar contacto..."
+              placeholder={t('tasks.searchContact')}
               className="input"
             />
-            {loadingContacts && <p className="text-xs text-gray-400 mt-1">Buscando…</p>}
+            {loadingContacts && <p className="text-xs text-gray-400 mt-1">{t('tasks.searching')}</p>}
             {contacts.length > 0 && contactSearch && (
               <div className="border border-gray-200 rounded-lg mt-1 max-h-40 overflow-y-auto divide-y divide-gray-50 shadow-sm">
                 {contacts.map(c => (
@@ -223,7 +223,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
             )}
             {formData.contactId && (
               <div className="flex items-center justify-between mt-1 px-2 py-1 bg-primary-50 rounded text-xs text-primary-700">
-                <span>Contacto vinculado</span>
+                <span>{t('tasks.contactLinked')}</span>
                 <button type="button" onClick={() => { handleChange('contactId', ''); setContactSearch('') }}
                   className="text-primary-400 hover:text-primary-600">✕</button>
               </div>
@@ -253,9 +253,9 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
                 onChange={(e) => handleChange('priority', e.target.value)}
                 className="input"
               >
-                <option value="low">Baja</option>
-                <option value="medium">Media</option>
-                <option value="high">Alta</option>
+                <option value="low">{t('tasks.priorities.low')}</option>
+                <option value="medium">{t('tasks.priorities.medium')}</option>
+                <option value="high">{t('tasks.priorities.high')}</option>
               </select>
             </div>
           </div>
@@ -272,7 +272,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
                 className="input"
                 disabled={loadingUsers}
               >
-                <option value="">Sin asignar</option>
+                <option value="">{t('tasks.unassigned')}</option>
                 {users.map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.name}
@@ -282,15 +282,15 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Visibilidad
+                {t('tasks.visibility')}
               </label>
               <select
                 value={formData.visibility}
                 onChange={(e) => handleChange('visibility', e.target.value)}
                 className="input"
               >
-                <option value="org">Toda la organización</option>
-                <option value="assignee">Solo asignado</option>
+                <option value="org">{t('tasks.visibilityOrg')}</option>
+                <option value="assignee">{t('tasks.visibilityAssignee')}</option>
               </select>
             </div>
           </div>
@@ -305,7 +305,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
               onChange={(e) => handleChange('description', e.target.value)}
               className="input resize-none"
               rows={3}
-              placeholder="Detalles de la tarea..."
+              placeholder={t('tasks.descriptionPlaceholder')}
             />
           </div>
         </div>

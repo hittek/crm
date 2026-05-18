@@ -403,7 +403,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
 
         {/* Type */}
         <div>
-          <label className="text-xs font-medium text-gray-500 uppercase">Tipo</label>
+          <label className="text-xs font-medium text-gray-500 uppercase">{t('tasks.type')}</label>
           <div className="flex flex-wrap gap-2 mt-1">
             {taskTypes.map((type) => (
               <button
@@ -429,7 +429,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
             const addr = [c.address, c.city, c.state, c.country].filter(Boolean).join(', ')
             return addr ? (
               <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Dirección</label>
+                <label className="text-xs font-medium text-gray-500 uppercase">{t('tasks.address')}</label>
                 <div className="mt-1 flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
                   <span className="text-sm text-blue-800 flex-1 truncate">{addr}</span>
                   <a
@@ -439,7 +439,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
                     className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shrink-0"
                   >
                     <Icons.external className="w-3.5 h-3.5" />
-                    Maps
+                    {t('tasks.openInMaps')}
                   </a>
                 </div>
               </div>

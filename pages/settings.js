@@ -149,7 +149,7 @@ export default function SettingsPage() {
     { id: 'users', label: t('settings.users'), icon: Icons.contacts, adminOnly: true },
     { id: 'pipeline', label: t('settings.pipeline'), icon: Icons.trending },
     { id: 'contacts', label: t('settings.contacts'), icon: Icons.contacts },
-    { id: 'tasks', label: 'Tareas', icon: Icons.tasks },
+    { id: 'tasks', label: t('settings.tasks'), icon: Icons.tasks },
     { id: 'notifications', label: t('settings.notifications'), icon: Icons.bell },
     { id: 'integrations', label: t('settings.integrations'), icon: Icons.link },
     { id: 'billing', label: t('billing.plan'), icon: Icons.creditCard, adminOnly: true },
@@ -1148,9 +1148,9 @@ export default function SettingsPage() {
           {/* Task Types Settings */}
           {activeTab === 'tasks' && (
             <div className="max-w-2xl">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Tipos de tarea</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('settingsExt.taskTypesTitle')}</h3>
               <p className="text-sm text-gray-500 mb-6">
-                Define los tipos de tarea disponibles. Los tipos personalizados pueden requerir un contacto vinculado y mostrar un link a Google Maps con la dirección del cliente.
+                {t('settingsExt.taskTypesHint')}
               </p>
 
               <div className="space-y-2 mb-4">
@@ -1161,7 +1161,7 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         className="w-9 h-9 flex items-center justify-center text-xl rounded-lg border border-gray-200 bg-white hover:border-primary-400 transition-colors"
-                        title="Cambiar emoji"
+                        title={t('settingsExt.taskTypeChangEmoji')}
                       >
                         {type.emoji}
                       </button>
@@ -1186,37 +1186,37 @@ export default function SettingsPage() {
                       value={type.label}
                       onChange={e => updateTaskType(index, 'label', e.target.value)}
                       disabled={type.builtIn}
-                      placeholder="Nombre del tipo"
+                      placeholder={t('settingsExt.taskTypeNamePlaceholder')}
                     />
 
                     {/* Toggles — only for custom types */}
                     {!type.builtIn && (
                       <div className="flex items-center gap-3 text-xs text-gray-600 shrink-0">
-                        <label className="flex items-center gap-1.5 cursor-pointer" title="Requiere contacto vinculado">
+                        <label className="flex items-center gap-1.5 cursor-pointer" title={t('settingsExt.taskTypeRequiresContactFull')}>
                           <input
                             type="checkbox"
                             checked={!!type.requiresContact}
                             onChange={e => updateTaskType(index, 'requiresContact', e.target.checked)}
                             className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                           />
-                          <span className="hidden sm:inline">Req. contacto</span>
+                          <span className="hidden sm:inline">{t('settingsExt.taskTypeRequiresContact')}</span>
                           <span className="sm:hidden">👤</span>
                         </label>
-                        <label className="flex items-center gap-1.5 cursor-pointer" title="Mostrar link a Google Maps">
+                        <label className="flex items-center gap-1.5 cursor-pointer" title={t('settingsExt.taskTypeShowMapsFull')}>
                           <input
                             type="checkbox"
                             checked={!!type.showMapsLink}
                             onChange={e => updateTaskType(index, 'showMapsLink', e.target.checked)}
                             className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                           />
-                          <span className="hidden sm:inline">Google Maps</span>
+                          <span className="hidden sm:inline">{t('settingsExt.taskTypeShowMaps')}</span>
                           <span className="sm:hidden">📍</span>
                         </label>
                       </div>
                     )}
 
                     {type.builtIn && (
-                      <span className="text-xs text-gray-400 shrink-0 hidden sm:inline">Integrado</span>
+                      <span className="text-xs text-gray-400 shrink-0 hidden sm:inline">{t('settingsExt.taskTypeBuiltIn')}</span>
                     )}
 
                     {/* Delete — only custom */}
@@ -1224,7 +1224,7 @@ export default function SettingsPage() {
                       onClick={() => removeTaskType(index)}
                       disabled={type.builtIn}
                       className="text-gray-300 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                      title={type.builtIn ? 'No se puede eliminar un tipo integrado' : 'Eliminar tipo'}
+                      title={type.builtIn ? t('settingsExt.taskTypeBuiltInDelete') : t('settingsExt.taskTypeDelete')}
                     >
                       <Icons.trash className="w-4 h-4" />
                     </button>
@@ -1237,7 +1237,7 @@ export default function SettingsPage() {
                 className="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium mb-8"
               >
                 <Icons.add className="w-4 h-4" />
-                Agregar tipo personalizado
+                {t('settingsExt.addTaskType')}
               </button>
 
               <div className="pt-4 border-t border-gray-200">
