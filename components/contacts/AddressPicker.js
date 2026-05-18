@@ -70,7 +70,8 @@ export default function AddressPicker({ value = {}, onChange, className = '' }) 
   // ── Select a Nominatim result ─────────────────────────────────────────────
   const selectResult = (r) => {
     const a = r.address || {}
-    const address    = [a.road, a.house_number].filter(Boolean).join(' ')
+    const streetPart = [a.road, a.house_number].filter(Boolean).join(' ')
+    const address    = streetPart || r.display_name || ''
     const city       = a.city || a.town || a.village || a.municipality || ''
     const state      = a.state || a.region || ''
     const country    = a.country || ''
@@ -103,7 +104,9 @@ export default function AddressPicker({ value = {}, onChange, className = '' }) 
       )
       const data = await r.json()
       const a = data.address || {}
-      const address    = [a.road, a.house_number].filter(Boolean).join(' ')
+      // Use road+number if available, otherwise fall back to full display_name
+      const streetPart = [a.road, a.house_number].filter(Boolean).join(' ')
+      const address    = streetPart || data.display_name || ''
       const city       = a.city || a.town || a.village || a.municipality || ''
       const state      = a.state || a.region || ''
       const country    = a.country || ''

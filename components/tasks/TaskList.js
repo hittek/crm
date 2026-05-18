@@ -427,13 +427,17 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
           (() => {
             const c = localTask.contact
             const addr = [c.address, c.city, c.state, c.country].filter(Boolean).join(', ')
-            return addr ? (
+            if (!addr && !c.lat) return null
+            const mapsUrl = c.lat && c.lng
+              ? `https://www.google.com/maps?q=${c.lat},${c.lng}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`
+            return (
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">{t('tasks.address')}</label>
                 <div className="mt-1 flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
-                  <span className="text-sm text-blue-800 flex-1 truncate">{addr}</span>
+                  <span className="text-sm text-blue-800 flex-1 truncate">{addr || `${c.lat?.toFixed(5)}, ${c.lng?.toFixed(5)}`}</span>
                   <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`}
+                    href={mapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shrink-0"
@@ -443,7 +447,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
                   </a>
                 </div>
               </div>
-            ) : null
+            )
           })()
         )}
 
