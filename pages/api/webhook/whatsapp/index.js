@@ -106,7 +106,9 @@ export default async function handler(req, res) {
         const reactivateMatch = lowerText.match(/#bot(?:\s+([\d\s+\-()]+))?/)
 
         const command = takeoverMatch ? 'takeover' : reactivateMatch ? 'reactivate' : null
-        if (!command) return  // agent message without command — ignore silently
+
+        // Strip command hashtags from the stored/displayed text
+        const cleanText = text.replace(/#agente\b/gi, '').replace(/#bot\b/gi, '').trim()
 
         // Extract optional customer number from command, e.g. "#agente 521234567890"
         const rawPhone = (takeoverMatch?.[1] || reactivateMatch?.[1] || '').replace(/\D/g, '')
@@ -127,13 +129,27 @@ export default async function handler(req, res) {
         })
 
         if (targetConv) {
-          await prisma.conversation.update({
-            where: { id: targetConv.id },
-            data:  { agentActive: command === 'takeover' },
-          })
-          console.log(`[webhook/whatsapp] ${command} via WA app — conv=${targetConv.id} session=${targetConv.sessionId}`)
+          const ops = []
+
+          // Save agent message to history (role 'agent') if there's actual text
+          if (cleanText) {
+            ops.push(prisma.conversationMessage.create({
+              data: { conversationId: targetConv.id, role: 'agent', content: cleanText },
+            }))
+          }
+
+          // Apply agentActive change if a command was present
+          if (command) {
+            ops.push(prisma.conversation.update({
+              where: { id: targetConv.id },
+              data:  { agentActive: command === 'takeover', updatedAt: new Date() },
+            }))
+          }
+
+          if (ops.length) await prisma.$transaction(ops)
+          console.log(`[webhook/whatsapp] agent msg saved — conv=${targetConv.id} command=${command || 'none'} text=${cleanText?.slice(0, 60)}`)
         } else {
-          console.log(`[webhook/whatsapp] ${command} via WA app — no matching conv found (phone=${rawPhone || 'any'})`)
+          console.log(`[webhook/whatsapp] agent msg — no matching conv (phone=${rawPhone || 'any'}) command=${command || 'none'}`)
         }
         return
       }
