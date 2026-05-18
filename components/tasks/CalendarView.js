@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Icons from '../ui/Icons'
 import { getFullName } from '../../lib/utils'
+import { useTaskTypes } from '../../lib/SettingsContext'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -52,13 +53,6 @@ const PRIORITY_DOT = {
   low:    'bg-green-400',
 }
 
-const TYPE_ICON = {
-  meeting: Icons.calendar,
-  call:    Icons.phone,
-  email:   Icons.mail,
-  task:    Icons.tasks,
-}
-
 const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const MONTHS   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -66,6 +60,8 @@ const MONTHS   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agos
 
 export default function CalendarView({ onNewTask, onTaskSelect }) {
   const today = new Date()
+  const taskTypes = useTaskTypes()
+  const getTypeEmoji = (typeId) => taskTypes.find(t => t.id === typeId)?.emoji || '✅'
   const [year,        setYear]        = useState(today.getFullYear())
   const [month,       setMonth]       = useState(today.getMonth())
   const [tasks,       setTasks]       = useState([])
@@ -209,7 +205,6 @@ export default function CalendarView({ onNewTask, onTaskSelect }) {
                   <div className="hidden sm:flex flex-col gap-0.5">
                     {dayTasks.slice(0, MAX).map(t => {
                       const colors = TYPE_COLORS[t.type] || TYPE_COLORS.task
-                      const Icon   = TYPE_ICON[t.type]   || Icons.tasks
                       return (
                         <div
                           key={t.id}
@@ -220,7 +215,7 @@ export default function CalendarView({ onNewTask, onTaskSelect }) {
                             ${colors} ${t.status === 'completed' ? 'opacity-40 line-through' : ''}`}
                         >
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${PRIORITY_DOT[t.priority] || 'bg-gray-300'}`} />
-                          <Icon className="w-3 h-3 shrink-0 opacity-60" />
+                          <span className="shrink-0 text-[10px] leading-none">{getTypeEmoji(t.type)}</span>
                           <span className="truncate">{t.title}</span>
                         </div>
                       )
@@ -261,15 +256,14 @@ export default function CalendarView({ onNewTask, onTaskSelect }) {
             <div className="divide-y divide-gray-50">
               {selectedDayTasks.map(task => {
                 const colors = TYPE_COLORS[task.type] || TYPE_COLORS.task
-                const Icon   = TYPE_ICON[task.type]   || Icons.tasks
                 return (
                   <div
                     key={task.id}
                     onClick={() => onTaskSelect?.(task)}
                     className="flex items-center gap-3 px-3 sm:px-4 lg:px-6 py-2.5 hover:bg-gray-50 active:bg-gray-100 cursor-pointer"
                   >
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 ${colors}`}>
-                      <Icon className="w-3.5 h-3.5" />
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 text-base ${colors}`}>
+                      {getTypeEmoji(task.type)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium text-gray-900 truncate ${

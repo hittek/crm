@@ -9,6 +9,7 @@ import { Drawer } from '../ui/Modal'
 import { formatSmartDate, getFullName, parseNaturalDate } from '../../lib/utils'
 import { useAuth } from '../../lib/AuthContext'
 import { useI18n } from '../../lib/i18n'
+import { useTaskTypes } from '../../lib/SettingsContext'
 
 const filters = [
   { id: 'today', icon: Icons.calendar },
@@ -20,6 +21,7 @@ const filters = [
 export default function TaskList({ onNewTask }) {
   const router = useRouter()
   const { t } = useI18n()
+  const taskTypes = useTaskTypes()
   const [tasks, setTasks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState('today')
@@ -264,11 +266,8 @@ export default function TaskList({ onNewTask }) {
                 <PriorityChip priority={task.priority} />
 
                 {/* Type icon */}
-                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
-                  {task.type === 'call' && <Icons.phone className="w-4 h-4 text-gray-500" />}
-                  {task.type === 'email' && <Icons.mail className="w-4 h-4 text-gray-500" />}
-                  {task.type === 'meeting' && <Icons.calendar className="w-4 h-4 text-gray-500" />}
-                  {task.type === 'task' && <Icons.tasks className="w-4 h-4 text-gray-500" />}
+                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-base" title={taskTypes.find(t => t.id === task.type)?.label || task.type}>
+                  {taskTypes.find(t => t.id === task.type)?.emoji || '✅'}
                 </div>
               </div>
             ))}
@@ -301,6 +300,10 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
   const [isSaving, setIsSaving] = useState(false)
   const { user, permissions } = useAuth()
   const { t } = useI18n()
+  const taskTypes = useTaskTypes()
+
+  const selectedTypeObj  = taskTypes.find(tp => tp.id === localTask?.type)
+  const showMapsLink     = selectedTypeObj?.showMapsLink
 
   // Check if current user can delete this task
   const canDelete = localTask && (
@@ -401,26 +404,48 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
         {/* Type */}
         <div>
           <label className="text-xs font-medium text-gray-500 uppercase">Tipo</label>
-          <div className="flex gap-2 mt-1">
-            {['task', 'call', 'email', 'meeting'].map((type) => (
+          <div className="flex flex-wrap gap-2 mt-1">
+            {taskTypes.map((type) => (
               <button
-                key={type}
-                onClick={() => updateField('type', type)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                  localTask.type === type
+                key={type.id}
+                onClick={() => updateField('type', type.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-colors text-sm ${
+                  localTask.type === type.id
                     ? 'border-primary-500 bg-primary-50 text-primary-700'
                     : 'border-gray-200 hover:bg-gray-50'
                 }`}
               >
-                {type === 'task' && <Icons.tasks className="w-4 h-4" />}
-                {type === 'call' && <Icons.phone className="w-4 h-4" />}
-                {type === 'email' && <Icons.mail className="w-4 h-4" />}
-                {type === 'meeting' && <Icons.calendar className="w-4 h-4" />}
-                <span className="text-sm capitalize">{t(`tasks.types.${type}`)}</span>
+                <span>{type.emoji}</span>
+                <span>{type.label}</span>
               </button>
             ))}
           </div>
         </div>
+
+        {/* Google Maps link — shown when type has showMapsLink and contact has address */}
+        {showMapsLink && localTask.contact && (
+          (() => {
+            const c = localTask.contact
+            const addr = [c.address, c.city, c.state, c.country].filter(Boolean).join(', ')
+            return addr ? (
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Dirección</label>
+                <div className="mt-1 flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                  <span className="text-sm text-blue-800 flex-1 truncate">{addr}</span>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shrink-0"
+                  >
+                    <Icons.external className="w-3.5 h-3.5" />
+                    Maps
+                  </a>
+                </div>
+              </div>
+            ) : null
+          })()
+        )}
 
         {/* Description */}
         <div>

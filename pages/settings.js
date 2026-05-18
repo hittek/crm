@@ -110,6 +110,7 @@ export default function SettingsPage() {
   
   const [dealStages, setDealStages] = useState([])
   const [contactStatuses, setContactStatuses] = useState([])
+  const [taskTypes, setTaskTypes] = useState([])
   const [notifications, setNotifications] = useState({
     taskReminders: true,
     newContacts: true,
@@ -148,6 +149,7 @@ export default function SettingsPage() {
     { id: 'users', label: t('settings.users'), icon: Icons.contacts, adminOnly: true },
     { id: 'pipeline', label: t('settings.pipeline'), icon: Icons.trending },
     { id: 'contacts', label: t('settings.contacts'), icon: Icons.contacts },
+    { id: 'tasks', label: 'Tareas', icon: Icons.tasks },
     { id: 'notifications', label: t('settings.notifications'), icon: Icons.bell },
     { id: 'integrations', label: t('settings.integrations'), icon: Icons.link },
     { id: 'billing', label: t('billing.plan'), icon: Icons.creditCard, adminOnly: true },
@@ -163,6 +165,7 @@ export default function SettingsPage() {
         if (data.organization) setOrganization(data.organization)
         if (data.dealStages) setDealStages(data.dealStages)
         if (data.contactStatuses) setContactStatuses(data.contactStatuses)
+        if (data.taskTypes) setTaskTypes(data.taskTypes)
         if (data.notifications) setNotifications(data.notifications)
       } catch (error) {
         console.error('Error fetching settings:', error)
@@ -440,6 +443,20 @@ export default function SettingsPage() {
   const removeContactStatus = (index) => {
     if (contactStatuses.length <= 1) return
     setContactStatuses(contactStatuses.filter((_, i) => i !== index))
+  }
+
+  // Task types handlers
+  const TASK_TYPE_EMOJIS = ['✅','📞','✉️','📅','🔧','🏠','📦','🚗','💡','🔑','📋','🛠️','🏭','🎯','📍']
+  const addTaskType = () => {
+    const newId = `custom_${Date.now()}`
+    setTaskTypes(prev => [...prev, { id: newId, label: 'Nuevo tipo', emoji: '🔧', color: 'gray', requiresContact: false, showMapsLink: false, builtIn: false }])
+  }
+  const updateTaskType = (index, field, value) => {
+    setTaskTypes(prev => { const u = [...prev]; u[index] = { ...u[index], [field]: value }; return u })
+  }
+  const removeTaskType = (index) => {
+    if (taskTypes[index]?.builtIn) return // never delete built-in types
+    setTaskTypes(prev => prev.filter((_, i) => i !== index))
   }
 
   // Show loading while checking auth or redirecting non-admin users
@@ -1119,6 +1136,113 @@ export default function SettingsPage() {
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => saveSettings('contactStatuses', contactStatuses)}
+                  disabled={isSaving}
+                  className="btn btn-primary"
+                >
+                  {isSaving ? t('common.saving') : t('settings.saveChanges')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Task Types Settings */}
+          {activeTab === 'tasks' && (
+            <div className="max-w-2xl">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Tipos de tarea</h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Define los tipos de tarea disponibles. Los tipos personalizados pueden requerir un contacto vinculado y mostrar un link a Google Maps con la dirección del cliente.
+              </p>
+
+              <div className="space-y-2 mb-4">
+                {taskTypes.map((type, index) => (
+                  <div key={type.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    {/* Emoji picker */}
+                    <div className="relative group">
+                      <button
+                        type="button"
+                        className="w-9 h-9 flex items-center justify-center text-xl rounded-lg border border-gray-200 bg-white hover:border-primary-400 transition-colors"
+                        title="Cambiar emoji"
+                      >
+                        {type.emoji}
+                      </button>
+                      {/* Emoji grid on hover */}
+                      <div className="absolute left-0 top-full mt-1 p-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 hidden group-hover:grid grid-cols-5 gap-1 w-40">
+                        {TASK_TYPE_EMOJIS.map(em => (
+                          <button
+                            key={em}
+                            type="button"
+                            onClick={() => updateTaskType(index, 'emoji', em)}
+                            className="w-7 h-7 flex items-center justify-center text-base hover:bg-gray-100 rounded transition-colors"
+                          >
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Label */}
+                    <input
+                      className="flex-1 bg-transparent border-none text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded px-2 py-1"
+                      value={type.label}
+                      onChange={e => updateTaskType(index, 'label', e.target.value)}
+                      disabled={type.builtIn}
+                      placeholder="Nombre del tipo"
+                    />
+
+                    {/* Toggles — only for custom types */}
+                    {!type.builtIn && (
+                      <div className="flex items-center gap-3 text-xs text-gray-600 shrink-0">
+                        <label className="flex items-center gap-1.5 cursor-pointer" title="Requiere contacto vinculado">
+                          <input
+                            type="checkbox"
+                            checked={!!type.requiresContact}
+                            onChange={e => updateTaskType(index, 'requiresContact', e.target.checked)}
+                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="hidden sm:inline">Req. contacto</span>
+                          <span className="sm:hidden">👤</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer" title="Mostrar link a Google Maps">
+                          <input
+                            type="checkbox"
+                            checked={!!type.showMapsLink}
+                            onChange={e => updateTaskType(index, 'showMapsLink', e.target.checked)}
+                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="hidden sm:inline">Google Maps</span>
+                          <span className="sm:hidden">📍</span>
+                        </label>
+                      </div>
+                    )}
+
+                    {type.builtIn && (
+                      <span className="text-xs text-gray-400 shrink-0 hidden sm:inline">Integrado</span>
+                    )}
+
+                    {/* Delete — only custom */}
+                    <button
+                      onClick={() => removeTaskType(index)}
+                      disabled={type.builtIn}
+                      className="text-gray-300 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      title={type.builtIn ? 'No se puede eliminar un tipo integrado' : 'Eliminar tipo'}
+                    >
+                      <Icons.trash className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={addTaskType}
+                className="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium mb-8"
+              >
+                <Icons.add className="w-4 h-4" />
+                Agregar tipo personalizado
+              </button>
+
+              <div className="pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => saveSettings('taskTypes', taskTypes)}
                   disabled={isSaving}
                   className="btn btn-primary"
                 >

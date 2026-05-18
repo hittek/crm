@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Modal } from '../ui/Modal'
 import Icons from '../ui/Icons'
-import { parseNaturalDate } from '../../lib/utils'
+import { parseNaturalDate, getFullName } from '../../lib/utils'
 import { useI18n } from '../../lib/i18n'
+import { useTaskTypes } from '../../lib/SettingsContext'
 
 export default function TaskForm({ isOpen, onClose, onSave, task = null, contactId = null, dealId = null }) {
   const { t } = useI18n()
+  const taskTypes = useTaskTypes()
   const [formData, setFormData] = useState({
     title: task?.title || '',
     description: task?.description || '',
@@ -25,6 +27,14 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
   const [errors, setErrors] = useState({})
   const [users, setUsers] = useState([])
   const [loadingUsers, setLoadingUsers] = useState(false)
+  const [contacts, setContacts] = useState([])
+  const [contactSearch, setContactSearch] = useState('')
+  const [loadingContacts, setLoadingContacts] = useState(false)
+
+  // Derive whether the selected type requires a contact / maps link
+  const selectedTypeObj = taskTypes.find(t => t.id === formData.type)
+  const requiresContact = selectedTypeObj?.requiresContact
+  const showMapsLink    = selectedTypeObj?.showMapsLink
 
   // Fetch users for assignment dropdown
   useEffect(() => {
@@ -44,10 +54,29 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
     }
   }, [isOpen])
 
+  // Fetch contacts for search (debounced)
+  useEffect(() => {
+    if (!isOpen) return
+    const timer = setTimeout(async () => {
+      setLoadingContacts(true)
+      try {
+        const q = contactSearch ? `&search=${encodeURIComponent(contactSearch)}` : ''
+        const res = await fetch(`/api/contacts?limit=20${q}`)
+        const data = await res.json()
+        setContacts(data.data || [])
+      } catch (e) { console.error('contact search:', e) }
+      setLoadingContacts(false)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [isOpen, contactSearch])
+
   const validate = () => {
     const newErrors = {}
     if (!formData.title.trim()) {
       newErrors.title = t('errors.validationError')
+    }
+    if (requiresContact && !formData.contactId) {
+      newErrors.contactId = 'Este tipo de tarea requiere vincular un contacto'
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -139,28 +168,67 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Tipo
             </label>
-            <div className="flex gap-2">
-              {[
-                { id: 'task', label: t('tasks.types.task'), icon: Icons.tasks },
-                { id: 'call', label: t('tasks.types.call'), icon: Icons.phone },
-                { id: 'email', label: t('tasks.types.email'), icon: Icons.mail },
-                { id: 'meeting', label: t('tasks.types.meeting'), icon: Icons.calendar },
-              ].map((type) => (
+            <div className="flex flex-wrap gap-2">
+              {taskTypes.map((type) => (
                 <button
                   key={type.id}
                   type="button"
                   onClick={() => handleChange('type', type.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-colors text-sm ${
                     formData.type === type.id
                       ? 'border-primary-500 bg-primary-50 text-primary-700'
                       : 'border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  <type.icon className="w-4 h-4" />
-                  <span className="text-sm">{type.label}</span>
+                  <span>{type.emoji}</span>
+                  <span>{type.label}</span>
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Contact picker — shown always, but required when type.requiresContact */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Contacto {requiresContact && <span className="text-red-500">*</span>}
+            </label>
+            <input
+              type="text"
+              value={contactSearch}
+              onChange={e => { setContactSearch(e.target.value); if (!e.target.value) handleChange('contactId', '') }}
+              placeholder="Buscar contacto..."
+              className="input"
+            />
+            {loadingContacts && <p className="text-xs text-gray-400 mt-1">Buscando…</p>}
+            {contacts.length > 0 && contactSearch && (
+              <div className="border border-gray-200 rounded-lg mt-1 max-h-40 overflow-y-auto divide-y divide-gray-50 shadow-sm">
+                {contacts.map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      handleChange('contactId', c.id)
+                      setContactSearch(getFullName(c.firstName, c.lastName))
+                      setContacts([])
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                      formData.contactId === c.id ? 'bg-primary-50 text-primary-700' : ''
+                    }`}
+                  >
+                    <span className="font-medium">{getFullName(c.firstName, c.lastName)}</span>
+                    {c.company && <span className="text-gray-400 ml-1.5 text-xs">{c.company}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            {formData.contactId && (
+              <div className="flex items-center justify-between mt-1 px-2 py-1 bg-primary-50 rounded text-xs text-primary-700">
+                <span>Contacto vinculado</span>
+                <button type="button" onClick={() => { handleChange('contactId', ''); setContactSearch('') }}
+                  className="text-primary-400 hover:text-primary-600">✕</button>
+              </div>
+            )}
+            {errors.contactId && <p className="text-xs text-red-500 mt-1">{errors.contactId}</p>}
           </div>
 
           {/* Due date and Priority */}
