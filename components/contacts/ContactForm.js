@@ -28,7 +28,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
     notes: contact?.notes || '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showMore, setShowMore] = useState(false)
+  const [showMore, setShowMore] = useState(!!(contact?.mobile || contact?.address || contact?.notes))
   const [errors, setErrors] = useState({})
 
   const validate = () => {
@@ -221,6 +221,34 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
           </div>
         </div>
 
+        {/* Address — always visible */}
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {t('contacts.address')}
+          </label>
+          <AddressPicker
+            value={{
+              address:    formData.address,
+              city:       formData.city,
+              state:      formData.state,
+              country:    formData.country,
+              postalCode: formData.postalCode,
+              lat:        formData.lat,
+              lng:        formData.lng,
+            }}
+            onChange={(v) => setFormData(prev => ({
+              ...prev,
+              address:    v.address    ?? prev.address,
+              city:       v.city       ?? prev.city,
+              state:      v.state      ?? prev.state,
+              country:    v.country    ?? prev.country,
+              postalCode: v.postalCode ?? prev.postalCode,
+              lat:        v.lat        ?? null,
+              lng:        v.lng        ?? null,
+            }))}
+          />
+        </div>
+
         {/* More fields toggle */}
         <button
           type="button"
@@ -244,34 +272,6 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
                 onChange={(e) => handleChange('mobile', e.target.value)}
                 className="input"
                 placeholder="+52 (555) 987-6543"
-              />
-            </div>
-
-            {/* Address — full col span with map picker */}
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('contacts.address')}
-              </label>
-              <AddressPicker
-                value={{
-                  address:    formData.address,
-                  city:       formData.city,
-                  state:      formData.state,
-                  country:    formData.country,
-                  postalCode: formData.postalCode,
-                  lat:        formData.lat,
-                  lng:        formData.lng,
-                }}
-                onChange={(v) => setFormData(prev => ({
-                  ...prev,
-                  address:    v.address    ?? prev.address,
-                  city:       v.city       ?? prev.city,
-                  state:      v.state      ?? prev.state,
-                  country:    v.country    ?? prev.country,
-                  postalCode: v.postalCode ?? prev.postalCode,
-                  lat:        v.lat        ?? null,
-                  lng:        v.lng        ?? null,
-                }))}
               />
             </div>
 
