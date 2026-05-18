@@ -11,6 +11,7 @@ import { getFullName, formatPhone, formatCurrency, formatSmartDate } from '../..
 import { useContactStatuses, useOrganization } from '../../lib/SettingsContext'
 import { useAuth } from '../../lib/AuthContext'
 import { useI18n } from '../../lib/i18n'
+import AddressPicker from './AddressPicker'
 
 export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, showBackButton = false }) {
   const { t } = useI18n()
@@ -234,32 +235,59 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
         </div>
       </div>
 
-      {/* Address block */}
-      {(contact.address || contact.city || contact.lat) && (() => {
+      {/* Address section — always visible, editable via AddressPicker */}
+      {(() => {
         const addrLine = [contact.address, contact.city, contact.state, contact.country].filter(Boolean).join(', ')
         const mapsUrl  = contact.lat && contact.lng
           ? `https://www.google.com/maps?q=${contact.lat},${contact.lng}`
-          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addrLine)}`
+          : addrLine ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addrLine)}` : null
+
+        const saveAddress = async (v) => {
+          const patch = {
+            address:    v.address    ?? contact.address,
+            city:       v.city       ?? contact.city,
+            state:      v.state      ?? contact.state,
+            country:    v.country    ?? contact.country,
+            postalCode: v.postalCode ?? contact.postalCode,
+            lat:        v.lat        ?? null,
+            lng:        v.lng        ?? null,
+          }
+          await fetch(`/api/contacts/${contactId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch),
+          })
+          fetchContact()
+        }
+
         return (
-          <div className="px-4 sm:px-6 py-3 border-t border-gray-100 bg-gray-50/50">
-            <div className="flex items-start gap-2">
-              <span className="text-base mt-0.5 shrink-0">📍</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-700 leading-snug">{addrLine}</p>
-                {contact.lat && contact.lng && (
-                  <p className="text-xs text-gray-400 font-mono mt-0.5">{contact.lat.toFixed(5)}, {contact.lng.toFixed(5)}</p>
-                )}
-              </div>
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shrink-0"
-              >
-                <Icons.external className="w-3.5 h-3.5" />
-                {t('tasks.openInMaps')}
-              </a>
+          <div className="px-4 lg:px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-gray-500 uppercase">{t('contacts.address')}</label>
+              {mapsUrl && (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Icons.external className="w-3 h-3" />
+                  {t('tasks.openInMaps')}
+                </a>
+              )}
             </div>
+            <AddressPicker
+              value={{
+                address:    contact.address    || '',
+                city:       contact.city       || '',
+                state:      contact.state      || '',
+                country:    contact.country    || '',
+                postalCode: contact.postalCode || '',
+                lat:        contact.lat,
+                lng:        contact.lng,
+              }}
+              onChange={saveAddress}
+            />
           </div>
         )
       })()}
