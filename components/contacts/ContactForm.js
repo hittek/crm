@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal'
 import Icons from '../ui/Icons'
 import { useContactStatuses } from '../../lib/SettingsContext'
 import { useI18n } from '../../lib/i18n'
+import AddressPicker from './AddressPicker'
 
 export default function ContactForm({ isOpen, onClose, onSave, contact = null }) {
   const { t } = useI18n()
@@ -19,6 +20,9 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
     city: contact?.city || '',
     state: contact?.state || '',
     country: contact?.country || 'México',
+    postalCode: contact?.postalCode || '',
+    lat: contact?.lat || null,
+    lng: contact?.lng || null,
     status: contact?.status || 'active',
     source: contact?.source || '',
     notes: contact?.notes || '',
@@ -243,42 +247,31 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
               />
             </div>
 
-            <div>
+            {/* Address — full col span with map picker */}
+            <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('contacts.address')}
               </label>
-              <input
-                type="text"
-                value={formData.address}
-                onChange={(e) => handleChange('address', e.target.value)}
-                className="input"
-                placeholder="Av. Reforma 123"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('contacts.city')}
-              </label>
-              <input
-                type="text"
-                value={formData.city}
-                onChange={(e) => handleChange('city', e.target.value)}
-                className="input"
-                placeholder="Ciudad de México"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('contacts.state')}
-              </label>
-              <input
-                type="text"
-                value={formData.state}
-                onChange={(e) => handleChange('state', e.target.value)}
-                className="input"
-                placeholder="CDMX"
+              <AddressPicker
+                value={{
+                  address:    formData.address,
+                  city:       formData.city,
+                  state:      formData.state,
+                  country:    formData.country,
+                  postalCode: formData.postalCode,
+                  lat:        formData.lat,
+                  lng:        formData.lng,
+                }}
+                onChange={(v) => setFormData(prev => ({
+                  ...prev,
+                  address:    v.address    ?? prev.address,
+                  city:       v.city       ?? prev.city,
+                  state:      v.state      ?? prev.state,
+                  country:    v.country    ?? prev.country,
+                  postalCode: v.postalCode ?? prev.postalCode,
+                  lat:        v.lat        ?? null,
+                  lng:        v.lng        ?? null,
+                }))}
               />
             </div>
 

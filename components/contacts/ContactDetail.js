@@ -234,6 +234,36 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
         </div>
       </div>
 
+      {/* Address block */}
+      {(contact.address || contact.city || contact.lat) && (() => {
+        const addrLine = [contact.address, contact.city, contact.state, contact.country].filter(Boolean).join(', ')
+        const mapsUrl  = contact.lat && contact.lng
+          ? `https://www.google.com/maps?q=${contact.lat},${contact.lng}`
+          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addrLine)}`
+        return (
+          <div className="px-4 sm:px-6 py-3 border-t border-gray-100 bg-gray-50/50">
+            <div className="flex items-start gap-2">
+              <span className="text-base mt-0.5 shrink-0">📍</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-700 leading-snug">{addrLine}</p>
+                {contact.lat && contact.lng && (
+                  <p className="text-xs text-gray-400 font-mono mt-0.5">{contact.lat.toFixed(5)}, {contact.lng.toFixed(5)}</p>
+                )}
+              </div>
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shrink-0"
+              >
+                <Icons.external className="w-3.5 h-3.5" />
+                {t('tasks.openInMaps')}
+              </a>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Tabs */}
       <div className="flex border-b border-gray-200">
         {[

@@ -1,0 +1,3 @@
+-- Add lat/lng coordinates to Contact
+ALTER TABLE "Contact" ADD COLUMN IF NOT EXISTS "lat" DOUBLE PRECISION;
+ALTER TABLE "Contact" ADD COLUMN IF NOT EXISTS "lng" DOUBLE PRECISION;

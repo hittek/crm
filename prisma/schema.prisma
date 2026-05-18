@@ -66,6 +66,8 @@ model Contact {
   state       String?
   country     String?
   postalCode  String?
+  lat         Float?
+  lng         Float?
   website     String?
   linkedin    String?
   twitter     String?
