@@ -8,6 +8,7 @@ import Icons from '../components/ui/Icons'
 import { Drawer } from '../components/ui/Modal'
 import { getFullName } from '../lib/utils'
 import { useI18n } from '../lib/i18n'
+import { useTaskTypes } from '../lib/SettingsContext'
 
 export default function TasksPage() {
   const router = useRouter()
@@ -58,7 +59,7 @@ export default function TasksPage() {
           }`}
         >
           <Icons.list className="w-4 h-4" />
-          Lista
+          {t('tasks.listView')}
         </button>
         <button
           onClick={() => setView('calendar')}
@@ -69,7 +70,7 @@ export default function TasksPage() {
           }`}
         >
           <Icons.calendar className="w-4 h-4" />
-          Calendario
+          {t('tasks.calendarView')}
         </button>
       </div>
 
@@ -117,6 +118,11 @@ export default function TasksPage() {
 function CalendarTaskDrawer({ task, onClose, onUpdate, onDelete }) {
   const [local, setLocal]   = useState(task)
   const [saving, setSaving] = useState(false)
+  const { t } = useI18n()
+  const taskTypes = useTaskTypes()
+
+  const typeObj      = taskTypes.find(tp => tp.id === local?.type)
+  const showMapsLink = typeObj?.showMapsLink
 
   useEffect(() => { setLocal(task) }, [task])
 
@@ -151,7 +157,7 @@ function CalendarTaskDrawer({ task, onClose, onUpdate, onDelete }) {
   }
 
   return (
-    <Drawer isOpen title="Detalle de tarea" onClose={onClose} width="md">
+    <Drawer isOpen title={t('tasks.taskDetail')} onClose={onClose} width="md">
       <div className="space-y-5">
         {/* Title */}
         <input
@@ -162,39 +168,36 @@ function CalendarTaskDrawer({ task, onClose, onUpdate, onDelete }) {
           className="text-base font-semibold w-full border-0 p-0 focus:ring-0 text-gray-900"
         />
 
-        {/* Type badge */}
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${TYPE_COLORS[local.type] || TYPE_COLORS.task}`}>
-          {local.type === 'meeting' && <Icons.calendar className="w-3 h-3" />}
-          {local.type === 'call'    && <Icons.phone    className="w-3 h-3" />}
-          {local.type === 'email'   && <Icons.mail     className="w-3 h-3" />}
-          {local.type === 'task'    && <Icons.tasks    className="w-3 h-3" />}
-          <span className="capitalize">{local.type}</span>
+        {/* Type badge — shows emoji + label from settings */}
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${TYPE_COLORS[local.type] || 'bg-gray-100 text-gray-700'}`}>
+          <span>{typeObj?.emoji || '✅'}</span>
+          <span>{typeObj?.label || local.type}</span>
         </span>
 
         {/* Status + Priority */}
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Estado</label>
+            <label className="text-xs font-medium text-gray-500 uppercase block mb-1">{t('tasks.statusLabel')}</label>
             <select value={local.status} onChange={e => updateField('status', e.target.value)} className="input">
-              <option value="pending">Pendiente</option>
-              <option value="in-progress">En progreso</option>
-              <option value="completed">Completada</option>
-              <option value="cancelled">Cancelada</option>
+              <option value="pending">{t('tasks.status.pending')}</option>
+              <option value="in-progress">{t('tasks.status.inProgress')}</option>
+              <option value="completed">{t('tasks.status.completed')}</option>
+              <option value="cancelled">{t('tasks.status.cancelled')}</option>
             </select>
           </div>
           <div className="flex-1">
-            <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Prioridad</label>
+            <label className="text-xs font-medium text-gray-500 uppercase block mb-1">{t('tasks.priority')}</label>
             <select value={local.priority} onChange={e => updateField('priority', e.target.value)} className="input">
-              <option value="low">Baja</option>
-              <option value="medium">Media</option>
-              <option value="high">Alta</option>
+              <option value="low">{t('tasks.priorities.low')}</option>
+              <option value="medium">{t('tasks.priorities.medium')}</option>
+              <option value="high">{t('tasks.priorities.high')}</option>
             </select>
           </div>
         </div>
 
         {/* Due date */}
         <div>
-          <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Fecha</label>
+          <label className="text-xs font-medium text-gray-500 uppercase block mb-1">{t('tasks.dueDate')}</label>
           <input
             type="date"
             value={local.dueDate ? new Date(local.dueDate).toISOString().split('T')[0] : ''}
@@ -205,21 +208,45 @@ function CalendarTaskDrawer({ task, onClose, onUpdate, onDelete }) {
 
         {/* Description */}
         <div>
-          <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Descripción</label>
+          <label className="text-xs font-medium text-gray-500 uppercase block mb-1">{t('tasks.description')}</label>
           <textarea
             value={local.description || ''}
             onChange={e => setLocal(p => ({ ...p, description: e.target.value }))}
             onBlur={e => updateField('description', e.target.value)}
             rows={3}
             className="input resize-none"
-            placeholder="Agregar descripción…"
+            placeholder={t('tasks.descriptionPlaceholderShort')}
           />
         </div>
 
-        {/* Related */}
+        {/* Google Maps link — when type.showMapsLink and contact has address */}
+        {showMapsLink && local.contact && (() => {
+          const c = local.contact
+          const addr = [c.address, c.city, c.state, c.country].filter(Boolean).join(', ')
+          if (!addr) return null
+          return (
+            <div>
+              <label className="text-xs font-medium text-gray-500 uppercase block mb-1">{t('tasks.address')}</label>
+              <div className="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                <span className="text-sm text-blue-800 flex-1 truncate">{addr}</span>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shrink-0"
+                >
+                  <Icons.external className="w-3.5 h-3.5" />
+                  {t('tasks.openInMaps')}
+                </a>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Related contact / deal */}
         {(local.contact || local.deal) && (
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-500 uppercase block">Relacionado</label>
+            <label className="text-xs font-medium text-gray-500 uppercase block">{t('tasks.related')}</label>
             {local.contact && (
               <div className="flex items-center gap-2 px-2.5 py-2 bg-gray-50 rounded-lg text-sm text-gray-700">
                 <Icons.user className="w-4 h-4 text-gray-400 shrink-0" />
@@ -239,7 +266,7 @@ function CalendarTaskDrawer({ task, onClose, onUpdate, onDelete }) {
         <div className="flex gap-2 pt-3 border-t border-gray-100">
           {local.status !== 'completed' && (
             <button onClick={() => updateField('status', 'completed')} className="btn-success flex-1">
-              <Icons.check className="w-4 h-4 mr-2" /> Marcar completada
+              <Icons.check className="w-4 h-4 mr-2" /> {t('tasks.markComplete')}
             </button>
           )}
           <button onClick={handleDelete} className="btn-danger">
@@ -247,7 +274,7 @@ function CalendarTaskDrawer({ task, onClose, onUpdate, onDelete }) {
           </button>
         </div>
 
-        {saving && <p className="text-xs text-center text-gray-400">Guardando…</p>}
+        {saving && <p className="text-xs text-center text-gray-400">{t('common.saving')}</p>}
       </div>
     </Drawer>
   )
