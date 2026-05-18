@@ -51,6 +51,15 @@ const methods = {
     if (filters.priority) where.priority = filters.priority
     if (filters.status) where.status = filters.status
 
+    // Calendar range query: ?from=ISO&to=ISO overrides named filters
+    if (req.query.from || req.query.to) {
+      where.dueDate = {
+        ...(req.query.from ? { gte: new Date(req.query.from) } : {}),
+        ...(req.query.to   ? { lte: new Date(req.query.to)   } : {}),
+      }
+      delete where.status  // show all statuses in calendar view
+    }
+
     // Visibility filtering based on user role
     // If userId provided and showAll is not true, filter by visibility
     if (userId && showAll !== 'true') {
