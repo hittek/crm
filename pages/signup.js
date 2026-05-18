@@ -3,40 +3,14 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useAuth } from '../lib/AuthContext'
+import { useI18n } from '../lib/i18n'
 import Icons from '../components/ui/Icons'
 import { Spinner } from '../components/ui/Spinner'
 
-const PLANS = [
-  {
-    id: 'trial',
-    name: 'Prueba gratuita',
-    price: 'Gratis',
-    period: '14 días',
-    description: 'Explora todas las funciones sin compromiso',
-    features: ['Hasta 50 contactos', 'Hasta 50 negocios', '3 usuarios', 'Soporte por email'],
-    recommended: false,
-    color: 'gray',
-  },
-  {
-    id: 'starter',
-    name: 'Starter',
-    price: '$499',
-    period: '/mes',
-    description: 'Para equipos pequeños que empiezan a crecer',
-    features: ['Hasta 500 contactos', 'Hasta 500 negocios', '5 usuarios', '1 chatbot', 'Soporte prioritario'],
-    recommended: true,
-    color: 'primary',
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: '$1,299',
-    period: '/mes',
-    description: 'Para equipos medianos con más volumen',
-    features: ['Hasta 5,000 contactos', 'Hasta 5,000 negocios', '20 usuarios', '3 chatbots', 'Soporte dedicado'],
-    recommended: false,
-    color: 'indigo',
-  },
+const PLANS_STATIC = [
+  { id: 'trial',   period: '14 días', recommended: false, color: 'gray' },
+  { id: 'starter', period: '/mes',    recommended: true,  color: 'primary' },
+  { id: 'pro',     period: '/mes',    recommended: false, color: 'indigo' },
 ]
 
 function slugify(name) {
@@ -69,6 +43,15 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const { t } = useI18n()
+
+  const PLANS = PLANS_STATIC.map(p => ({
+    ...p,
+    name:        t(`signup.plans.${p.id}.name`),
+    price:       t(`signup.plans.${p.id}.price`),
+    description: t(`signup.plans.${p.id}.description`),
+    features:    t(`signup.plans.${p.id}.features`),
+  }))
 
   const slugPreview = slugify(orgName)
 
@@ -91,11 +74,11 @@ export default function SignupPage() {
     e.preventDefault()
     setError('')
 
-    if (!orgName.trim()) return setError('El nombre de la organización es requerido')
-    if (!email.trim()) return setError('El correo electrónico es requerido')
-    if (password.length < 6) return setError('La contraseña debe tener al menos 6 caracteres')
-    if (password !== confirmPassword) return setError('Las contraseñas no coinciden')
-    if (!privacyConsent) return setError('Debes aceptar el aviso de privacidad para continuar')
+    if (!orgName.trim()) return setError(t('signup.orgName') + ' ' + t('common.required').toLowerCase())
+    if (!email.trim()) return setError(t('signup.email') + ' ' + t('common.required').toLowerCase())
+    if (password.length < 6) return setError(t('signup.passwordMinLength'))
+    if (password !== confirmPassword) return setError(t('auth.passwordsDoNotMatch') || 'Las contraseñas no coinciden')
+    if (!privacyConsent) return setError(t('signup.privacyConsent'))
 
     setIsLoading(true)
     try {
@@ -108,7 +91,7 @@ export default function SignupPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'Error al crear la cuenta')
+        setError(data.error || t('errors.generic'))
         return
       }
 
@@ -136,7 +119,7 @@ export default function SignupPage() {
 
       router.push('/contacts?welcome=1')
     } catch {
-      setError('Error de red. Intenta de nuevo.')
+      setError(t('errors.networkError'))
     } finally {
       setIsLoading(false)
     }
@@ -153,7 +136,7 @@ export default function SignupPage() {
   return (
     <>
       <Head>
-        <title>Crear cuenta | Hittek CRM</title>
+        <title>{t('signup.title')} | Hittek CRM</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -163,9 +146,9 @@ export default function SignupPage() {
             <div className="mx-auto w-14 h-14 rounded-2xl bg-primary-600 flex items-center justify-center mb-4 shadow-lg">
               <span className="text-white font-bold text-2xl">H</span>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Crea tu cuenta</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('signup.title')}</h1>
             <p className="mt-2 text-gray-500">
-              14 días gratis. Sin tarjeta de crédito requerida.
+              {t('signup.subtitle')}
             </p>
           </div>
 
@@ -180,7 +163,7 @@ export default function SignupPage() {
                   {step > s ? <Icons.check className="w-4 h-4" /> : s}
                 </div>
                 <span className={`text-sm font-medium ${step === s ? 'text-primary-700' : 'text-gray-400'}`}>
-                  {s === 1 ? 'Elige tu plan' : 'Datos de cuenta'}
+                  {s === 1 ? t('signup.stepPlan') : t('signup.stepAccount')}
                 </span>
                 {s < 2 && <div className="w-8 h-px bg-gray-200" />}
               </div>
@@ -192,7 +175,7 @@ export default function SignupPage() {
             {/* ── Step 1: Plan selection ───────────────────────────────────── */}
             {step === 1 && (
               <div className="p-8">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">Elige tu plan</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">{t("signup.stepPlan")}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                   {PLANS.map((plan) => (
                     <button
@@ -269,14 +252,14 @@ export default function SignupPage() {
                   {/* Org name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nombre de la organización
+                      {t('signup.orgName')}
                     </label>
                     <input
                       type="text"
                       required
                       value={orgName}
                       onChange={(e) => setOrgName(e.target.value)}
-                      placeholder="Ej: Mi Empresa S.A. de C.V."
+                      placeholder={t('signup.orgNamePlaceholder')}
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                     {slugPreview && (
@@ -289,14 +272,14 @@ export default function SignupPage() {
                   {/* Email */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Correo electrónico
+                      {t('signup.email')}
                     </label>
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="tu@empresa.com"
+                      placeholder={t('signup.emailPlaceholder')}
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                   </div>
@@ -304,7 +287,7 @@ export default function SignupPage() {
                   {/* Password */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Contraseña
+                      {t('signup.password')}
                     </label>
                     <div className="relative">
                       <input
@@ -312,7 +295,7 @@ export default function SignupPage() {
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Mínimo 6 caracteres"
+                        placeholder={t('signup.passwordMinLength')}
                         className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                       <button
@@ -335,7 +318,7 @@ export default function SignupPage() {
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Repite tu contraseña"
+                      placeholder={t('signup.confirmPassword')}
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                   </div>
@@ -368,10 +351,10 @@ export default function SignupPage() {
                   {isLoading ? (
                     <>
                       <Spinner size="sm" />
-                      Creando cuenta...
+                      {t('signup.creating')}
                     </>
                   ) : (
-                    'Crear cuenta gratis'
+                    t('signup.createButton')
                   )}
                 </button>
 
@@ -383,9 +366,9 @@ export default function SignupPage() {
           </div>
 
           <p className="text-center text-sm text-gray-500 mt-6">
-            ¿Ya tienes cuenta?{' '}
+            {t('signup.hasAccount')}{' '}
             <Link href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
-              Inicia sesión
+              {t('signup.signIn')}
             </Link>
           </p>
         </div>

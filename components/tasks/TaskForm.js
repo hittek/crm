@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { Modal } from '../ui/Modal'
 import Icons from '../ui/Icons'
 import { parseNaturalDate } from '../../lib/utils'
+import { useI18n } from '../../lib/i18n'
 
 export default function TaskForm({ isOpen, onClose, onSave, task = null, contactId = null, dealId = null }) {
+  const { t } = useI18n()
   const [formData, setFormData] = useState({
     title: task?.title || '',
     description: task?.description || '',
@@ -45,7 +47,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
   const validate = () => {
     const newErrors = {}
     if (!formData.title.trim()) {
-      newErrors.title = 'El título es requerido'
+      newErrors.title = t('errors.validationError')
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -81,7 +83,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
       onClose()
     } catch (error) {
       console.error('Error saving task:', error)
-      setErrors({ submit: 'Error al guardar la tarea' })
+      setErrors({ submit: t('errors.generic') })
     }
     setIsSubmitting(false)
   }
@@ -106,7 +108,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={task ? 'Editar tarea' : 'Nueva tarea'}
+      title={task ? t('tasks.editTask') : t('tasks.newTask')}
       size="md"
     >
       <form onSubmit={handleSubmit}>
@@ -114,7 +116,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Título <span className="text-red-500">*</span>
+              {t('tasks.taskTitle')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -139,10 +141,10 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
             </label>
             <div className="flex gap-2">
               {[
-                { id: 'task', label: 'Tarea', icon: Icons.tasks },
-                { id: 'call', label: 'Llamada', icon: Icons.phone },
-                { id: 'email', label: 'Email', icon: Icons.mail },
-                { id: 'meeting', label: 'Reunión', icon: Icons.calendar },
+                { id: 'task', label: t('tasks.types.task'), icon: Icons.tasks },
+                { id: 'call', label: t('tasks.types.call'), icon: Icons.phone },
+                { id: 'email', label: t('tasks.types.email'), icon: Icons.mail },
+                { id: 'meeting', label: t('tasks.types.meeting'), icon: Icons.calendar },
               ].map((type) => (
                 <button
                   key={type.id}
@@ -165,7 +167,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha de vencimiento
+                {t('tasks.dueDate')}
               </label>
               <input
                 type="date"
@@ -176,7 +178,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prioridad
+                {t('tasks.priority')}
               </label>
               <select
                 value={formData.priority}
@@ -194,7 +196,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Asignado a
+                {t('tasks.assignTo')}
               </label>
               <select
                 value={formData.assignedToId}
@@ -228,7 +230,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Descripción
+              {t('tasks.description')}
             </label>
             <textarea
               value={formData.description}
@@ -250,10 +252,10 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
         {/* Actions */}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
           <button type="button" onClick={onClose} className="btn-secondary">
-            Cancelar
+            {t('common.cancel')}
           </button>
           <button type="submit" disabled={isSubmitting} className="btn-primary">
-            {isSubmitting ? 'Guardando...' : task ? 'Guardar cambios' : 'Crear tarea'}
+            {isSubmitting ? t('common.saving') : task ? t('common.save') : t('tasks.newTask')}
           </button>
         </div>
       </form>

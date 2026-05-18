@@ -5,22 +5,23 @@ import UpgradeWall from '../components/ui/UpgradeWall'
 import ChatPanel from '../components/chatbot/ChatPanel'
 import { useAuth } from '../lib/AuthContext'
 import { useModalClose } from '../components/ui/Modal'
+import { useI18n } from '../lib/i18n'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const STATUS = {
-  empty:    { label: 'Vacío',       color: 'bg-gray-100 text-gray-500' },
-  indexing: { label: 'Indexando…',  color: 'bg-yellow-100 text-yellow-700' },
-  ready:    { label: 'Listo',       color: 'bg-green-100 text-green-700' },
-  error:    { label: 'Error',       color: 'bg-red-100 text-red-700' },
+  empty:    { color: 'bg-gray-100 text-gray-500' },
+  indexing: { color: 'bg-yellow-100 text-yellow-700' },
+  ready:    { color: 'bg-green-100 text-green-700' },
+  error:    { color: 'bg-red-100 text-red-700' },
 }
 
 const DOC_STATUS = {
-  pending:    { label: 'Pendiente',  color: 'text-gray-400' },
-  processing: { label: 'Procesando',color: 'text-yellow-600' },
-  chunked:    { label: 'Indexado',   color: 'text-green-600' },
-  indexed:    { label: 'Indexado ✓', color: 'text-green-700' },
-  error:      { label: 'Error',      color: 'text-red-500' },
+  pending:    { color: 'text-gray-400' },
+  processing: { color: 'text-yellow-600' },
+  chunked:    { color: 'text-green-600' },
+  indexed:    { color: 'text-green-700' },
+  error:      { color: 'text-red-500' },
 }
 
 const DOC_ICONS = {
@@ -38,33 +39,39 @@ function fmt(bytes) {
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
-function StatusBadge({ status, className = '' }) {
+function StatusBadge({ status, className = '', t }) {
   const s = STATUS[status] ?? STATUS.empty
+  const statusLabels = {
+    empty:    'Vacío',
+    indexing: t ? t('chatbot.indexing') : 'Indexando…',
+    ready:    t ? t('chatbot.ready') : 'Listo',
+    error:    t ? t('common.error') : 'Error',
+  }
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color} ${className}`}>
-      {s.label}
+      {statusLabels[status] ?? status}
     </span>
   )
 }
 
-function EmptyKBState({ onCreate }) {
+function EmptyKBState({ onCreate, t }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center px-4">
       <div className="w-16 h-16 rounded-2xl bg-primary-50 flex items-center justify-center mb-4">
         <Icons.bot className="w-8 h-8 text-primary-500" />
       </div>
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">Sin base de conocimiento</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-2">{t('chatbot.noKbs')}</h2>
       <p className="text-sm text-gray-500 mb-6 max-w-sm">
-        Crea una base de conocimiento para que tu chatbot responda preguntas basándose en tus documentos.
+        {t('chatbot.noKbsDesc')}
       </p>
       <button onClick={onCreate} className="btn-primary">
-        <Icons.plus className="w-4 h-4 mr-2" /> Nueva base de conocimiento
+        <Icons.plus className="w-4 h-4 mr-2" /> {t('chatbot.newKb')}
       </button>
     </div>
   )
 }
 
-function KBCard({ kb, isActive, onClick, onDelete }) {
+function KBCard({ kb, isActive, onClick, onDelete, t }) {
   const s = STATUS[kb.status] ?? STATUS.empty
   return (
     <div
@@ -86,13 +93,11 @@ function KBCard({ kb, isActive, onClick, onDelete }) {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>
-            {s.label}
-          </span>
+          <StatusBadge status={kb.status} t={t} />
           <button
             onClick={e => { e.stopPropagation(); onDelete(kb) }}
             className="p-1 rounded hover:bg-red-50 hover:text-red-500 text-gray-400 transition-colors"
-            title="Eliminar"
+            title={t('common.delete')}
           >
             <Icons.delete className="w-3.5 h-3.5" />
           </button>
@@ -102,10 +107,19 @@ function KBCard({ kb, isActive, onClick, onDelete }) {
   )
 }
 
-function DocumentRow({ doc, onDelete, onRetry }) {
+function DocumentRow({ doc, onDelete, onRetry, t }) {
   const [expanded, setExpanded] = useState(false)
   const DocIcon = DOC_ICONS[doc.type] ?? Icons.fileText
   const ds = DOC_STATUS[doc.status] ?? DOC_STATUS.pending
+
+  const docStatusLabels = {
+    pending:    'Pendiente',
+    processing: t ? t('chatbot.processing') : 'Procesando',
+    chunked:    'Indexado',
+    indexed:    'Indexado ✓',
+    error:      t ? t('common.error') : 'Error',
+  }
+  const dsLabel = docStatusLabels[doc.status] ?? doc.status
 
   // Only show expand toggle when there's something to show
   const canExpand = doc.status === 'indexed' && (doc.answer || doc.content)
@@ -124,7 +138,7 @@ function DocumentRow({ doc, onDelete, onRetry }) {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-gray-800 truncate">{doc.title}</p>
           <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5 flex-wrap">
-            <span className={`font-medium ${ds.color}`}>{ds.label}</span>
+            <span className={`font-medium ${ds.color}`}>{dsLabel}</span>
             {doc.chunkCount > 0 && <span>· {doc.chunkCount} fragmentos</span>}
             {doc.fileSize > 0 && <span>· {fmt(doc.fileSize)}</span>}
             {doc.sourceUrl && (
@@ -146,8 +160,7 @@ function DocumentRow({ doc, onDelete, onRetry }) {
             <button
               onClick={() => setExpanded(e => !e)}
               className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-              title={expanded ? 'Ocultar contenido' : 'Ver contenido indexado'}
-            >
+              title={expanded ? 'Ocultar contenido' : 'Ver contenido indexado'}            >
               <Icons.chevronDown className={`w-4 h-4 transition-transform duration-150 ${expanded ? 'rotate-180' : ''}`} />
             </button>
           )}
@@ -156,7 +169,7 @@ function DocumentRow({ doc, onDelete, onRetry }) {
               <button
                 onClick={() => onRetry(doc)}
                 className="p-1.5 rounded hover:bg-yellow-50 hover:text-yellow-600 text-gray-400 transition-colors"
-                title="Reintentar"
+                title={t ? t('chatbot.retry') : 'Reintentar'}
               >
                 <Icons.refresh className="w-4 h-4" />
               </button>
@@ -164,7 +177,7 @@ function DocumentRow({ doc, onDelete, onRetry }) {
             <button
               onClick={() => onDelete(doc)}
               className="p-1.5 rounded hover:bg-red-50 hover:text-red-500 text-gray-400 transition-colors"
-              title="Eliminar documento"
+              title={t ? t('common.delete') : 'Eliminar documento'}
             >
               <Icons.delete className="w-4 h-4" />
             </button>
@@ -178,11 +191,11 @@ function DocumentRow({ doc, onDelete, onRetry }) {
           {doc.type === 'qa' ? (
             <div>
               <div className="px-3 py-2.5 border-b border-gray-200">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Pregunta</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t ? t('chatbot.faqQuestion') : 'Pregunta'}</p>
                 <p className="text-gray-800 leading-relaxed">{doc.title}</p>
               </div>
               <div className="px-3 py-2.5">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Respuesta</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t ? t('chatbot.faqAnswer') : 'Respuesta'}</p>
                 <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{doc.answer}</p>
               </div>
             </div>
@@ -206,6 +219,7 @@ function DocumentRow({ doc, onDelete, onRetry }) {
 // ── Add-document modal ────────────────────────────────────────────────────────
 
 function AddDocumentModal({ kbId, onClose, onAdded }) {
+  const { t } = useI18n()
   const [tab, setTab] = useState('pdf')
   const [loading, setLoading] = useState(false)
   const [error, setError]   = useState('')
@@ -276,7 +290,7 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
-          <h3 className="text-base font-semibold text-gray-900">Agregar fuente</h3>
+        <h3 className="text-base font-semibold text-gray-900">{t('chatbot.addDocument')}</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
             <Icons.close className="w-4 h-4" />
           </button>
@@ -284,17 +298,17 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
 
         {/* Tab switcher */}
         <div className="flex gap-1 px-6 pt-4">
-          {TABS.map(t => (
+          {TABS.map(tab_ => (
             <button
-              key={t.id}
-              onClick={() => { setTab(t.id); setError('') }}
+              key={tab_.id}
+              onClick={() => { setTab(tab_.id); setError('') }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                tab === t.id
+                tab === tab_.id
                   ? 'bg-primary-100 text-primary-700'
                   : 'text-gray-500 hover:bg-gray-100'
               }`}
             >
-              <t.icon className="w-3.5 h-3.5" /> {t.label}
+              <tab_.icon className="w-3.5 h-3.5" /> {tab_.label}
             </button>
           ))}
         </div>
@@ -315,15 +329,14 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
                 ) : (
                   <>
                     <p className="text-sm font-medium text-gray-700">Arrastra un PDF o haz clic</p>
-                    <p className="text-xs text-gray-400 mt-1">Máximo 20 MB</p>
-                  </>
+                    <p className="text-xs text-gray-400 mt-1">Máximo 20 MB</p>                  </>
                 )}
                 <input ref={fileRef} type="file" accept="application/pdf" className="hidden"
                   onChange={e => setPdfFile(e.target.files?.[0] ?? null)} />
               </div>
               <input
                 type="text"
-                placeholder="Título (opcional)"
+                placeholder={t('chatbot.docTitle')}
                 value={pdfTitle}
                 onChange={e => setPdfTitle(e.target.value)}
                 className="input"
@@ -335,14 +348,14 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
             <>
               <input
                 type="url"
-                placeholder="https://ejemplo.com/articulo"
+                placeholder={t('chatbot.urlPlaceholder')}
                 value={url}
                 onChange={e => setUrl(e.target.value)}
                 className="input"
               />
               <input
                 type="text"
-                placeholder="Título (opcional — se extrae automáticamente)"
+                placeholder={t('chatbot.docTitle')}
                 value={urlTitle}
                 onChange={e => setUrlTitle(e.target.value)}
                 className="input"
@@ -357,14 +370,14 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
             <>
               <input
                 type="text"
-                placeholder="¿Cuál es el horario de atención?"
+                placeholder={t('chatbot.faqQuestion')}
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
                 className="input"
               />
               <textarea
                 rows={4}
-                placeholder="Atendemos de lunes a viernes de 9 AM a 6 PM CST."
+                placeholder={t('chatbot.faqAnswer')}
                 value={answer}
                 onChange={e => setAnswer(e.target.value)}
                 className="input resize-none"
@@ -379,12 +392,12 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 pb-5">
-          <button onClick={onClose} className="btn-ghost" disabled={loading}>Cancelar</button>
+          <button onClick={onClose} className="btn-ghost" disabled={loading}>{t('common.cancel')}</button>
           <button onClick={submit} disabled={loading} className="btn-primary">
             {loading ? (
-              <><Icons.refresh className="w-4 h-4 mr-2 animate-spin" /> Procesando…</>
+              <><Icons.refresh className="w-4 h-4 mr-2 animate-spin" /> {t('chatbot.processing')}…</>
             ) : (
-              <><Icons.plus className="w-4 h-4 mr-2" /> Agregar</>
+              <><Icons.plus className="w-4 h-4 mr-2" /> {t('common.add')}</>
             )}
           </button>
         </div>
@@ -396,6 +409,7 @@ function AddDocumentModal({ kbId, onClose, onAdded }) {
 // ── Create-KB modal ───────────────────────────────────────────────────────────
 
 function CreateKBModal({ onClose, onCreate }) {
+  const { t } = useI18n()
   const [name, setName]       = useState('')
   const [desc, setDesc]       = useState('')
   const [loading, setLoading] = useState(false)
@@ -425,7 +439,7 @@ function CreateKBModal({ onClose, onCreate }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
-          <h3 className="text-base font-semibold text-gray-900">Nueva base de conocimiento</h3>
+          <h3 className="text-base font-semibold text-gray-900">{t('chatbot.newKb')}</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
             <Icons.close className="w-4 h-4" />
           </button>
@@ -433,7 +447,7 @@ function CreateKBModal({ onClose, onCreate }) {
         <form onSubmit={submit} className="px-6 py-4 space-y-3">
           <input
             type="text"
-            placeholder="Nombre, p. ej. «Soporte al cliente»"
+            placeholder={t('chatbot.kbNamePlaceholder')}
             value={name}
             onChange={e => setName(e.target.value)}
             className="input"
@@ -441,16 +455,16 @@ function CreateKBModal({ onClose, onCreate }) {
           />
           <textarea
             rows={3}
-            placeholder="Descripción (opcional)"
+            placeholder={t('chatbot.kbDescPlaceholder')}
             value={desc}
             onChange={e => setDesc(e.target.value)}
             className="input resize-none"
           />
           {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div className="flex items-center justify-end gap-3 pt-1">
-            <button type="button" onClick={onClose} className="btn-ghost" disabled={loading}>Cancelar</button>
+            <button type="button" onClick={onClose} className="btn-ghost" disabled={loading}>{t('common.cancel')}</button>
             <button type="submit" disabled={loading} className="btn-primary">
-              {loading ? 'Creando…' : 'Crear'}
+              {loading ? t('chatbot.saving') : t('common.save')}
             </button>
           </div>
         </form>
@@ -462,7 +476,8 @@ function CreateKBModal({ onClose, onCreate }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ChatbotPage() {
-  const { permissions, isLoading: authLoading } = useAuth()
+  const { t } = useI18n()
+  const { permissions, org, isLoading: authLoading } = useAuth()
   const canAccess = permissions?.canManageSettings // same gate as billing
 
   const [kbs, setKbs]                     = useState([])
@@ -531,14 +546,14 @@ export default function ChatbotPage() {
   }
 
   async function deleteKb(kb) {
-    if (!confirm(`¿Eliminar la base de conocimiento «${kb.name}»? Esta acción no se puede deshacer.`)) return
+    if (!confirm(t('chatbot.deleteKbConfirm', { name: kb.name }))) return
     await fetch(`/api/chatbot/knowledge-bases/${kb.id}`, { method: 'DELETE' })
     setKbs(prev => prev.filter(k => k.id !== kb.id))
     if (activeKb?.id === kb.id) { setActiveKb(null); setDocuments([]) }
   }
 
   async function deleteDoc(doc) {
-    if (!confirm(`¿Eliminar el documento «${doc.title}»?`)) return
+    if (!confirm(t('chatbot.deleteDocConfirm', { name: doc.title }))) return
     await fetch(`/api/chatbot/knowledge-bases/${activeKb.id}/documents/${doc.id}`, { method: 'DELETE' })
     setDocuments(prev => prev.filter(d => d.id !== doc.id))
     // Refresh KB to update counts
@@ -559,14 +574,12 @@ export default function ChatbotPage() {
 
   if (authLoading) return null
 
-  if (planBlocked) {
-    return (
-      <UpgradeWall
-        title="Chatbot con IA"
-        message="Actualiza tu plan para crear chatbots y bases de conocimiento con IA."
-        feature="chatbot"
-      />
-    )
+  // Trial plan has knowledgeBases: 0 — show upgrade wall immediately without
+  // waiting for a 402 from the API.
+  const isChatbotBlocked = planBlocked || org?.planStatus === 'trialing'
+
+  if (isChatbotBlocked) {
+    return <UpgradeWall reason="feature_unavailable" />
   }
 
   // Mobile: show right panel when a KB is active
@@ -574,7 +587,7 @@ export default function ChatbotPage() {
 
   return (
     <>
-      <Head><title>Chatbot | CRM</title></Head>
+      <Head><title>{t('nav.chatbot')} | CRM</title></Head>
 
       <div className="flex flex-1 overflow-hidden">
         {/* ── Left panel: KB list ─────────────────────────────────────── */}
@@ -583,12 +596,12 @@ export default function ChatbotPage() {
           <div className="px-4 py-4 border-b border-gray-200 bg-white flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Icons.bot className="w-5 h-5 text-primary-500" />
-              <h1 className="text-sm font-semibold text-gray-900">Bases de conocimiento</h1>
+              <h1 className="text-sm font-semibold text-gray-900">{t('chatbot.kbTitle')}</h1>
             </div>
             <button
               onClick={() => setShowCreate(true)}
               className="p-1.5 rounded-lg bg-primary-50 hover:bg-primary-100 text-primary-600 transition-colors"
-              title="Nueva base de conocimiento"
+              title={t('chatbot.newKb')}
             >
               <Icons.plus className="w-4 h-4" />
             </button>
@@ -608,6 +621,7 @@ export default function ChatbotPage() {
                   isActive={activeKb?.id === kb.id}
                   onClick={() => selectKb(kb)}
                   onDelete={deleteKb}
+                  t={t}
                 />
               ))
             )}
@@ -617,10 +631,10 @@ export default function ChatbotPage() {
         {/* ── Right panel: documents ──────────────────────────────────── */}
         <div className={`${showDetail ? 'flex' : 'hidden sm:flex'} flex-1 flex-col min-w-0 bg-white overflow-hidden`}>
           {!activeKb && !loadingKbs && kbs.length === 0 ? (
-            <EmptyKBState onCreate={() => setShowCreate(true)} />
+            <EmptyKBState onCreate={() => setShowCreate(true)} t={t} />
           ) : !activeKb ? (
             <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
-              Selecciona una base de conocimiento
+              {t('chatbot.noKbs')}
             </div>
           ) : (
             <>
@@ -630,7 +644,7 @@ export default function ChatbotPage() {
                 className="sm:hidden flex items-center gap-2 px-4 py-3 text-sm font-medium text-primary-600 border-b border-gray-200 hover:bg-gray-50 shrink-0"
               >
                 <Icons.chevronLeft className="w-4 h-4" />
-                Bases de conocimiento
+                {t('chatbot.kbTitle')}
               </button>
 
               {/* KB header */}
@@ -638,7 +652,7 @@ export default function ChatbotPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{activeKb.name}</h2>
-                    <StatusBadge status={activeKb.status} />
+                    <StatusBadge status={activeKb.status} t={t} />
                   </div>
                   {activeKb.description && (
                     <p className="text-sm text-gray-500 mt-0.5">{activeKb.description}</p>
@@ -649,8 +663,8 @@ export default function ChatbotPage() {
                   className="btn-primary shrink-0"
                 >
                   <Icons.plus className="w-4 h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Agregar fuente</span>
-                  <span className="sm:hidden">Agregar</span>
+                  <span className="hidden sm:inline">{t('chatbot.addDocument')}</span>
+                  <span className="sm:hidden">{t('common.add')}</span>
                 </button>
               </div>
 
@@ -663,9 +677,9 @@ export default function ChatbotPage() {
                 ) : documents.length === 0 ? (
                   <div className="py-16 text-center">
                     <Icons.database className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm font-medium text-gray-500">Sin documentos</p>
+                    <p className="text-sm font-medium text-gray-500">{t('chatbot.noDocuments')}</p>
                     <p className="text-xs text-gray-400 mt-1">
-                      Agrega PDFs, URLs o pares de Q&A para construir el conocimiento.
+                      {t('chatbot.noDocsDesc')}
                     </p>
                   </div>
                 ) : (
@@ -675,7 +689,7 @@ export default function ChatbotPage() {
                       {documents.reduce((s, d) => s + (d.chunkCount ?? 0), 0)} fragmentos totales
                     </p>
                     {documents.map(doc => (
-                      <DocumentRow key={doc.id} doc={doc} onDelete={deleteDoc} onRetry={retryDoc} />
+                      <DocumentRow key={doc.id} doc={doc} onDelete={deleteDoc} onRetry={retryDoc} t={t} />
                     ))}
                   </div>
                 )}

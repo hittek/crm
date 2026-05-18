@@ -72,32 +72,52 @@ export default function NotificationBell() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Poll for new notifications every 10s — works correctly on serverless
-  // (replaces SSE stream which caused Vercel timeout errors every 55s)
+  // Poll only the lightweight /count endpoint every 60s.
+  // Full notification list is only fetched on mount and when the dropdown opens.
   useEffect(() => {
-    fetchNotifications()
+    fetchNotifications() // full fetch on mount
 
-    const interval = setInterval(async () => {
+    let intervalId = null
+
+    const pollCount = async () => {
+      if (document.visibilityState === 'hidden') return
       try {
-        const res = await fetch('/api/notifications?limit=10')
+        const res = await fetch('/api/notifications/count')
         if (!res.ok) return
-        const data = await res.json()
-        const notifs = data.data || []
-
-        // Detect and surface genuinely new notifications
-        notifs.forEach(n => {
-          if (!seenIdsRef.current.has(n.id)) {
-            seenIdsRef.current.add(n.id)
-            if (!n.isRead) fireBrowserNotif(n)
-          }
+        const { unreadCount: newCount } = await res.json()
+        // If unread count grew, do a full fetch to surface new notifications
+        setUnreadCount(prev => {
+          if (newCount > prev) fetchNotifications()
+          return newCount
         })
-
-        setNotifications(notifs)
-        setUnreadCount(data.unreadCount || 0)
       } catch (_) {}
-    }, 10_000)
+    }
 
-    return () => clearInterval(interval)
+    const startPolling = () => {
+      if (intervalId) return
+      intervalId = setInterval(pollCount, 60_000)
+    }
+
+    const stopPolling = () => {
+      if (intervalId) { clearInterval(intervalId); intervalId = null }
+    }
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications()
+        startPolling()
+      } else {
+        stopPolling()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility)
+    startPolling()
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      stopPolling()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

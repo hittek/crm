@@ -5,25 +5,32 @@ import Icons from '../components/ui/Icons'
 import { useAuth } from '../lib/AuthContext'
 import { useDealStages } from '../lib/SettingsContext'
 import { PageLoader } from '../components/ui/Spinner'
+import UpgradeWall from '../components/ui/UpgradeWall'
 import { useModalClose } from '../components/ui/Modal'
 import ChatPanel, { ChatPanelInline } from '../components/chatbot/ChatPanel'
+import { useI18n } from '../lib/i18n'
 
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }) {
+function StatusBadge({ status, t }) {
   const map = {
     ready:  'bg-green-100 text-green-700',
     empty:  'bg-gray-100 text-gray-500',
     error:  'bg-red-100 text-red-700',
   }
-  const label = { ready: 'Lista', empty: 'Vacía', error: 'Error' }
+  const getLabel = () => {
+    if (t) {
+      if (status === 'ready') return t('chatbot.ready')
+      if (status === 'error') return t('common.error')
+    }
+    return { ready: 'Lista', empty: 'Vacía', error: 'Error' }[status] || status
+  }
   const cls = map[status] || 'bg-gray-100 text-gray-500'
-  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{label[status] || status}</span>
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{getLabel()}</span>
 }
 
 // ── Create/Edit modal ─────────────────────────────────────────────────────────
 
 function BotModal({ bot, kbs, dealStages, onClose, onSave }) {
+  const { t } = useI18n()
   const [form, setForm] = useState({
     name:             bot?.name             || '',
     kbId:             bot?.kbId             || (kbs[0]?.id || ''),
@@ -72,7 +79,7 @@ function BotModal({ bot, kbs, dealStages, onClose, onSave }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">{bot ? 'Editar chatbot' : 'Nuevo chatbot'}</h2>
+          <h2 className="text-base font-semibold text-gray-900">{bot ? t('chatbot.editBot') : t('chatbot.newBot')}</h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"><Icons.close className="w-4 h-4" /></button>
         </div>
 
@@ -81,7 +88,7 @@ function BotModal({ bot, kbs, dealStages, onClose, onSave }) {
           {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Nombre del chatbot</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{t('chatbot.botName')}</label>
             <input
               type="text" required value={form.name} onChange={e => set('name', e.target.value)}
               placeholder="Ej: Soporte Técnico"
@@ -90,7 +97,7 @@ function BotModal({ bot, kbs, dealStages, onClose, onSave }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Base de conocimiento</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{t('chatbot.botKb')}</label>
             <select
               required value={form.kbId} onChange={e => set('kbId', e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white"
@@ -242,10 +249,10 @@ function BotModal({ bot, kbs, dealStages, onClose, onSave }) {
 
           <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100 shrink-0">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-              Cancelar
+              {t('common.cancel')}
             </button>
             <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors">
-              {saving ? 'Guardando…' : bot ? 'Guardar cambios' : 'Crear chatbot'}
+              {saving ? t('chatbot.saving') : bot ? t('common.save') : t('chatbot.newBot')}
             </button>
           </div>
         </form>
@@ -263,6 +270,7 @@ const CHANNEL_META = {
 }
 
 function ChannelsModal({ bot, onClose }) {
+  const { t } = useI18n()
   const [channels, setChannels] = useState([])
   const [loading, setLoading]   = useState(true)
   const [active, setActive]     = useState(null)   // which channel card is expanded for connect
@@ -335,7 +343,7 @@ function ChannelsModal({ bot, onClose }) {
             </div>
           )}
           {loading ? (
-            <p className="text-sm text-gray-400 text-center py-6">Cargando…</p>
+            <p className="text-sm text-gray-400 text-center py-6">{t('common.loading')}</p>
           ) : (
             Object.entries(CHANNEL_META).map(([key, meta]) => {
               const connected = connectedMap[key]
@@ -375,7 +383,7 @@ function ChannelsModal({ bot, onClose }) {
                           onClick={() => disconnect(key)}
                           className="px-2.5 py-1.5 text-xs rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition-colors"
                         >
-                          Desconectar
+                          {t('common.delete')}
                         </button>
                       </div>
                     ) : (
@@ -483,14 +491,14 @@ function ChannelsModal({ bot, onClose }) {
 
                       <div className="flex gap-2 pt-1">
                         <button onClick={() => { setActive(null); setForm({}) }} className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 hover:bg-gray-50">
-                          Cancelar
+                          {t('common.cancel')}
                         </button>
                         <button
                           onClick={() => connect(key)}
                           disabled={saving}
                           className="flex-1 px-3 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40"
                         >
-                          {saving ? 'Conectando…' : 'Guardar y conectar'}
+                          {saving ? t('common.saving') : t('common.save')}
                         </button>
                       </div>
                     </div>
@@ -507,7 +515,7 @@ function ChannelsModal({ bot, onClose }) {
 
 // ── Bot card ──────────────────────────────────────────────────────────────────
 
-function BotCard({ bot, onEdit, onDelete, onTest, onChannels, isTesting }) {
+function BotCard({ bot, onEdit, onDelete, onTest, onChannels, isTesting, t }) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-3">
@@ -524,17 +532,17 @@ function BotCard({ bot, onEdit, onDelete, onTest, onChannels, isTesting }) {
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => onTest(bot)} title="Probar chatbot"
+          <button onClick={() => onTest(bot)} title={t ? t('chatbot.testBot') : 'Probar chatbot'}
             className={`p-1.5 rounded-lg transition-colors ${isTesting ? 'bg-primary-100 text-primary-600' : 'hover:bg-gray-100 text-gray-400'}`}>
             <Icons.send className="w-4 h-4" />
           </button>
-          <button onClick={() => onChannels(bot)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors" title="Canales">
+          <button onClick={() => onChannels(bot)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors" title={t ? t('chatbot.channels') : 'Canales'}>
             <Icons.globe className="w-4 h-4" />
           </button>
-          <button onClick={() => onEdit(bot)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors" title="Editar">
+          <button onClick={() => onEdit(bot)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors" title={t ? t('common.edit') : 'Editar'}>
             <Icons.edit className="w-4 h-4" />
           </button>
-          <button onClick={() => onDelete(bot)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors" title="Eliminar">
+          <button onClick={() => onDelete(bot)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors" title={t ? t('common.delete') : 'Eliminar'}>
             <Icons.trash className="w-4 h-4" />
           </button>
         </div>
@@ -554,7 +562,7 @@ function BotCard({ bot, onEdit, onDelete, onTest, onChannels, isTesting }) {
       </div>
 
       <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-        <StatusBadge status={bot.kb?.status} />
+        <StatusBadge status={bot.kb?.status} t={t} />
         <span className={`text-xs font-medium ${bot.isActive ? 'text-green-600' : 'text-gray-400'}`}>
           {bot.isActive ? 'Activo' : 'Inactivo'}
         </span>
@@ -566,7 +574,8 @@ function BotCard({ bot, onEdit, onDelete, onTest, onChannels, isTesting }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ChatbotsPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { t } = useI18n()
+  const { user, org, loading: authLoading } = useAuth()
   const router = useRouter()
   const dealStages = useDealStages()
   const [bots, setBots]         = useState([])
@@ -590,7 +599,7 @@ export default function ChatbotsPage() {
   useEffect(() => { if (user) fetchBots() }, [user, fetchBots])
 
   async function handleDelete(bot) {
-    if (!confirm(`¿Eliminar el chatbot «${bot.name}»? Se eliminará también el historial de conversaciones.`)) return
+    if (!confirm(t('chatbot.deleteBotConfirm', { name: bot.name }))) return
     const r = await fetch(`/api/chatbot/bots/${bot.id}`, { method: 'DELETE' })
     if (r.ok) setBots(prev => prev.filter(b => b.id !== bot.id))
   }
@@ -614,9 +623,13 @@ export default function ChatbotsPage() {
 
   if (authLoading) return <PageLoader />
 
+  if (org?.planStatus === 'trialing') {
+    return <UpgradeWall reason="feature_unavailable" />
+  }
+
   return (
     <>
-      <Head><title>Mis Chatbots</title></Head>
+      <Head><title>{t('nav.chatbots')} | CRM</title></Head>
 
       <div className="flex flex-1 overflow-hidden">
 
@@ -626,15 +639,15 @@ export default function ChatbotsPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Mis Chatbots</h1>
-                <p className="text-sm text-gray-500 mt-0.5">Configura chatbots para conectar con WhatsApp, Facebook y Telegram</p>
+                <h1 className="text-xl font-bold text-gray-900">{t('chatbot.botsTitle')}</h1>
+                <p className="text-sm text-gray-500 mt-0.5">{t('chatbot.noBotsDesc')}</p>
               </div>
               <button
                 onClick={() => { setEditBot(null); setShowModal(true) }}
                 className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
               >
                 <Icons.plus className="w-4 h-4" />
-                Nuevo chatbot
+                {t('chatbot.newBot')}
               </button>
             </div>
 
@@ -651,20 +664,20 @@ export default function ChatbotsPage() {
                 <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
                   <Icons.bot className="w-7 h-7 text-primary-400" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-700 mb-1">Sin chatbots todavía</h3>
+                <h3 className="text-base font-semibold text-gray-700 mb-1">{t('chatbot.noBots')}</h3>
                 <p className="text-sm text-gray-400 mb-5 max-w-xs">
-                  Crea tu primer chatbot y conéctalo a una base de conocimiento para empezar a responder automáticamente.
+                  {t('chatbot.noBotsDesc')}
                 </p>
                 {kbs.length === 0 ? (
                   <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
-                    Primero necesitas crear una base de conocimiento en la sección <strong>Chatbot IA</strong>.
+                    {t('chatbot.noKbsYet')}
                   </p>
                 ) : (
                   <button
                     onClick={() => setShowModal(true)}
                     className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
                   >
-                    Crear primer chatbot
+                    {t('chatbot.createFirstBot')}
                   </button>
                 )}
               </div>
@@ -682,6 +695,7 @@ export default function ChatbotsPage() {
                     onEdit={b => { setEditBot(b); setShowModal(true) }}
                     onDelete={handleDelete}
                     onChannels={handleChannels}
+                    t={t}
                   />
                 ))}
               </div>

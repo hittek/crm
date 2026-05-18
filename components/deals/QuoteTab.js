@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Icons from '../ui/Icons'
 import { Spinner } from '../ui/Spinner'
 import { useAuth } from '../../lib/AuthContext'
+import { useI18n } from '../../lib/i18n'
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 function fmt(n, currency = 'MXN') {
@@ -9,11 +10,11 @@ function fmt(n, currency = 'MXN') {
 }
 
 const STATUS_CONFIG = {
-  draft:    { label: 'Borrador',  cls: 'bg-gray-100 text-gray-600' },
-  sent:     { label: 'Enviada',   cls: 'bg-blue-100 text-blue-700' },
-  accepted: { label: 'Aceptada',  cls: 'bg-green-100 text-green-700' },
-  rejected: { label: 'Rechazada', cls: 'bg-red-100 text-red-700' },
-  expired:  { label: 'Vencida',   cls: 'bg-orange-100 text-orange-700' },
+  draft:    { cls: 'bg-gray-100 text-gray-600' },
+  sent:     { cls: 'bg-blue-100 text-blue-700' },
+  accepted: { cls: 'bg-green-100 text-green-700' },
+  rejected: { cls: 'bg-red-100 text-red-700' },
+  expired:  { cls: 'bg-orange-100 text-orange-700' },
 }
 
 const UNIT_LABELS = {
@@ -21,14 +22,8 @@ const UNIT_LABELS = {
   kg: 'kg', m: 'm', m2: 'm²', lt: 'Litro',
 }
 
-const NEXT_STATUSES = {
-  draft:    [{ value: 'sent',     label: 'Marcar enviada',  style: 'ghost' }],
-  sent:     [{ value: 'accepted', label: 'Aceptar',         style: 'primary' },
-             { value: 'rejected', label: 'Rechazar',        style: 'danger' }],
-  accepted: [],
-  rejected: [],
-  expired:  [],
-}
+
+
 
 let _seq = 0
 function uid() { return `item-${Date.now()}-${++_seq}` }
@@ -39,16 +34,25 @@ function makeItem(overrides = {}) {
 
 // ── StatusBadge ────────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
+  const { t } = useI18n()
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft
+  const labels = {
+    draft:    t('dealsExt.quoteStatuses.draft'),
+    sent:     t('dealsExt.quoteStatuses.sent'),
+    accepted: t('dealsExt.quoteStatuses.accepted'),
+    rejected: t('dealsExt.quoteStatuses.rejected'),
+    expired:  t('dealsExt.quoteStatuses.expired'),
+  }
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}>
-      {cfg.label}
+      {labels[status] || status}
     </span>
   )
 }
 
 // ── CatalogPicker ──────────────────────────────────────────────────────────────
 function CatalogPicker({ products, onSelect, onClose }) {
+  const { t } = useI18n()
   const [search, setSearch] = useState('')
   const filtered = products.filter(p => {
     if (!search) return true
@@ -70,11 +74,11 @@ function CatalogPicker({ products, onSelect, onClose }) {
         type="text"
         value={search}
         onChange={e => setSearch(e.target.value)}
-        placeholder="Buscar producto o servicio…"
+        placeholder={t('common.search')}
       />
       <div className="max-h-48 overflow-y-auto space-y-0.5 -mx-1">
         {filtered.length === 0 ? (
-          <p className="text-sm text-center text-gray-400 py-3">Sin resultados</p>
+          <p className="text-sm text-center text-gray-400 py-3">{t('common.noResults')}</p>
         ) : filtered.map(p => (
           <button
             key={p.id}
@@ -84,7 +88,7 @@ function CatalogPicker({ products, onSelect, onClose }) {
             <div className="min-w-0">
               <div className="text-sm font-medium text-gray-900 truncate">{p.name}</div>
               {p.sku && <div className="text-xs text-gray-400 font-mono">{p.sku}</div>}
-              <div className="text-xs text-gray-400">{UNIT_LABELS[p.unit] || p.unit}</div>
+              <div className="text-xs text-gray-400">{t(`products.units.${p.unit}`) || p.unit}</div>
             </div>
             <div className="text-right shrink-0 ml-3">
               <div className="text-sm font-semibold text-gray-800">
@@ -100,6 +104,7 @@ function CatalogPicker({ products, onSelect, onClose }) {
 
 // ── LineItemRow ────────────────────────────────────────────────────────────────
 function LineItemRow({ item, idx, onUpdate, onRemove, onPickCatalog }) {
+  const { t } = useI18n()
   return (
     <div className="border border-gray-200 rounded-lg p-2.5 space-y-2 bg-white">
       {/* Name row */}
@@ -109,7 +114,7 @@ function LineItemRow({ item, idx, onUpdate, onRemove, onPickCatalog }) {
             className="w-full text-sm font-medium text-gray-900 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary-500 focus:outline-none pb-0.5"
             value={item.description}
             onChange={e => onUpdate(idx, 'description', e.target.value)}
-            placeholder="Descripción del ítem"
+            placeholder={t('quotes.description')}
           />
           {item.sku && (
             <span className="text-xs text-gray-400 font-mono block mt-0.5">{item.sku}</span>
@@ -125,7 +130,7 @@ function LineItemRow({ item, idx, onUpdate, onRemove, onPickCatalog }) {
         <button
           onClick={() => onRemove(idx)}
           className="p-1 text-gray-300 hover:text-red-500 rounded transition-colors"
-          title="Eliminar ítem"
+          title={t('common.delete')}
         >
           <Icons.close className="w-3.5 h-3.5" />
         </button>
@@ -134,7 +139,7 @@ function LineItemRow({ item, idx, onUpdate, onRemove, onPickCatalog }) {
       {/* Qty / Price / IVA / Total */}
       <div className="grid grid-cols-4 gap-2 text-xs">
         <div>
-          <label className="text-gray-400 block mb-0.5">Cantidad</label>
+          <label className="text-gray-400 block mb-0.5">{t('quotes.qty')}</label>
           <input
             type="number" min="0" step="1"
             className="w-full border border-gray-200 rounded px-2 py-1 text-right focus:outline-none focus:border-primary-500"
@@ -143,7 +148,7 @@ function LineItemRow({ item, idx, onUpdate, onRemove, onPickCatalog }) {
           />
         </div>
         <div>
-          <label className="text-gray-400 block mb-0.5">Precio unit.</label>
+          <label className="text-gray-400 block mb-0.5">{t('quotes.unitPrice')}</label>
           <input
             type="number" min="0" step="0.01"
             className="w-full border border-gray-200 rounded px-2 py-1 text-right focus:outline-none focus:border-primary-500"
@@ -163,7 +168,7 @@ function LineItemRow({ item, idx, onUpdate, onRemove, onPickCatalog }) {
           </select>
         </div>
         <div>
-          <label className="text-gray-400 block mb-0.5">Total</label>
+          <label className="text-gray-400 block mb-0.5">{t('quotes.total')}</label>
           <div className="w-full border border-gray-100 bg-gray-50 rounded px-2 py-1 text-right font-semibold text-gray-900">
             {fmt(item.total)}
           </div>
@@ -175,6 +180,7 @@ function LineItemRow({ item, idx, onUpdate, onRemove, onPickCatalog }) {
 
 // ── QuoteForm ──────────────────────────────────────────────────────────────────
 function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
+  const { t } = useI18n()
   const [items, setItems] = useState(() =>
     quote ? quote.items.map(it => ({
       ...it,
@@ -237,10 +243,9 @@ function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
   }
 
   async function handleSave() {
-    if (items.length === 0) { setError('Agrega al menos un ítem'); return }
+    if (items.length === 0) { setError(t('dealsExt.addItem')); return }
     const hasEmpty = items.some(it => !it.description.trim())
-    if (hasEmpty) { setError('Todos los ítems necesitan descripción'); return }
-    setSaving(true); setError(null)
+    if (hasEmpty) { setError(t('dealsExt.itemNeedsDesc')); return }    setSaving(true); setError(null)
     try {
       const cleanItems = items.map(({ _id, ...rest }) => rest)
       const body = {
@@ -284,7 +289,7 @@ function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
       {/* Line items */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ítems</span>
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('quotes.items')}</span>
           <div className="flex gap-1.5">
             <button
               onClick={() => setCatalogTarget('new')}
@@ -329,7 +334,7 @@ function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
       {/* Totals summary */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1.5 text-sm">
         <div className="flex justify-between text-gray-600">
-          <span>Subtotal</span>
+          <span>{t('quotes.subtotal')}</span>
           <span>{fmt(subtotal, currency)}</span>
         </div>
         {/* IVA breakdown by rate */}
@@ -349,7 +354,7 @@ function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
             ))
         })()}
         <div className="flex justify-between font-semibold text-gray-900 border-t border-gray-200 pt-1.5">
-          <span>Total</span>
+          <span>{t('quotes.total')}</span>
           <span>{fmt(total, currency)}</span>
         </div>
       </div>
@@ -357,7 +362,7 @@ function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
       {/* Notes + meta */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Notas</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t('quotes.notes')}</label>
           <textarea
             className="input text-sm"
             rows={3}
@@ -394,9 +399,9 @@ function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-2 pt-1 border-t border-gray-100">
-        <button onClick={onCancel} className="btn-ghost" disabled={saving}>Cancelar</button>
+        <button onClick={onCancel} className="btn-ghost" disabled={saving}>{t('common.cancel')}</button>
         <button onClick={handleSave} className="btn-primary" disabled={saving}>
-          {saving ? 'Guardando…' : quote ? 'Actualizar' : 'Guardar borrador'}
+          {saving ? t('common.saving') : quote ? t('dealsExt.quoteActions.update') : t('dealsExt.quoteActions.saveDraft')}
         </button>
       </div>
     </div>
@@ -405,10 +410,19 @@ function QuoteForm({ dealId, contactId, quote, products, onSave, onCancel }) {
 
 // ── QuoteCard ──────────────────────────────────────────────────────────────────
 function QuoteCard({ quote, canWrite, canDelete, onEdit, onDelete, onStatusChange }) {
+  const { t } = useI18n()
   const [busy, setBusy] = useState(false)
   const [shareUrl, setShareUrl] = useState(quote.shareToken ? `/q/${quote.shareToken}` : null)
   const [sharing, setSharing]   = useState(false)
   const [copied, setCopied]     = useState(false)
+  const NEXT_STATUSES = {
+    draft:    [{ value: 'sent',     label: t('dealsExt.quoteActions.markSent'),  style: 'ghost' }],
+    sent:     [{ value: 'accepted', label: t('dealsExt.quoteActions.accept'),    style: 'primary' },
+               { value: 'rejected', label: t('dealsExt.quoteActions.reject'),   style: 'danger' }],
+    accepted: [],
+    rejected: [],
+    expired:  [],
+  }
   const nextStatuses = NEXT_STATUSES[quote.status] || []
 
   async function changeStatus(value) {
@@ -501,7 +515,7 @@ function QuoteCard({ quote, canWrite, canDelete, onEdit, onDelete, onStatusChang
             className="btn-ghost btn-sm inline-flex items-center gap-1 text-xs"
           >
             <Icons.edit className="w-3 h-3" />
-            Editar
+            {t('common.edit')}
           </button>
         )}
 
@@ -510,17 +524,17 @@ function QuoteCard({ quote, canWrite, canDelete, onEdit, onDelete, onStatusChang
           onClick={shareUrl ? copyUrl : handleShare}
           disabled={sharing}
           className="btn-ghost btn-sm inline-flex items-center gap-1 text-xs"
-          title={shareUrl ? 'Copiar enlace' : 'Generar enlace compartible'}
+          title={shareUrl ? t('dealsExt.copyLink') : t('dealsExt.generateLink')}
         >
           <Icons.external className="w-3 h-3" />
-          {sharing ? '…' : copied ? '¡Copiado!' : shareUrl ? 'Copiar enlace' : 'Compartir'}
+          {sharing ? '…' : copied ? t('dealsExt.copied') : shareUrl ? t('dealsExt.copyLink') : t('dealsExt.shareQuote')}
         </button>
 
         {canDelete && (
           <button
             onClick={() => onDelete(quote.id)}
             className="ml-auto p-1.5 text-gray-300 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
-            title="Eliminar cotización"
+            title={t('quotes.deleteQuote')}
           >
             <Icons.trash className="w-3.5 h-3.5" />
           </button>
@@ -532,6 +546,7 @@ function QuoteCard({ quote, canWrite, canDelete, onEdit, onDelete, onStatusChang
 
 // ── QuoteTab (main export) ─────────────────────────────────────────────────────
 export default function QuoteTab({ deal }) {
+  const { t } = useI18n()
   const { user } = useAuth()
   const [quotes, setQuotes] = useState([])
   const [products, setProducts] = useState([])
@@ -569,7 +584,7 @@ export default function QuoteTab({ deal }) {
   }
 
   async function handleDelete(id) {
-    if (!confirm('¿Eliminar esta cotización?')) return
+    if (!confirm(t('quotes.deleteConfirm'))) return
     await fetch(`/api/quotes/${id}`, { method: 'DELETE' })
     setQuotes(prev => prev.filter(q => q.id !== id))
   }
@@ -606,7 +621,7 @@ export default function QuoteTab({ deal }) {
             <Icons.chevronLeft className="w-4 h-4" />
           </button>
           <h4 className="text-sm font-semibold text-gray-900">
-            {editingQuote ? `Editar ${editingQuote.number}` : 'Nueva cotización'}
+            {editingQuote ? `${t('common.edit')} ${editingQuote.number}` : 'Nueva cotización'}
           </h4>
         </div>
         <QuoteForm
@@ -626,7 +641,7 @@ export default function QuoteTab({ deal }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-gray-700">
-          Cotizaciones{quotes.length > 0 && (
+          {t('quotes.title')}{quotes.length > 0 && (
             <span className="ml-1 text-gray-400 font-normal">({quotes.length})</span>
           )}
         </span>
@@ -644,7 +659,7 @@ export default function QuoteTab({ deal }) {
       {quotes.length === 0 ? (
         <div className="text-center py-10">
           <Icons.fileText className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-          <p className="text-sm text-gray-400">Sin cotizaciones aún</p>
+          <p className="text-sm text-gray-400">{t('quotes.noQuotes')}</p>
           {canWrite && (
             <button
               onClick={() => { setEditingQuote(null); setShowForm(true) }}

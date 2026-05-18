@@ -5,6 +5,7 @@ import { StatusChip } from '../ui/Chip'
 import { Spinner } from '../ui/Spinner'
 import { ContactsEmptyState } from '../ui/EmptyState'
 import { getFullName } from '../../lib/utils'
+import { useI18n } from '../../lib/i18n'
 
 export default function ContactList({ 
   selectedId, 
@@ -14,6 +15,7 @@ export default function ContactList({
   statusFilter = '',
   refreshKey = 0
 }) {
+  const { t } = useI18n()
   const [contacts, setContacts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [pagination, setPagination] = useState({ page: 1, total: 0, pages: 0 })
@@ -62,15 +64,17 @@ export default function ContactList({
       {/* List header with count and add button */}
       <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
         <p className="text-sm text-gray-600">
-          {pagination.total} contacto{pagination.total !== 1 ? 's' : ''}
+          {pagination.total === 1
+            ? t('contacts.contactCount', { count: pagination.total })
+            : t('contacts.contactCountPlural', { count: pagination.total })}
         </p>
         <button
           onClick={onNewContact}
           className="btn-primary btn-sm"
-          title="Nuevo contacto"
+          title={t('contacts.newContact')}
         >
           <Icons.add className="w-4 h-4 mr-1" />
-          Nuevo
+          {t('contacts.newContact')}
         </button>
       </div>
 
@@ -105,7 +109,7 @@ export default function ContactList({
                 </p>
               ) : (
                 <p className="text-xs text-gray-500 truncate">
-                  {contact.email || contact.company || 'Sin información'}
+                  {contact.email || contact.company || t('contacts.noContacts')}
                 </p>
               )}
             </div>
@@ -142,7 +146,7 @@ export default function ContactList({
             <Icons.chevronLeft className="w-4 h-4" />
           </button>
           <span className="text-sm text-gray-600">
-            Página {pagination.page} de {pagination.pages}
+            {pagination.page} / {pagination.pages}
           </span>
           <button
             onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}

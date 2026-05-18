@@ -5,37 +5,42 @@ import Icons from '../components/ui/Icons'
 import { useAuth } from '../lib/AuthContext'
 import { PageLoader } from '../components/ui/Spinner'
 import { hasMinRole } from '../lib/auth'
+import { useI18n } from '../lib/i18n'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const CHANNEL_META = {
-  web:       { label: 'Web',      color: 'bg-blue-100 text-blue-700' },
-  sandbox:   { label: 'Sandbox',  color: 'bg-purple-100 text-purple-700' },
-  whatsapp:  { label: 'WhatsApp', color: 'bg-green-100 text-green-700' },
-  facebook:  { label: 'Facebook', color: 'bg-indigo-100 text-indigo-700' },
-  telegram:  { label: 'Telegram', color: 'bg-sky-100 text-sky-700' },
+  web:       { color: 'bg-blue-100 text-blue-700' },
+  sandbox:   { color: 'bg-purple-100 text-purple-700' },
+  whatsapp:  { color: 'bg-green-100 text-green-700' },
+  facebook:  { color: 'bg-indigo-100 text-indigo-700' },
+  telegram:  { color: 'bg-sky-100 text-sky-700' },
 }
 
 const STATUS_META = {
-  open:      { label: 'Abierta',  color: 'bg-yellow-100 text-yellow-700' },
-  resolved:  { label: 'Resuelta', color: 'bg-green-100 text-green-700' },
-  escalated: { label: 'Escalada', color: 'bg-red-100 text-red-700' },
+  open:      { color: 'bg-yellow-100 text-yellow-700' },
+  resolved:  { color: 'bg-green-100 text-green-700' },
+  escalated: { color: 'bg-red-100 text-red-700' },
 }
 
 function ChannelBadge({ channel }) {
-  const m = CHANNEL_META[channel] || { label: channel, color: 'bg-gray-100 text-gray-600' }
-  return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.color}`}>{m.label}</span>
+  const { t } = useI18n()
+  const m = CHANNEL_META[channel] || { color: 'bg-gray-100 text-gray-600' }
+  const label = CHANNEL_META[channel] ? t(`conversations.channels.${channel}`) : channel
+  return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.color}`}>{label}</span>
 }
 
 function StatusBadge({ status }) {
-  const m = STATUS_META[status] || { label: status, color: 'bg-gray-100 text-gray-600' }
-  return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.color}`}>{m.label}</span>
+  const { t } = useI18n()
+  const m = STATUS_META[status] || { color: 'bg-gray-100 text-gray-600' }
+  const label = STATUS_META[status] ? t(`conversations.status.${status}`) : status
+  return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.color}`}>{label}</span>
 }
 
-function timeAgo(dateStr) {
+function timeAgo(dateStr, now) {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 1)  return 'ahora'
+  if (m < 1)  return now
   if (m < 60) return `${m}m`
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h`
@@ -54,15 +59,16 @@ function bubbleClass(role) {
 function bubbleSide(role) {
   return role === 'agent' ? 'justify-end' : 'justify-start'
 }
-function roleLabel(msg) {
-  if (msg.role === 'agent')     return msg.agentName || 'Agente'
-  if (msg.role === 'assistant') return 'Bot'
+function roleLabel(msg, t) {
+  if (msg.role === 'agent')     return msg.agentName || t('conversations.agent')
+  if (msg.role === 'assistant') return t('conversations.bot')
   return null
 }
 
 // ── List row ──────────────────────────────────────────────────────────────────
 
 function ConvRow({ conv, isSelected, onClick }) {
+  const { t } = useI18n()
   const preview = conv.messages?.find(m => m.role === 'user')?.content || ''
   const isEscalated = conv.status === 'escalated'
   return (
@@ -80,10 +86,10 @@ function ConvRow({ conv, isSelected, onClick }) {
             <span className="text-xs font-semibold text-gray-800 truncate">{conv.chatbot?.name || 'Chatbot'}</span>
             <ChannelBadge channel={conv.channel} />
           </div>
-          <p className="text-xs text-gray-500 truncate leading-relaxed">{preview || 'Sin mensajes'}</p>
+          <p className="text-xs text-gray-500 truncate leading-relaxed">{preview || t('conversations.noMessages')}</p>
         </div>
         <div className="shrink-0 flex flex-col items-end gap-1">
-          <span className="text-xs text-gray-400">{timeAgo(conv.updatedAt)}</span>
+          <span className="text-xs text-gray-400">{timeAgo(conv.updatedAt, t('conversations.now'))}</span>
           <StatusBadge status={conv.status} />
         </div>
       </div>
@@ -102,6 +108,7 @@ const EVENT_META = {
 }
 
 function EventPill({ event }) {
+  const { t } = useI18n()
   const meta = EVENT_META[event.type] || { icon: Icons.activity, text: () => event.type, color: 'text-gray-500', bg: 'bg-gray-50' }
   const Icon = meta.icon
   return (
@@ -110,7 +117,7 @@ function EventPill({ event }) {
         <Icon className="w-3 h-3 shrink-0" />
         <span>{meta.text(event)}</span>
         <span className="opacity-50">·</span>
-        <span className="opacity-60">{timeAgo(event.createdAt)}</span>
+        <span className="opacity-60">{timeAgo(event.createdAt, t('conversations.now'))}</span>
       </div>
     </div>
   )
@@ -119,6 +126,7 @@ function EventPill({ event }) {
 // ── Forward modal ─────────────────────────────────────────────────────────────
 
 function ForwardModal({ convId, onClose, onForwarded }) {
+  const { t } = useI18n()
   const [users, setUsers]     = useState([])
   const [toUserId, setTo]     = useState('')
   const [note, setNote]       = useState('')
@@ -180,7 +188,7 @@ function ForwardModal({ convId, onClose, onForwarded }) {
             </div>
             <div className="flex gap-2 pt-1">
               <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-sm rounded-lg border border-gray-200 hover:bg-gray-50">
-                Cancelar
+                {t('common.cancel')}
               </button>
               <button type="submit" disabled={!toUserId || saving} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40">
                 {saving ? 'Transfiriendo…' : 'Transferir'}
@@ -196,6 +204,7 @@ function ForwardModal({ convId, onClose, onForwarded }) {
 // ── Thread ────────────────────────────────────────────────────────────────────
 
 function Thread({ conv, onStatusChange, currentUser }) {
+  const { t } = useI18n()
   const [messages, setMessages]         = useState([])
   const [events, setEvents]             = useState([])
   const [replyText, setReplyText]       = useState('')
@@ -287,7 +296,7 @@ function Thread({ conv, onStatusChange, currentUser }) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8 text-gray-400">
         <Icons.messageSquare className="w-10 h-10 mb-3 text-gray-200" />
-        <p className="text-sm">Selecciona una conversación para ver el hilo</p>
+        <p className="text-sm">{t('conversations.noMessages')}</p>
       </div>
     )
   }
@@ -316,7 +325,7 @@ function Thread({ conv, onStatusChange, currentUser }) {
             <StatusBadge  status={conv.status} />
           </div>
           <p className="text-xs text-gray-400 mt-0.5">
-            {messages.length} mensajes · última actividad {timeAgo(conv.updatedAt)}
+            {messages.length} mensajes · última actividad {timeAgo(conv.updatedAt, t('conversations.now'))}
           </p>
         </div>
 
@@ -338,7 +347,7 @@ function Thread({ conv, onStatusChange, currentUser }) {
               disabled={updatingStatus}
               className="px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 transition-colors"
             >
-              Reabrir
+              {t('conversations.reopen')}
             </button>
           ) : (
             <button
@@ -348,7 +357,7 @@ function Thread({ conv, onStatusChange, currentUser }) {
             >
               <Icons.check className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Marcar resuelta</span>
-              <span className="sm:hidden">Resolver</span>
+              <span className="sm:hidden">{t('conversations.resolve')}</span>
             </button>
           )}
         </div>
@@ -377,7 +386,7 @@ function Thread({ conv, onStatusChange, currentUser }) {
       {/* Unified timeline */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
         {timeline.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-8">Sin mensajes en esta conversación</p>
+          <p className="text-sm text-gray-400 text-center py-8">{t('conversations.noMessages')}</p>
         )}
         {timeline.map(item =>
           item._kind === 'event' ? (
@@ -385,9 +394,9 @@ function Thread({ conv, onStatusChange, currentUser }) {
           ) : (
             <div key={`msg-${item.id}`} className={`flex ${bubbleSide(item.role)}`}>
               <div className="max-w-[72%]">
-                {roleLabel(item) && (
+                {roleLabel(item, t) && (
                   <p className={`text-xs mb-1 ${item.role === 'agent' ? 'text-right text-primary-500' : 'text-gray-400'}`}>
-                    {roleLabel(item)}
+                    {roleLabel(item, t)}
                   </p>
                 )}
                 <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${bubbleClass(item.role)}`}>
@@ -411,7 +420,7 @@ function Thread({ conv, onStatusChange, currentUser }) {
             value={replyText}
             onChange={e => setReplyText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
-            placeholder="Escribe una respuesta… (Enter para enviar)"
+            placeholder={t('conversations.messageInput')}
             rows={2}
             disabled={sending}
             className="flex-1 text-sm px-3 py-2 rounded-xl border border-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:opacity-50 disabled:bg-gray-50"
@@ -427,7 +436,7 @@ function Thread({ conv, onStatusChange, currentUser }) {
         </form>
       ) : (
         <div className="px-5 py-3 border-t border-gray-100 text-center shrink-0">
-          <p className="text-xs text-gray-400">Conversación resuelta · <button onClick={() => updateStatus('open')} className="text-primary-500 hover:underline">Reabrir para responder</button></p>
+          <p className="text-xs text-gray-400">Conversación resuelta · <button onClick={() => updateStatus('open')} className="text-primary-500 hover:underline">{t('conversations.reopen')}</button></p>
         </div>
       )}
 
@@ -450,6 +459,7 @@ const STATUSES = ['', 'open', 'resolved', 'escalated']
 
 export default function ConversationsPage() {
   const { user, loading: authLoading } = useAuth()
+  const { t } = useI18n()
   const router = useRouter()
   const [convs, setConvs]       = useState([])
   const [total, setTotal]       = useState(0)
@@ -507,14 +517,14 @@ export default function ConversationsPage() {
 
   return (
     <>
-      <Head><title>Conversaciones</title></Head>
+      <Head><title>{t('conversations.title')}</title></Head>
 
       <div className="flex flex-col flex-1 overflow-hidden">
 
         {/* Top bar — hidden on mobile when thread is open */}
         <div className={`px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-white shrink-0 ${showThread ? 'hidden sm:flex' : 'flex'} flex-col sm:flex-row sm:items-center sm:justify-between gap-2`}>
           <div className="flex items-center gap-3">
-            <h1 className="text-lg font-bold text-gray-900">Conversaciones</h1>
+            <h1 className="text-lg font-bold text-gray-900">{t('conversations.title')}</h1>
             {total > 0 && (
               <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2.5 py-0.5 font-medium">{total}</span>
             )}
@@ -527,7 +537,7 @@ export default function ConversationsPage() {
             >
               <option value="">Todos los canales</option>
               {CHANNELS.filter(Boolean).map(c => (
-                <option key={c} value={c}>{CHANNEL_META[c]?.label || c}</option>
+                <option key={c} value={c}>{t(`conversations.channels.${c}`)}</option>
               ))}
             </select>
             <select
@@ -536,7 +546,7 @@ export default function ConversationsPage() {
             >
               <option value="">Todos los estados</option>
               {STATUSES.filter(Boolean).map(s => (
-                <option key={s} value={s}>{STATUS_META[s]?.label || s}</option>
+                <option key={s} value={s}>{t(`conversations.status.${s}`)}</option>
               ))}
             </select>
           </div>
@@ -559,7 +569,7 @@ export default function ConversationsPage() {
               <div className="flex flex-col items-center justify-center flex-1 p-6 text-center">
                 <Icons.messageSquare className="w-8 h-8 text-gray-200 mb-3" />
                 <p className="text-sm text-gray-400">
-                  {filterStatus || filterChannel ? 'Sin conversaciones con estos filtros' : 'Sin conversaciones todavía'}
+                  {filterStatus || filterChannel ? t('conversations.noConversations') : t('conversations.noConversations')}
                 </p>
               </div>
             )}
@@ -607,7 +617,7 @@ export default function ConversationsPage() {
                 className="sm:hidden flex items-center gap-2 px-4 py-3 text-sm font-medium text-primary-600 border-b border-gray-200 hover:bg-gray-50 shrink-0"
               >
                 <Icons.chevronLeft className="w-4 h-4" />
-                Conversaciones
+                {t('conversations.title')}
               </button>
             )}
             <div className="flex-1 overflow-hidden">

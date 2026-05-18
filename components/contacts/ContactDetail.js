@@ -10,8 +10,10 @@ import TaskForm from '../tasks/TaskForm'
 import { getFullName, formatPhone, formatCurrency, formatSmartDate } from '../../lib/utils'
 import { useContactStatuses, useOrganization } from '../../lib/SettingsContext'
 import { useAuth } from '../../lib/AuthContext'
+import { useI18n } from '../../lib/i18n'
 
 export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, showBackButton = false }) {
+  const { t } = useI18n()
   const contactStatuses = useContactStatuses()
   const organization = useOrganization()
   const currency = organization?.currency || 'USD'
@@ -114,23 +116,23 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
                     updateField('firstName', firstName)
                     if (lastName) updateField('lastName', lastName)
                   }}
-                  placeholder="Nombre"
+                  placeholder={t('contacts.firstName')}
                 />
               </h2>
               <div className="flex items-center gap-2 mt-1">
                 <InlineEdit
                   value={contact.role}
                   onSave={(value) => updateField('role', value)}
-                  placeholder="Puesto"
+                  placeholder={t('contacts.role')}
                   className="text-sm text-gray-600"
                 />
                 {contact.company && (
                   <>
-                    <span className="text-gray-400">en</span>
+                    <span className="text-gray-400">{t('common.and')}</span>
                     <InlineEdit
                       value={contact.company}
                       onSave={(value) => updateField('company', value)}
-                      placeholder="Empresa"
+                      placeholder={t('contacts.company')}
                       className="text-sm text-gray-600 font-medium"
                     />
                   </>
@@ -176,7 +178,7 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
           {contact.phone && (
             <a href={`tel:${contact.phone}`} className="btn-secondary btn-sm">
               <Icons.phone className="w-4 h-4 mr-1" />
-              Llamar
+              {t('contacts.phone')}
             </a>
           )}
           <button 
@@ -184,7 +186,7 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
             className="btn-secondary btn-sm"
           >
             <Icons.calendar className="w-4 h-4 mr-1" />
-            Agendar
+            {t('common.actions')}
           </button>
         </div>
       </div>
@@ -202,7 +204,7 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-500 uppercase">Teléfono</label>
+          <label className="text-xs font-medium text-gray-500 uppercase">{t('contacts.phone')}</label>
           <InlineEdit
             value={contact.phone}
             onSave={(value) => updateField('phone', value)}
@@ -212,7 +214,7 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-500 uppercase">Móvil</label>
+          <label className="text-xs font-medium text-gray-500 uppercase">{t('contacts.mobile')}</label>
           <InlineEdit
             value={contact.mobile}
             onSave={(value) => updateField('mobile', value)}
@@ -222,11 +224,11 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-500 uppercase">Empresa</label>
+          <label className="text-xs font-medium text-gray-500 uppercase">{t('contacts.company')}</label>
           <InlineEdit
             value={contact.company}
             onSave={(value) => updateField('company', value)}
-            placeholder="Nombre de empresa"
+            placeholder={t('contacts.company')}
             className="block mt-1"
           />
         </div>
@@ -235,9 +237,9 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
       {/* Tabs */}
       <div className="flex border-b border-gray-200">
         {[
-          { id: 'activity', label: 'Actividad', count: contact._count?.activities },
-          { id: 'deals', label: 'Oportunidades', count: contact._count?.deals },
-          { id: 'tasks', label: 'Tareas', count: contact._count?.tasks },
+          { id: 'activity', label: t('contactsExt.activityTab'), count: contact._count?.activities },
+          { id: 'deals', label: t('deals.title'), count: contact._count?.deals },
+          { id: 'tasks', label: t('tasks.title'), count: contact._count?.tasks },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -273,10 +275,10 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
             {contact.deals?.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Icons.deals className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>No hay oportunidades asociadas</p>
+                <p>{t('deals.title')}</p>
                 <button className="btn-primary btn-sm mt-4">
                   <Icons.add className="w-4 h-4 mr-1" />
-                  Crear oportunidad
+                  {t('deals.newDeal')}
                 </button>
               </div>
             ) : (
@@ -293,7 +295,7 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
                     <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                       <span>{formatCurrency(deal.value, currency)}</span>
                       {deal.expectedClose && (
-                        <span>Cierre: {formatSmartDate(deal.expectedClose)}</span>
+                        <span>{t('deals.expectedClose')}: {formatSmartDate(deal.expectedClose)}</span>
                       )}
                     </div>
                   </div>
@@ -308,10 +310,10 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
             {contact.tasks?.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Icons.tasks className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>No hay tareas pendientes</p>
+                <p>{t('tasks.title')}</p>
                 <button className="btn-primary btn-sm mt-4">
                   <Icons.add className="w-4 h-4 mr-1" />
-                  Crear tarea
+                  {t('tasks.newTask')}
                 </button>
               </div>
             ) : (
@@ -330,7 +332,7 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900">{task.title}</p>
                       <p className="text-xs text-gray-500">
-                        {task.dueDate ? formatSmartDate(task.dueDate) : 'Sin fecha'}
+                        {task.dueDate ? formatSmartDate(task.dueDate) : t('contactsExt.noDate')}
                       </p>
                     </div>
                     <PriorityChip priority={task.priority} />
@@ -347,9 +349,9 @@ export default function ContactDetail({ contactId, onClose, onUpdate, onDelete, 
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
-        title="Eliminar contacto"
-        message={`¿Estás seguro de que deseas eliminar a ${getFullName(contact.firstName, contact.lastName)}? Esta acción no se puede deshacer.`}
-        confirmText="Eliminar"
+        title={t('contacts.deleteContact')}
+        message={t('confirmations.deleteMessage')}
+        confirmText={t('common.delete')}
         variant="danger"
       />
 

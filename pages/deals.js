@@ -3,8 +3,10 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Pipeline from '../components/deals/Pipeline'
 import DealForm from '../components/deals/DealForm'
+import { useI18n } from '../lib/i18n'
 
 export default function DealsPage() {
+  const { t } = useI18n()
   const router = useRouter()
   const [showForm, setShowForm] = useState(false)
   const [editingDeal, setEditingDeal] = useState(null)
@@ -41,7 +43,7 @@ export default function DealsPage() {
   return (
     <>
       <Head>
-        <title>Pipeline | CRM</title>
+        <title>{t('nav.pipeline')} | CRM</title>
       </Head>
 
       <div className="flex h-full">

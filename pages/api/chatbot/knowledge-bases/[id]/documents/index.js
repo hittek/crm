@@ -1,5 +1,4 @@
 import fs from 'fs'
-import pdfParse from 'pdf-parse'
 import { waitUntil } from '@vercel/functions'
 import prisma from '../../../../../../lib/prisma'
 import { getSession } from '../../../../../../lib/auth'
@@ -57,6 +56,7 @@ export const config = { api: { bodyParser: false }, maxDuration: 60 }
 // ── helpers ─────────────────────────────────────────────────────────────────
 
 async function extractPdf(filePath) {
+  const { default: pdfParse } = await import('pdf-parse')
   const data = await pdfParse(fs.readFileSync(filePath))
   return data.text ?? ''
 }

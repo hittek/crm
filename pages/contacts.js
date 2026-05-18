@@ -6,8 +6,10 @@ import ContactDetail from '../components/contacts/ContactDetail'
 import ContactForm from '../components/contacts/ContactForm'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Spinner } from '../components/ui/Spinner'
+import { useI18n } from '../lib/i18n'
 
 export default function ContactsPage() {
+  const { t } = useI18n()
   const router = useRouter()
   const [contacts, setContacts] = useState([])
   const [selectedContact, setSelectedContact] = useState(null)
@@ -134,7 +136,7 @@ export default function ContactsPage() {
   return (
     <>
       <Head>
-        <title>Contactos | CRM</title>
+        <title>{t('nav.contacts')} | CRM</title>
       </Head>
 
       <div className="flex flex-col lg:flex-row h-full">

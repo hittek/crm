@@ -6,6 +6,7 @@ import { Spinner } from '../components/ui/Spinner'
 import { useAuth } from '../lib/AuthContext'
 import { useModalClose } from '../components/ui/Modal'
 import { FiCheck, FiArrowRight } from 'react-icons/fi'
+import { useI18n } from '../lib/i18n'
 
 const COLOR_MAP = {
   gray: '#6B7280',
@@ -57,6 +58,7 @@ const DATE_FORMATS = [
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { t } = useI18n()
   const [activeTab, setActiveTab] = useState('general')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -78,11 +80,11 @@ export default function SettingsPage() {
       setActiveTab(tab)
     }
     if (success) {
-      setBillingMessage({ type: 'success', text: '¡Suscripción activada! Tu plan ha sido actualizado.' })
+      setBillingMessage({ type: 'success', text: t('billing.subscriptionActivated') })
       router.replace({ pathname: '/settings', query: { tab: 'billing' } }, undefined, { shallow: true })
     }
     if (canceled) {
-      setBillingMessage({ type: 'info', text: 'Pago cancelado. No se realizaron cargos.' })
+      setBillingMessage({ type: 'info', text: t('billing.paymentCanceled') })
       router.replace({ pathname: '/settings', query: { tab: 'billing' } }, undefined, { shallow: true })
     }
   }, [router.query])
@@ -142,13 +144,13 @@ export default function SettingsPage() {
   }, [authLoading, isAdmin, router])
 
   const tabs = [
-    { id: 'general', label: 'General', icon: Icons.settings },
-    { id: 'users', label: 'Usuarios', icon: Icons.contacts, adminOnly: true },
-    { id: 'pipeline', label: 'Pipeline', icon: Icons.trending },
-    { id: 'contacts', label: 'Contactos', icon: Icons.contacts },
-    { id: 'notifications', label: 'Notificaciones', icon: Icons.bell },
-    { id: 'integrations', label: 'Integraciones', icon: Icons.link },
-    { id: 'billing', label: 'Plan', icon: Icons.creditCard, adminOnly: true },
+    { id: 'general', label: t('settings.general'), icon: Icons.settings },
+    { id: 'users', label: t('settings.users'), icon: Icons.contacts, adminOnly: true },
+    { id: 'pipeline', label: t('settings.pipeline'), icon: Icons.trending },
+    { id: 'contacts', label: t('settings.contacts'), icon: Icons.contacts },
+    { id: 'notifications', label: t('settings.notifications'), icon: Icons.bell },
+    { id: 'integrations', label: t('settings.integrations'), icon: Icons.link },
+    { id: 'billing', label: t('billing.plan'), icon: Icons.creditCard, adminOnly: true },
   ].filter(tab => !tab.adminOnly || isAdmin)
 
   // Fetch settings
@@ -173,7 +175,7 @@ export default function SettingsPage() {
   // Save settings
   const saveSettings = useCallback(async (key, value) => {
     if (!isAdmin) {
-      setSaveMessage({ type: 'error', text: 'No tienes permisos para cambiar configuración' })
+      setSaveMessage({ type: 'error', text: t('errors.unauthorized') })
       return
     }
     
@@ -188,13 +190,13 @@ export default function SettingsPage() {
       })
       
       if (res.ok) {
-        setSaveMessage({ type: 'success', text: 'Cambios guardados' })
+        setSaveMessage({ type: 'success', text: t('settings.changesSaved') })
         setTimeout(() => setSaveMessage(null), 3000)
       } else {
         throw new Error('Error saving')
       }
     } catch (error) {
-      setSaveMessage({ type: 'error', text: 'Error al guardar' })
+      setSaveMessage({ type: 'error', text: t('common.error') })
     }
     setIsSaving(false)
   }, [isAdmin])
@@ -251,10 +253,10 @@ export default function SettingsPage() {
       if (data.url) {
         window.location.href = data.url
       } else {
-        setBillingMessage({ type: 'error', text: data.error || 'Error al abrir el portal de pago.' })
+        setBillingMessage({ type: 'error', text: data.error || t('billing.portalError') })
       }
     } catch {
-      setBillingMessage({ type: 'error', text: 'Error de red. Intenta de nuevo.' })
+      setBillingMessage({ type: 'error', text: t('errors.networkError') })
     } finally {
       setIsPortalLoading(false)
     }
@@ -274,10 +276,10 @@ export default function SettingsPage() {
       if (data.url) {
         window.location.href = data.url
       } else {
-        setBillingMessage({ type: 'error', text: data.error || 'Error al iniciar el pago' })
+        setBillingMessage({ type: 'error', text: data.error || t('billing.checkoutError') })
       }
     } catch {
-      setBillingMessage({ type: 'error', text: 'Error de red. Intenta de nuevo.' })
+      setBillingMessage({ type: 'error', text: t('errors.networkError') })
     } finally {
       setIsUpgrading(null)
     }
@@ -316,19 +318,19 @@ export default function SettingsPage() {
 
   const saveUser = async () => {
     if (!userForm.name || !userForm.email) {
-      setSaveMessage({ type: 'error', text: 'Nombre y email son requeridos' })
+      setSaveMessage({ type: 'error', text: t('users.nameEmailRequired') })
       return
     }
 
     // Require password for new users
     if (!editingUser && !userForm.password) {
-      setSaveMessage({ type: 'error', text: 'La contraseña es requerida para nuevos usuarios' })
+      setSaveMessage({ type: 'error', text: t('users.passwordRequired') })
       return
     }
 
     // Password minimum length
     if (userForm.password && userForm.password.length < 6) {
-      setSaveMessage({ type: 'error', text: 'La contraseña debe tener al menos 6 caracteres' })
+      setSaveMessage({ type: 'error', text: t('users.passwordTooShort') })
       return
     }
 
@@ -350,36 +352,36 @@ export default function SettingsPage() {
       })
 
       if (res.ok) {
-        setSaveMessage({ type: 'success', text: editingUser ? 'Usuario actualizado' : 'Usuario creado' })
+        setSaveMessage({ type: 'success', text: editingUser ? t('users.updated') : t('users.created') })
         closeUserModal()
         fetchUsers()
         setTimeout(() => setSaveMessage(null), 3000)
       } else {
         const error = await res.json()
-        setSaveMessage({ type: 'error', text: error.error || 'Error al guardar usuario' })
+        setSaveMessage({ type: 'error', text: error.error || t('users.saveError') })
       }
     } catch (error) {
-      setSaveMessage({ type: 'error', text: 'Error al guardar usuario' })
+      setSaveMessage({ type: 'error', text: t('users.saveError') })
     }
     setIsSaving(false)
   }
 
   const deleteUser = async (user) => {
-    if (!confirm(`¿Estás seguro de desactivar a ${user.name}?`)) return
+    if (!confirm(t('users.confirmDeactivate', { name: user.name }))) return
 
     try {
       const res = await fetch(`/api/users/${user.id}`, { method: 'DELETE' })
       const data = await res.json()
       if (res.ok) {
-        setSaveMessage({ type: 'success', text: 'Usuario desactivado' })
+        setSaveMessage({ type: 'success', text: t('users.deactivated') })
         fetchUsers()
         setTimeout(() => setSaveMessage(null), 3000)
       } else {
-        setSaveMessage({ type: 'error', text: data.error || 'Error al desactivar usuario' })
+        setSaveMessage({ type: 'error', text: data.error || t('users.deactivateError') })
         setTimeout(() => setSaveMessage(null), 5000)
       }
     } catch (error) {
-      setSaveMessage({ type: 'error', text: 'Error al desactivar usuario' })
+      setSaveMessage({ type: 'error', text: t('users.deactivateError') })
     }
   }
 
@@ -452,13 +454,13 @@ export default function SettingsPage() {
   return (
     <>
       <Head>
-        <title>Configuración | CRM</title>
+        <title>{t('nav.settings')} | CRM</title>
       </Head>
 
       <div className="flex flex-col lg:flex-row flex-1 min-h-0">
         {/* Settings Sidebar */}
         <div className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-gray-200 bg-gray-50 p-4">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 hidden lg:block">Configuración</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 hidden lg:block">{t('settings.title')}</h2>
           <nav className="flex lg:flex-col gap-1 lg:gap-0 lg:space-y-1 overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => (
               <button
@@ -493,7 +495,7 @@ export default function SettingsPage() {
           {/* General Settings */}
           {activeTab === 'general' && (
             <div className="max-w-2xl">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">Configuración general</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">{t('settings.generalSettings')}</h3>
               
               {/* Logo Upload */}
               <div className="card mb-6">
@@ -513,10 +515,10 @@ export default function SettingsPage() {
                     </div>
                     <div className="flex-1">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Logo de la organización
+                        {t('settingsExt.orgLogo')}
                       </label>
                       <p className="text-sm text-gray-500 mb-3">
-                        Sube el logo de tu empresa. Recomendado: PNG o SVG, máximo 1MB.
+                        {t('settingsExt.orgLogoHint')}
                       </p>
                       <div className="flex gap-2">
                         <label className={`btn btn-secondary cursor-pointer ${logoUploading ? 'opacity-50' : ''}`}>
@@ -547,14 +549,14 @@ export default function SettingsPage() {
                               }
                             }}
                           />
-                          {logoUploading ? 'Subiendo...' : 'Subir logo'}
+                          {logoUploading ? t('settingsExt.uploading') : t('settingsExt.uploadLogo')}
                         </label>
                         {organization.logo && (
                           <button
                             onClick={() => setOrganization({ ...organization, logo: null })}
                             className="btn btn-secondary text-red-600 hover:text-red-700"
                           >
-                            Eliminar
+                            {t('common.delete')}
                           </button>
                         )}
                       </div>
@@ -563,7 +565,7 @@ export default function SettingsPage() {
 
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre de la organización
+                      {t('settings.organizationName')}
                     </label>
                     <input
                       type="text"
@@ -576,7 +578,7 @@ export default function SettingsPage() {
 
                   <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Color principal
+                      {t('settingsExt.primaryColor')}
                     </label>
                     <div className="flex items-center gap-3">
                       <input
@@ -597,10 +599,10 @@ export default function SettingsPage() {
 
                   <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Color secundario
+                      {t('settingsExt.secondaryColor')}
                     </label>
                     <p className="text-xs text-gray-500 mb-2">
-                      Usado en botones secundarios, barra lateral activa, avatares y acentos visuales.
+                      {t('settingsExt.secondaryColorHint')}
                     </p>
                     <div className="flex items-center gap-3">
                       <input
@@ -652,10 +654,10 @@ export default function SettingsPage() {
 
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Dominio personalizado
+                      {t('settingsExt.customDomain')}
                     </label>
                     <p className="text-xs text-gray-500 mb-2">
-                      Configura un CNAME de <code className="bg-gray-100 px-1 rounded">tu.dominio.com</code> apuntando a <code className="bg-gray-100 px-1 rounded">cname.vercel-dns.com</code>, luego ingresa el dominio aquí.
+                      {t('settingsExt.customDomainHint')}
                     </p>
                     <input
                       type="text"
@@ -671,12 +673,12 @@ export default function SettingsPage() {
               {/* Regional Settings */}
               <div className="card">
                 <div className="card-header">
-                  <h4 className="font-medium text-gray-900">Configuración regional</h4>
+                  <h4 className="font-medium text-gray-900">{t('settingsExt.regionalSettings')}</h4>
                 </div>
                 <div className="card-body space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Moneda predeterminada
+                      {t('settings.currency')}
                     </label>
                     <select
                       className="input max-w-md"
@@ -691,7 +693,7 @@ export default function SettingsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Zona horaria
+                      {t('settings.timezone')}
                     </label>
                     <select
                       className="input max-w-md"
@@ -706,7 +708,7 @@ export default function SettingsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Formato de fecha
+                      {t('settings.dateFormat')}
                     </label>
                     <select
                       className="input max-w-md"
@@ -727,7 +729,7 @@ export default function SettingsPage() {
                   disabled={isSaving || !isAdmin}
                   className="btn btn-primary"
                 >
-                  {isSaving ? 'Guardando...' : 'Guardar cambios'}
+                  {isSaving ? t('common.saving') : t('settings.saveChanges')}
                 </button>
               </div>
             </div>
@@ -738,34 +740,34 @@ export default function SettingsPage() {
             <div className="max-w-4xl">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Gestión de Usuarios</h3>
-                  <p className="text-gray-500">Administra los usuarios de tu organización y sus permisos.</p>
+                  <h3 className="text-xl font-semibold text-gray-900">{t('settings.users')}</h3>
+                  <p className="text-gray-500">{t('settingsExt.usersSubtitle')}</p>
                 </div>
                 <button
                   onClick={() => openUserModal()}
                   className="btn btn-primary flex items-center gap-2"
                 >
                   <Icons.plus className="w-4 h-4" />
-                  Nuevo usuario
+                  {t('users.newUser')}
                 </button>
               </div>
 
               {/* Role Legend */}
               <div className="card mb-6">
                 <div className="card-body">
-                  <h4 className="font-medium text-gray-900 mb-3">Roles y permisos</h4>
+                  <h4 className="font-medium text-gray-900 mb-3">{t('settingsExt.rolesAndPermissions')}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div className="p-3 bg-red-50 rounded-lg">
-                      <span className="font-medium text-red-700">Administrador</span>
-                      <p className="text-red-600 mt-1">Acceso total. Puede cambiar configuración y gestionar usuarios.</p>
+                      <span className="font-medium text-red-700">{t('roles.admin')}</span>
+                      <p className="text-red-600 mt-1">{t('roles.adminDesc')}</p>
                     </div>
                     <div className="p-3 bg-blue-50 rounded-lg">
-                      <span className="font-medium text-blue-700">Manager</span>
-                      <p className="text-blue-600 mt-1">Ve todos los datos. Puede asignar tareas a otros usuarios.</p>
+                      <span className="font-medium text-blue-700">{t('roles.manager')}</span>
+                      <p className="text-blue-600 mt-1">{t('roles.managerDesc')}</p>
                     </div>
                     <div className="p-3 bg-gray-50 rounded-lg">
-                      <span className="font-medium text-gray-700">Usuario</span>
-                      <p className="text-gray-600 mt-1">Solo ve tareas asignadas y datos con visibilidad pública.</p>
+                      <span className="font-medium text-gray-700">{t('roles.user')}</span>
+                      <p className="text-gray-600 mt-1">{t('roles.userDesc')}</p>
                     </div>
                   </div>
                 </div>
@@ -774,7 +776,7 @@ export default function SettingsPage() {
               {/* Users List */}
               <div className="card">
                 <div className="card-header">
-                  <h4 className="font-medium text-gray-900">Usuarios ({users.length})</h4>
+                  <h4 className="font-medium text-gray-900">{t('settings.users')} ({users.length})</h4>
                 </div>
                 <div className="divide-y divide-gray-200">
                   {isLoadingUsers ? (
@@ -783,7 +785,7 @@ export default function SettingsPage() {
                     </div>
                   ) : users.length === 0 ? (
                     <div className="p-8 text-center text-gray-500">
-                      No hay usuarios registrados. Crea el primero.
+                      {t('users.empty')}
                     </div>
                   ) : (
                     users.map((user) => (
@@ -798,7 +800,7 @@ export default function SettingsPage() {
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-gray-900">{user.name}</span>
                               {!user.isActive && (
-                                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Inactivo</span>
+                                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">{t('users.inactive')}</span>
                               )}
                             </div>
                             <p className="text-sm text-gray-500">{user.email}</p>
@@ -812,20 +814,20 @@ export default function SettingsPage() {
                                 ? 'bg-blue-100 text-blue-700' 
                                 : 'bg-gray-100 text-gray-700'
                           }`}>
-                            {user.role === 'admin' ? 'Administrador' : user.role === 'manager' ? 'Manager' : 'Usuario'}
+                            {user.role === 'admin' ? t('roles.admin') : user.role === 'manager' ? t('roles.manager') : t('roles.user')}
                           </span>
                           <div className="flex gap-2">
                             <button
                               onClick={() => openUserModal(user)}
                               className="text-gray-400 hover:text-gray-600"
-                              title="Editar"
+                              title={t('common.edit')}
                             >
                               <Icons.edit className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => deleteUser(user)}
                               className="text-gray-400 hover:text-red-600"
-                              title="Desactivar"
+                              title={t('users.deactivate')}
                             >
                               <Icons.trash className="w-4 h-4" />
                             </button>
@@ -843,13 +845,13 @@ export default function SettingsPage() {
                   <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
                     <div className="p-6 border-b border-gray-200">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {editingUser ? 'Editar usuario' : 'Nuevo usuario'}
+                        {editingUser ? t('users.editUser') : t('users.newUser')}
                       </h3>
                     </div>
                     <div className="p-6 space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Nombre <span className="text-red-500">*</span>
+                          {t('common.name')} <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -873,33 +875,33 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Contraseña {!editingUser && <span className="text-red-500">*</span>}
+                          {t('auth.password')} {!editingUser && <span className="text-red-500">*</span>}
                         </label>
                         <input
                           type="password"
                           className="input w-full"
                           value={userForm.password}
                           onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                          placeholder={editingUser ? 'Dejar vacío para mantener la actual' : 'Mínimo 6 caracteres'}
+                          placeholder={editingUser ? t('users.passwordKeepEmpty') : t('users.passwordMin')}
                         />
                         {editingUser && (
                           <p className="text-xs text-gray-500 mt-1">
-                            Deja vacío si no deseas cambiar la contraseña
+                            {t('users.passwordKeepEmptyHint')}
                           </p>
                         )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Rol
+                          {t('common.role')}
                         </label>
                         <select
                           className="input w-full"
                           value={userForm.role}
                           onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
                         >
-                          <option value="user">Usuario</option>
+                          <option value="user">{t('roles.user')}</option>
                           <option value="manager">Manager</option>
-                          <option value="admin">Administrador</option>
+                          <option value="admin">{t('roles.admin')}</option>
                         </select>
                       </div>
                       <div className="flex items-center gap-2">
@@ -911,7 +913,7 @@ export default function SettingsPage() {
                           className="rounded border-gray-300"
                         />
                         <label htmlFor="userActive" className="text-sm text-gray-700">
-                          Usuario activo
+                          {t('users.activeUser')}
                         </label>
                       </div>
                     </div>
@@ -920,14 +922,14 @@ export default function SettingsPage() {
                         onClick={closeUserModal}
                         className="btn btn-secondary"
                       >
-                        Cancelar
+                        {t('common.cancel')}
                       </button>
                       <button
                         onClick={saveUser}
                         disabled={isSaving}
                         className="btn btn-primary"
                       >
-                        {isSaving ? 'Guardando...' : editingUser ? 'Actualizar' : 'Crear usuario'}
+                        {isSaving ? t('common.saving') : editingUser ? t('users.update') : t('users.create')}
                       </button>
                     </div>
                   </div>
@@ -939,20 +941,20 @@ export default function SettingsPage() {
           {/* Pipeline Settings */}
           {activeTab === 'pipeline' && (
             <div className="max-w-2xl">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Configuración del pipeline</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('settings.pipelineSettings')}</h3>
               <p className="text-gray-500 mb-6">
-                Personaliza las etapas de tu proceso de ventas. Arrastra para reordenar.
+                {t('settingsExt.pipelineHint')}
               </p>
               
               <div className="card">
                 <div className="card-header flex items-center justify-between">
-                  <h4 className="font-medium text-gray-900">Etapas del pipeline</h4>
+                  <h4 className="font-medium text-gray-900">{t('settings.pipelineStages')}</h4>
                   <button
                     onClick={addDealStage}
                     className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
                   >
                     <Icons.plus className="w-4 h-4" />
-                    Agregar etapa
+                    {t('settings.addStage')}
                   </button>
                 </div>
                 <div className="card-body">
@@ -1023,7 +1025,7 @@ export default function SettingsPage() {
 
                           {/* Probability row (below on all sizes) */}
                           <div className="mt-2 flex items-center gap-2 pl-10">
-                            <span className="text-xs text-gray-500">Probabilidad:</span>
+                            <span className="text-xs text-gray-500">{t('settingsExt.probability')}</span>
                             <input
                               type="number"
                               min="0"
@@ -1043,7 +1045,7 @@ export default function SettingsPage() {
                   </div>
 
                   <p className="mt-4 text-xs text-gray-500">
-                    Las etapas "Ganado" y "Perdido" son fijas y no pueden eliminarse ni reordenarse.
+                    {t('settingsExt.fixedStagesNote')}
                   </p>
                 </div>
               </div>
@@ -1054,7 +1056,7 @@ export default function SettingsPage() {
                   disabled={isSaving}
                   className="btn btn-primary"
                 >
-                  {isSaving ? 'Guardando...' : 'Guardar cambios'}
+                  {isSaving ? t('common.saving') : t('settings.saveChanges')}
                 </button>
               </div>
             </div>
@@ -1063,20 +1065,20 @@ export default function SettingsPage() {
           {/* Contact Statuses Settings */}
           {activeTab === 'contacts' && (
             <div className="max-w-2xl">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Estados de contactos</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('settings.contactStatuses')}</h3>
               <p className="text-gray-500 mb-6">
-                Define los estados disponibles para clasificar tus contactos.
+                {t('settingsExt.contactStatusesHint')}
               </p>
               
               <div className="card">
                 <div className="card-header flex items-center justify-between">
-                  <h4 className="font-medium text-gray-900">Estados disponibles</h4>
+                  <h4 className="font-medium text-gray-900">{t('settings.availableStatuses')}</h4>
                   <button
                     onClick={addContactStatus}
                     className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
                   >
                     <Icons.plus className="w-4 h-4" />
-                    Agregar estado
+                    {t('settings.addStatus')}
                   </button>
                 </div>
                 <div className="card-body">
@@ -1120,7 +1122,7 @@ export default function SettingsPage() {
                   disabled={isSaving}
                   className="btn btn-primary"
                 >
-                  {isSaving ? 'Guardando...' : 'Guardar cambios'}
+                  {isSaving ? t('common.saving') : t('settings.saveChanges')}
                 </button>
               </div>
             </div>
@@ -1129,16 +1131,16 @@ export default function SettingsPage() {
           {/* Notifications Settings */}
           {activeTab === 'notifications' && (
             <div className="max-w-2xl">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">Notificaciones</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">{t('settings.notifications')}</h3>
 
               <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
                 <div className="space-y-4">
                   {[
-                    { key: 'taskReminders', label: 'Recordatorios de tareas', description: 'Recibe alertas antes de que venza una tarea' },
-                    { key: 'newContacts', label: 'Nuevos contactos', description: 'Notificación cuando se agrega un nuevo contacto' },
-                    { key: 'dealsWon', label: 'Negocios ganados', description: 'Celebra cuando un negocio pasa a Ganado' },
-                    { key: 'dealUpdates', label: 'Actualizaciones de negocios', description: 'Cambios de etapa en el pipeline' },
-                    { key: 'dailyDigest', label: 'Resumen diario', description: 'Recibe un resumen de actividad cada día' },
+                    { key: 'taskReminders', label: t('settings.taskReminders'), description: t('settingsExt.taskRemindersDesc') },
+                    { key: 'newContacts', label: t('settingsExt.newContacts'), description: t('settingsExt.newContactsDesc') },
+                    { key: 'dealsWon', label: t('settingsExt.dealsWon'), description: t('settingsExt.dealsWonDesc') },
+                    { key: 'dealUpdates', label: t('settings.dealUpdates'), description: t('settingsExt.dealUpdatesDesc') },
+                    { key: 'dailyDigest', label: t('settingsExt.dailyDigest'), description: t('settingsExt.dailyDigestDesc') },
                   ].map(({ key, label, description }) => (
                     <div key={key} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                       <div>
@@ -1165,7 +1167,7 @@ export default function SettingsPage() {
                   disabled={isSaving}
                   className="btn-primary"
                 >
-                  {isSaving ? 'Guardando...' : 'Guardar cambios'}
+                  {isSaving ? t('common.saving') : t('settings.saveChanges')}
                 </button>
               </div>
             </div>
@@ -1174,7 +1176,7 @@ export default function SettingsPage() {
           {/* Integrations Settings */}
           {activeTab === 'integrations' && (
             <div className="max-w-2xl">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">Integraciones</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">{t('settings.integrations')}</h3>
               
               <div className="space-y-4">
                 {/* Google Calendar */}
@@ -1191,11 +1193,11 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">Google Calendar</p>
-                        <p className="text-sm text-gray-500">Sincroniza tareas y reuniones</p>
+                        <p className="text-sm text-gray-500">{t('integrations.googleCalendarDesc')}</p>
                       </div>
                     </div>
                     <button className="btn btn-secondary">
-                      Conectar
+                      {t('integrations.connect')}
                     </button>
                   </div>
                 </div>
@@ -1214,11 +1216,11 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">Slack</p>
-                        <p className="text-sm text-gray-500">Recibe notificaciones en Slack</p>
+                        <p className="text-sm text-gray-500">{t('integrations.slackDesc')}</p>
                       </div>
                     </div>
                     <button className="btn btn-secondary">
-                      Conectar
+                      {t('integrations.connect')}
                     </button>
                   </div>
                 </div>
@@ -1234,11 +1236,11 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">Zapier</p>
-                        <p className="text-sm text-gray-500">Conecta con miles de aplicaciones</p>
+                        <p className="text-sm text-gray-500">{t('integrations.zapierDesc')}</p>
                       </div>
                     </div>
                     <button className="btn btn-secondary">
-                      Conectar
+                      {t('integrations.connect')}
                     </button>
                   </div>
                 </div>
@@ -1254,11 +1256,11 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">WhatsApp Business</p>
-                        <p className="text-sm text-gray-500">Envía mensajes a contactos</p>
+                        <p className="text-sm text-gray-500">{t('integrations.whatsappDesc')}</p>
                       </div>
                     </div>
                     <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                      Próximamente
+                      {t('common.comingSoon')}
                     </span>
                   </div>
                 </div>
@@ -1269,7 +1271,7 @@ export default function SettingsPage() {
           {/* ── Plan y Facturación tab ───────────────────────────────────────── */}
           {activeTab === 'billing' && (
             <div className="max-w-2xl">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">Plan y Facturación</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">{t('billing.title')}</h3>
 
               {billingMessage && (
                 <div className={`mb-5 p-4 rounded-xl text-sm flex items-center gap-3 ${
@@ -1296,8 +1298,8 @@ export default function SettingsPage() {
                     <div className="mt-8">
                       <h4 className="text-base font-semibold text-gray-900 mb-4">
                         {billing.plan === 'trial'
-                          ? 'Elige tu plan'
-                          : 'Cambiar plan'}
+                          ? t('billing.choosePlan')
+                          : t('billing.changePlan')}
                       </h4>
                       <div className="grid sm:grid-cols-2 gap-4">
                         {billing.plan !== 'starter' && billing.plan !== 'pro' && (
@@ -1330,16 +1332,16 @@ export default function SettingsPage() {
 
                   {billing.plan === 'enterprise' && (
                     <p className="mt-6 text-sm text-gray-500">
-                      Estás en el plan Enterprise. Contacta a <a href="mailto:soporte@hittek.mx" className="text-indigo-600 hover:underline">soporte@hittek.mx</a> para cualquier cambio.
+                      {t('billing.enterpriseContact')}
                     </p>
                   )}
 
                   {/* ── Payment method & portal ─────────────────────────── */}
                   {billing.stripeCustomerId && (
                     <div className="mt-8 pt-6 border-t border-gray-100">
-                      <h4 className="text-base font-semibold text-gray-900 mb-1">Método de pago</h4>
+                      <h4 className="text-base font-semibold text-gray-900 mb-1">{t('billing.paymentMethod')}</h4>
                       <p className="text-sm text-gray-500 mb-4">
-                        Actualiza tu tarjeta o consulta la información de pago en el portal seguro de Stripe.
+                        {t('billing.paymentMethodHint')}
                       </p>
                       <button
                         onClick={handlePortal}
@@ -1347,19 +1349,19 @@ export default function SettingsPage() {
                         className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors disabled:opacity-60"
                       >
                         {isPortalLoading ? <Spinner size="sm" /> : <Icons.creditCard className="w-4 h-4" />}
-                        Gestionar método de pago
+                        {t('billing.managePaymentMethod')}
                       </button>
                     </div>
                   )}
 
                   {/* ── Invoice history ──────────────────────────────────── */}
                   <div className="mt-8 pt-6 border-t border-gray-100">
-                    <h4 className="text-base font-semibold text-gray-900 mb-4">Historial de pagos</h4>
+                    <h4 className="text-base font-semibold text-gray-900 mb-4">{t('billing.invoiceHistory')}</h4>
                     <InvoiceHistory invoices={invoices} isLoading={isInvoicesLoading} />
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-gray-400">No se pudo cargar la información de facturación.</p>
+                <p className="text-sm text-gray-400">{t('billing.loadError')}</p>
               )}
             </div>
           )}

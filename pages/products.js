@@ -5,17 +5,7 @@ import { Modal } from '../components/ui/Modal'
 import { Spinner } from '../components/ui/Spinner'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useAuth } from '../lib/AuthContext'
-
-const UNITS = [
-  { value: 'unit', label: 'Unidad' },
-  { value: 'hr', label: 'Hora' },
-  { value: 'service', label: 'Servicio' },
-  { value: 'month', label: 'Mes' },
-  { value: 'kg', label: 'kg' },
-  { value: 'm', label: 'm' },
-  { value: 'm2', label: 'm²' },
-  { value: 'lt', label: 'Litro' },
-]
+import { useI18n } from '../lib/i18n'
 
 function fmt(n) {
   return Number(n || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
@@ -29,6 +19,19 @@ function computePrice(cost, fee, margin) {
 
 // ── ProductForm (rendered inside <Modal>) ─────────────────────────────────────
 function ProductForm({ product, providers, onSave, onClose }) {
+  const { t } = useI18n()
+
+  const UNITS = [
+    { value: 'unit', label: t('products.units.unit') },
+    { value: 'hr', label: t('products.units.hr') },
+    { value: 'service', label: t('products.units.service') },
+    { value: 'month', label: t('products.units.month') },
+    { value: 'kg', label: t('products.units.kg') },
+    { value: 'm', label: t('products.units.m') },
+    { value: 'm2', label: t('products.units.m2') },
+    { value: 'lt', label: t('products.units.lt') },
+  ]
+
   const [form, setForm] = useState({
     name: product?.name || '',
     description: product?.description || '',
@@ -71,9 +74,9 @@ function ProductForm({ product, providers, onSave, onClose }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!form.name.trim()) { setError('Nombre requerido'); return }
+    if (!form.name.trim()) { setError(t('products.nameRequired')); return }
     const sp = parseFloat(form.sellingPrice)
-    if (isNaN(sp) || sp < 0) { setError('Precio de venta requerido'); return }
+    if (isNaN(sp) || sp < 0) { setError(t('products.sellingPriceRequired')); return }
     setSaving(true); setError(null)
     try {
       const body = {
@@ -143,18 +146,18 @@ function ProductForm({ product, providers, onSave, onClose }) {
 
       {/* Type toggle */}
       <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
-        {[['service', '🛠 Servicio'], ['product', '📦 Producto']].map(([t, l]) => (
+        {[['service', `🛠 ${t('products.typeService')}`], ['product', `📦 ${t('products.typeProduct')}`]].map(([tp, l]) => (
           <button
-            key={t} type="button" onClick={() => switchType(t)}
+            key={tp} type="button" onClick={() => switchType(tp)}
             className={`flex-1 py-2 font-medium transition-colors ${
-              form.type === t ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50'
+              form.type === tp ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50'
             }`}
           >{l}</button>
         ))}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.name')} *</label>
         <input
           autoFocus className="input" type="text" value={form.name}
           onChange={e => set('name', e.target.value)}
@@ -164,12 +167,12 @@ function ProductForm({ product, providers, onSave, onClose }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">SKU / Código</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.sku')}</label>
           <input className="input" type="text" value={form.sku}
             onChange={e => set('sku', e.target.value)} placeholder="Opcional" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Unidad</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.unit')}</label>
           <select className="input" value={form.unit} onChange={e => set('unit', e.target.value)}>
             {UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
           </select>
@@ -177,7 +180,7 @@ function ProductForm({ product, providers, onSave, onClose }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.description')}</label>
         <textarea className="input" rows={2} value={form.description}
           onChange={e => set('description', e.target.value)} style={{ resize: 'none' }} />
       </div>
@@ -187,9 +190,9 @@ function ProductForm({ product, providers, onSave, onClose }) {
         <>
           {providers.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.provider')}</label>
               <select className="input" value={form.providerId} onChange={e => set('providerId', e.target.value)}>
-                <option value="">Sin proveedor</option>
+                <option value="">{t('products.noProvider')}</option>
                 {providers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
@@ -199,24 +202,24 @@ function ProductForm({ product, providers, onSave, onClose }) {
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Estructura de precios</p>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Costo</label>
+                <label className="block text-xs text-gray-600 mb-1">{t('products.costPrice')}</label>
                 <input className="input" type="number" min="0" step="0.01"
                   value={form.costPrice} onChange={e => set('costPrice', e.target.value)} placeholder="0.00" />
               </div>
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Cargo %</label>
+                <label className="block text-xs text-gray-600 mb-1">{t('products.feePercent')}</label>
                 <input className="input" type="number" min="0" max="999" step="0.1"
                   value={form.feePercent} onChange={e => set('feePercent', e.target.value)} />
               </div>
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Ganancia %</label>
+                <label className="block text-xs text-gray-600 mb-1">{t('products.marginPercent')}</label>
                 <input className="input" type="number" min="0" max="999" step="0.1"
                   value={form.marginPercent} onChange={e => set('marginPercent', e.target.value)} />
               </div>
             </div>
             {derived !== null && (
               <div className="flex items-center justify-between pt-2 border-t border-gray-200 text-sm">
-                <span className="text-gray-500">Precio calculado</span>
+                <span className="text-gray-500">{t('products.derivedPrice')}</span>
                 <span className="font-semibold text-gray-900">{fmt(derived)}</span>
               </div>
             )}
@@ -227,7 +230,7 @@ function ProductForm({ product, providers, onSave, onClose }) {
       {/* Selling price — always shown */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Precio de venta *
+          {t('products.sellingPrice')} *
           {isProduct && derived !== null && <span className="ml-1 text-gray-400 font-normal text-xs">(editable)</span>}
         </label>
         <div className="flex gap-2">
@@ -276,7 +279,7 @@ function ProductForm({ product, providers, onSave, onClose }) {
 
       {/* IVA */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.ivaPercent')}</label>
         <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
           {[['16', '16% (gravado)'], ['0', '0% (exento)']].map(([v, l]) => (
             <button
@@ -290,9 +293,9 @@ function ProductForm({ product, providers, onSave, onClose }) {
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
-        <button type="button" onClick={onClose} className="btn-ghost" disabled={saving}>Cancelar</button>
+        <button type="button" onClick={onClose} className="btn-ghost" disabled={saving}>{t('common.cancel')}</button>
         <button type="submit" className="btn-primary" disabled={saving}>
-          {saving ? 'Guardando…' : 'Guardar'}
+          {saving ? t('common.saving') : t('common.save')}
         </button>
       </div>
     </form>
@@ -302,6 +305,7 @@ function ProductForm({ product, providers, onSave, onClose }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function ProductsPage() {
   const { user } = useAuth()
+  const { t } = useI18n()
   const [products, setProducts]   = useState([])
   const [providers, setProviders] = useState([])
   const [loading, setLoading]     = useState(true)
@@ -350,7 +354,7 @@ export default function ProductsPage() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('¿Eliminar este producto/servicio?')) return
+    if (!confirm(t('products.deleteConfirm'))) return
     await fetch(`/api/products/${id}`, { method: 'DELETE' })
     setProducts(prev => prev.filter(p => p.id !== id))
   }
@@ -428,17 +432,17 @@ export default function ProductsPage() {
 
   return (
     <>
-      <Head><title>Catálogo | CRM</title></Head>
+      <Head><title>{t('products.title')} | CRM</title></Head>
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Header */}
         <div className="px-4 lg:px-6 py-4 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Catálogo</h1>
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{t('products.title')}</h1>
             {canWrite && (
               <button onClick={openNew} className="btn-primary">
                 <Icons.plus className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Nuevo producto</span>
+                <span className="hidden lg:inline">{t('products.newProduct')}</span>
               </button>
             )}
           </div>
@@ -469,7 +473,7 @@ export default function ProductsPage() {
               <Icons.search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 className="input pl-9 py-1.5" type="text" value={search}
-                onChange={e => setSearch(e.target.value)} placeholder="Buscar…"
+                onChange={e => setSearch(e.target.value)} placeholder={t('products.searchPlaceholder')}
               />
             </div>
           </div>
@@ -494,7 +498,7 @@ export default function ProductsPage() {
 
               {bulkField === 'marginPercent' ? (
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs text-gray-600 shrink-0">Ganancia %</span>
+                  <span className="text-xs text-gray-600 shrink-0">{t('products.marginPercent')}</span>
                   <input
                     autoFocus
                     type="number" min="0" step="0.1"
@@ -508,11 +512,11 @@ export default function ProductsPage() {
                     disabled={bulkSaving}
                     className="btn-primary py-1 px-2.5 text-xs"
                   >{bulkSaving ? '…' : 'Aplicar'}</button>
-                  <button onClick={() => { setBulkField(null); setBulkError(null) }} className="btn-ghost py-1 px-2 text-xs">Cancelar</button>
+                  <button onClick={() => { setBulkField(null); setBulkError(null) }} className="btn-ghost py-1 px-2 text-xs">{t('common.cancel')}</button>
                 </div>
               ) : bulkField === 'feePercent' ? (
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs text-gray-600 shrink-0">Cargo %</span>
+                  <span className="text-xs text-gray-600 shrink-0">{t('products.feePercent')}</span>
                   <input
                     autoFocus
                     type="number" min="0" step="0.1"
@@ -526,28 +530,28 @@ export default function ProductsPage() {
                     disabled={bulkSaving}
                     className="btn-primary py-1 px-2.5 text-xs"
                   >{bulkSaving ? '…' : 'Aplicar'}</button>
-                  <button onClick={() => { setBulkField(null); setBulkError(null) }} className="btn-ghost py-1 px-2 text-xs">Cancelar</button>
+                  <button onClick={() => { setBulkField(null); setBulkError(null) }} className="btn-ghost py-1 px-2 text-xs">{t('common.cancel')}</button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => { setBulkField('marginPercent'); setBulkValue('') }}
                     className="btn-ghost py-1 px-2.5 text-xs"
-                  >Ganancia %</button>
+                  >{t('products.marginPercent')}</button>
                   <button
                     onClick={() => { setBulkField('feePercent'); setBulkValue('') }}
                     className="btn-ghost py-1 px-2.5 text-xs"
-                  >Cargo %</button>
+                  >{t('products.feePercent')}</button>
                   <button
                     onClick={() => handleBulkUpdate({ isActive: true })}
                     disabled={bulkSaving}
                     className="btn-ghost py-1 px-2.5 text-xs text-green-700 hover:bg-green-50"
-                  >{bulkSaving ? '…' : 'Activar'}</button>
+                  >{bulkSaving ? '…' : t('providers.activate')}</button>
                   <button
                     onClick={() => handleBulkUpdate({ isActive: false })}
                     disabled={bulkSaving}
                     className="btn-ghost py-1 px-2.5 text-xs text-red-600 hover:bg-red-50"
-                  >{bulkSaving ? '…' : 'Desactivar'}</button>
+                  >{bulkSaving ? '…' : t('providers.deactivate')}</button>
                 </div>
               )}
 
@@ -567,14 +571,14 @@ export default function ProductsPage() {
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={Icons.package}
-              title={search || typeFilter !== 'all' || provFilter ? 'Sin resultados' : 'Catálogo vacío'}
+              title={search || typeFilter !== 'all' || provFilter ? t('common.noResults') : t('products.noProducts')}
               description={
                 search || typeFilter !== 'all' || provFilter
                   ? 'Prueba cambiando los filtros.'
-                  : 'Agrega tu primer producto o servicio para comenzar.'
+                  : t('products.noProductsDesc')
               }
               action={!search && typeFilter === 'all' && !provFilter && canWrite ? openNew : undefined}
-              actionLabel="Nuevo producto"
+              actionLabel={t('products.newProduct')}
             />
           ) : (
             <div className="divide-y divide-gray-100">
@@ -613,7 +617,7 @@ export default function ProductsPage() {
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                         p.type === 'service' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'
                       }`}>
-                        {p.type === 'service' ? 'Servicio' : 'Producto'}
+                        {p.type === 'service' ? t('products.typeService') : t('products.typeProduct')}
                       </span>
                       {!p.isActive && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
@@ -626,7 +630,7 @@ export default function ProductsPage() {
                       {p.provider?.name && <span>{p.provider.name}</span>}
                       <span className="capitalize">{p.unit}</span>
                       {p.costPrice != null && (
-                        <span className="hidden sm:inline">Costo: {fmt(p.costPrice)}</span>
+                        <span className="hidden sm:inline">{t('products.costPrice')}: {fmt(p.costPrice)}</span>
                       )}
                       {/* Price shown inline on mobile */}
                       <span className="font-semibold text-gray-900 sm:hidden">{fmt(p.sellingPrice)}</span>
@@ -645,7 +649,7 @@ export default function ProductsPage() {
                       <button
                         onClick={() => toggleActive(p)}
                         className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
-                        title={p.isActive ? 'Desactivar' : 'Activar'}
+                        title={p.isActive ? t('providers.deactivate') : t('providers.activate')}
                       >
                         {p.isActive
                           ? <Icons.eyeOff className="w-4 h-4" />
@@ -674,7 +678,7 @@ export default function ProductsPage() {
       <Modal
         isOpen={showModal}
         onClose={closeModal}
-        title={editProduct ? 'Editar producto/servicio' : 'Nuevo producto/servicio'}
+        title={editProduct ? t('products.editProduct') : t('products.newProduct')}
         size="md"
       >
         <ProductForm

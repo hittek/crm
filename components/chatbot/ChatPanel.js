@@ -7,6 +7,7 @@
  */
 import { useState, useRef, useEffect } from 'react'
 import Icons from '../ui/Icons'
+import { useI18n } from '../../lib/i18n'
 
 const EMPTY_MESSAGES = []
 
@@ -19,6 +20,7 @@ function uuid() {
 }
 
 export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
+  const { t } = useI18n()
   const [messages, setMessages]   = useState(EMPTY_MESSAGES)
   const [input, setInput]         = useState('')
   const [loading, setLoading]     = useState(false)
@@ -162,11 +164,11 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
         >
           <div className="flex items-center gap-2">
             <Icons.bot className="w-4 h-4 text-primary-500" />
-            <span className="text-sm font-medium text-gray-700">Sandbox del chatbot</span>
+            <span className="text-sm font-medium text-gray-700">{t('chatbot.testBot')}</span>
             <span className="text-xs text-gray-400 hidden sm:inline">— {kb.name}</span>
             {resolved && (
               <span className="text-xs font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
-                Resuelta
+                {t('chatbot.ready')}
               </span>
             )}
           </div>
@@ -177,9 +179,9 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
                 tabIndex={-1}
                 onClick={e => { e.stopPropagation(); clearChat() }}
                 className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-1"
-                title="Limpiar conversación"
+                title={t('common.close')}
               >
-                Limpiar
+                {t('common.close')}
               </span>
             )}
             <Icons.chevronDown
@@ -196,7 +198,7 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
             {!hasMessages && (
               <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 gap-2">
                 <Icons.bot className="w-8 h-8 opacity-30" />
-                <p className="text-sm">Escribe una pregunta para probar el chatbot</p>
+                <p className="text-sm">{t('chatbot.testPlaceholder')}</p>
               </div>
             )}
             {messages.map((msg, idx) => (
@@ -224,7 +226,7 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Escribe una pregunta…"
+              placeholder={t('chatbot.testPlaceholder')}
               disabled={loading}
               maxLength={2000}
               className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:opacity-50 disabled:bg-gray-50"
@@ -234,7 +236,7 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
                 type="button"
                 onClick={clearChat}
                 className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
-                title="Limpiar"
+                title={t('common.close')}
               >
                 <Icons.refresh className="w-4 h-4" />
               </button>
@@ -243,7 +245,7 @@ export default function ChatPanel({ kb, chatbotId, variant = 'standalone' }) {
               type="submit"
               disabled={!canSend}
               className="p-1.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              title="Enviar"
+              title={t('chatbot.send')}
             >
               <Icons.send className="w-4 h-4" />
             </button>

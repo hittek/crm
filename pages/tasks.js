@@ -3,9 +3,11 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import TaskList from '../components/tasks/TaskList'
 import TaskForm from '../components/tasks/TaskForm'
+import { useI18n } from '../lib/i18n'
 
 export default function TasksPage() {
   const router = useRouter()
+  const { t } = useI18n()
   const [showForm, setShowForm] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -36,7 +38,7 @@ export default function TasksPage() {
   return (
     <>
       <Head>
-        <title>Tareas | CRM</title>
+        <title>{t('tasks.title')} | CRM</title>
       </Head>
 
       <TaskList

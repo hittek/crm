@@ -6,6 +6,7 @@ import { Spinner } from '../components/ui/Spinner'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useAuth } from '../lib/AuthContext'
 import QuoteTab from '../components/deals/QuoteTab'
+import { useI18n } from '../lib/i18n'
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 function fmt(n, currency = 'MXN') {
@@ -40,6 +41,7 @@ function StatusBadge({ status }) {
 // ── QuoteDetailModal ───────────────────────────────────────────────────────────
 function QuoteDetailModal({ quote, products, onClose, onUpdate, onDelete }) {
   const { user } = useAuth()
+  const { t } = useI18n()
   const [q, setQ] = useState(quote)
   const [busy, setBusy] = useState(false)
   const [shareUrl, setShareUrl] = useState(null)
@@ -121,15 +123,15 @@ function QuoteDetailModal({ quote, products, onClose, onUpdate, onDelete }) {
 
       {/* Line items */}
       <div>
-        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Ítems</h4>
+        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t('quotes.items')}</h4>
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left px-3 py-2 font-medium text-gray-600">Descripción</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-600 hidden sm:table-cell">Cant.</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-600 hidden sm:table-cell">P. unit.</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-600">Total</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-600">{t('quotes.description')}</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-600 hidden sm:table-cell">{t('quotes.qty')}</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-600 hidden sm:table-cell">{t('quotes.unitPrice')}</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-600">{t('quotes.total')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -151,8 +153,8 @@ function QuoteDetailModal({ quote, products, onClose, onUpdate, onDelete }) {
             </tbody>
             <tfoot className="bg-gray-50 border-t border-gray-200 text-sm">
               <tr>
-                <td colSpan={3} className="px-3 py-2 text-right text-gray-500 hidden sm:table-cell">Subtotal</td>
-                <td colSpan={2} className="px-3 py-2 text-right text-gray-500 sm:hidden">Subtotal</td>
+                <td colSpan={3} className="px-3 py-2 text-right text-gray-500 hidden sm:table-cell">{t('quotes.subtotal')}</td>
+                <td colSpan={2} className="px-3 py-2 text-right text-gray-500 sm:hidden">{t('quotes.subtotal')}</td>
                 <td className="px-3 py-2 text-right">{fmt(subtotal, q.currency)}</td>
               </tr>
               {(() => {
@@ -170,8 +172,8 @@ function QuoteDetailModal({ quote, products, onClose, onUpdate, onDelete }) {
                 ))
               })()}
               <tr className="font-semibold text-gray-900">
-                <td colSpan={3} className="px-3 py-2.5 text-right hidden sm:table-cell">Total</td>
-                <td colSpan={2} className="px-3 py-2.5 text-right sm:hidden">Total</td>
+                <td colSpan={3} className="px-3 py-2.5 text-right hidden sm:table-cell">{t('quotes.total')}</td>
+                <td colSpan={2} className="px-3 py-2.5 text-right sm:hidden">{t('quotes.total')}</td>
                 <td className="px-3 py-2.5 text-right text-base">{fmt(q.total, q.currency)}</td>
               </tr>
             </tfoot>
@@ -182,7 +184,7 @@ function QuoteDetailModal({ quote, products, onClose, onUpdate, onDelete }) {
       {/* Notes */}
       {q.notes && (
         <div>
-          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Notas</h4>
+          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('quotes.notes')}</h4>
           <p className="text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">{q.notes}</p>
         </div>
       )}
@@ -200,7 +202,7 @@ function QuoteDetailModal({ quote, products, onClose, onUpdate, onDelete }) {
           <button
             onClick={openPublicPage}
             className="shrink-0 p-1 text-gray-400 hover:text-gray-700 rounded"
-            title="Abrir en nueva pestaña"
+            title={t('quotes.openNewTab')}
           >
             <Icons.external className="w-3.5 h-3.5" />
           </button>
@@ -238,7 +240,7 @@ function QuoteDetailModal({ quote, products, onClose, onUpdate, onDelete }) {
           <button
             onClick={() => { onDelete(q.id); onClose() }}
             className="ml-auto p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-            title="Eliminar cotización"
+            title={t('quotes.deleteQuote')}
           >
             <Icons.trash className="w-4 h-4" />
           </button>
@@ -251,6 +253,7 @@ function QuoteDetailModal({ quote, products, onClose, onUpdate, onDelete }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function QuotesPage() {
   const { user } = useAuth()
+  const { t } = useI18n()
   const [quotes, setQuotes]   = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -283,7 +286,7 @@ export default function QuotesPage() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('¿Eliminar esta cotización?')) return
+    if (!confirm(t('quotes.deleteConfirm'))) return
     await fetch(`/api/quotes/${id}`, { method: 'DELETE' })
     setQuotes(prev => prev.filter(q => q.id !== id))
     if (selected?.id === id) setSelected(null)
@@ -308,13 +311,13 @@ export default function QuotesPage() {
 
   return (
     <>
-      <Head><title>Cotizaciones | CRM</title></Head>
+      <Head><title>{t('quotes.title')} | CRM</title></Head>
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Header */}
         <div className="px-4 lg:px-6 py-4 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Cotizaciones</h1>
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{t('quotes.title')}</h1>
           </div>
 
           {/* Status filter pills + search */}
@@ -350,7 +353,7 @@ export default function QuotesPage() {
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar por número, deal o contacto…"
+                placeholder={t('quotes.searchPlaceholder')}
               />
             </div>
           </div>
@@ -365,7 +368,7 @@ export default function QuotesPage() {
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={Icons.fileText}
-              title={search || statusFilter !== 'all' ? 'Sin resultados' : 'Sin cotizaciones'}
+              title={search || statusFilter !== 'all' ? t('quotes.noResults') : t('quotes.noQuotes')}
               description={
                 search || statusFilter !== 'all'
                   ? 'Prueba cambiando los filtros.'

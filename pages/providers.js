@@ -5,6 +5,7 @@ import { Modal } from '../components/ui/Modal'
 import { Spinner } from '../components/ui/Spinner'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useAuth } from '../lib/AuthContext'
+import { useI18n } from '../lib/i18n'
 
 const UNIT_LABELS = {
   m2: 'm²', m: 'm', unidad: 'Unidad', rollo: 'Rollo', kg: 'kg',
@@ -14,6 +15,7 @@ const UNIT_LABELS = {
 
 // ── ImportModal — multi-step PDF price list import ────────────────────────────
 function ImportModal({ provider, onDone, onClose }) {
+  const { t } = useI18n()
   const fileRef      = useRef(null)
   const [step, setStep]     = useState('upload')   // upload | extracting | review | importing | done
   const [error, setError]   = useState(null)
@@ -131,13 +133,13 @@ function ImportModal({ provider, onDone, onClose }) {
             onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]) }}
           >
             <Icons.upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-            <p className="text-sm font-medium text-gray-700">Arrastra tu PDF aquí o haz clic para seleccionar</p>
-            <p className="text-xs text-gray-400 mt-1">Máx. 20 MB</p>
+            <p className="text-sm font-medium text-gray-700">{t('providers.dropPdf')}</p>
+            <p className="text-xs text-gray-400 mt-1">{t('providers.maxSize')}</p>
           </div>
           <input ref={fileRef} type="file" accept=".pdf" className="hidden"
             onChange={e => handleFile(e.target.files[0])} />
           <div className="flex justify-end">
-            <button onClick={onClose} className="btn-ghost">Cancelar</button>
+            <button onClick={onClose} className="btn-ghost">{t('common.cancel')}</button>
           </div>
         </div>
       )}
@@ -146,8 +148,8 @@ function ImportModal({ provider, onDone, onClose }) {
       {step === 'extracting' && (
         <div className="py-12 text-center space-y-4">
           <Spinner size="lg" />
-          <p className="text-sm font-medium text-gray-700">Analizando lista de precios…</p>
-          <p className="text-xs text-gray-400">Claude está extrayendo los productos. Puede tomar hasta 30 segundos.</p>
+          <p className="text-sm font-medium text-gray-700">{t('providers.analyzing')}</p>
+          <p className="text-xs text-gray-400">{t('providers.analyzingDesc')}</p>
         </div>
       )}
 
@@ -163,7 +165,7 @@ function ImportModal({ provider, onDone, onClose }) {
           {extractMeta?.mode === 'vision' && !extractMeta?.warning && (
             <div className="flex gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
               <Icons.eye className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>PDF escaneado detectado — se usó visión para extraer los datos. Revisa con cuidado.</span>
+              <span>{t('providers.scannedPdf')}</span>
             </div>
           )}
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -174,7 +176,7 @@ function ImportModal({ provider, onDone, onClose }) {
               <Icons.search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <input
                 className="input pl-8 py-1.5 text-sm w-48"
-                placeholder="Buscar…"
+                placeholder={t('providers.searchImport')}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -193,9 +195,9 @@ function ImportModal({ provider, onDone, onClose }) {
                   checked={allVisible} ref={el => el && (el.indeterminate = !allVisible && someVisible)}
                   onChange={toggleAll} />
               </div>
-              <div>Nombre / SKU</div>
-              <div>Unidad</div>
-              <div className="text-right">Precio</div>
+              <div>{t('providers.nameSku')}</div>
+              <div>{t('products.unit')}</div>
+              <div className="text-right">{t('providers.price')}</div>
               <div></div>
             </div>
             {/* Mobile-only: select-all row */}
@@ -203,13 +205,13 @@ function ImportModal({ provider, onDone, onClose }) {
               <input type="checkbox" className="rounded"
                 checked={allVisible} ref={el => el && (el.indeterminate = !allVisible && someVisible)}
                 onChange={toggleAll} />
-              <span className="text-xs text-gray-500">Seleccionar todos los visibles</span>
+              <span className="text-xs text-gray-500">{t('providers.selectAll')}</span>
             </div>
 
             {/* Table body */}
             <div className="divide-y divide-gray-100 max-h-[40vh] overflow-y-auto">
               {filtered.length === 0 && (
-                <div className="px-4 py-6 text-sm text-gray-400 text-center">Sin resultados</div>
+                <div className="px-4 py-6 text-sm text-gray-400 text-center">{t('providers.noResults')}</div>
               )}
               {filtered.map(row => (
                 <div key={row._id} className={selected.has(row._id) ? '' : 'opacity-40'}>
@@ -259,7 +261,7 @@ function ImportModal({ provider, onDone, onClose }) {
                       <button
                         className="p-1 text-gray-300 hover:text-red-500 transition-colors"
                         onClick={() => { setRows(prev => prev.filter(r => r._id !== row._id)); setSelected(prev => { const n = new Set(prev); n.delete(row._id); return n }) }}
-                        title="Eliminar fila"
+                        title={t('common.delete')}
                       >
                         <Icons.close className="w-3.5 h-3.5" />
                       </button>
@@ -308,7 +310,7 @@ function ImportModal({ provider, onDone, onClose }) {
                         type="number" step="0.01" min="0"
                         className="text-xs text-right border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:border-primary-500 w-28"
                         value={row.costPrice ?? ''}
-                        placeholder="Precio"
+                        placeholder={t('providers.price')}
                         onChange={e => updateRow(row._id, 'costPrice', e.target.value === '' ? null : parseFloat(e.target.value))}
                       />
                     </div>
@@ -338,7 +340,7 @@ function ImportModal({ provider, onDone, onClose }) {
       {step === 'importing' && (
         <div className="py-12 text-center space-y-4">
           <Spinner size="lg" />
-          <p className="text-sm font-medium text-gray-700">Importando productos…</p>
+          <p className="text-sm font-medium text-gray-700">{t('providers.importing')}</p>
         </div>
       )}
 
@@ -356,7 +358,7 @@ function ImportModal({ provider, onDone, onClose }) {
               {result.updated > 0 && <span>{result.updated} actualizados</span>}
             </p>
           </div>
-          <button onClick={onClose} className="btn-primary">Listo</button>
+          <button onClick={onClose} className="btn-primary">{t('providers.done')}</button>
         </div>
       )}
     </div>
@@ -365,6 +367,7 @@ function ImportModal({ provider, onDone, onClose }) {
 
 // ── ProviderForm (rendered inside <Modal>) ────────────────────────────────────
 function ProviderForm({ provider, onSave, onClose }) {
+  const { t } = useI18n()
   const [form, setForm] = useState({
     name: provider?.name || '',
     contactName: provider?.contactName || '',
@@ -380,7 +383,7 @@ function ProviderForm({ provider, onSave, onClose }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!form.name.trim()) { setError('Nombre requerido'); return }
+    if (!form.name.trim()) { setError(t('providers.nameRequired')); return }
     setSaving(true); setError(null)
     try {
       const url = provider ? `/api/providers/${provider.id}` : '/api/providers'
@@ -405,7 +408,7 @@ function ProviderForm({ provider, onSave, onClose }) {
         <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
       )}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{t('providers.name')} *</label>
         <input
           autoFocus className="input" type="text" value={form.name}
           onChange={e => set('name', e.target.value)}
@@ -413,40 +416,40 @@ function ProviderForm({ provider, onSave, onClose }) {
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Contacto</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{t('providers.contact')}</label>
         <input className="input" type="text" value={form.contactName}
           onChange={e => set('contactName', e.target.value)}
-          placeholder="Nombre del contacto" />
+          placeholder={t('providers.contactPlaceholder')} />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('providers.email')}</label>
           <input className="input" type="email" value={form.email}
             onChange={e => set('email', e.target.value)} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('providers.phone')}</label>
           <input className="input" type="tel" value={form.phone}
             onChange={e => set('phone', e.target.value)} />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Sitio web</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{t('providers.website')}</label>
         <input className="input" type="url" value={form.website}
           onChange={e => set('website', e.target.value)} placeholder="https://" />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{t('providers.notes')}</label>
         <textarea className="input" rows={3} value={form.notes}
           onChange={e => set('notes', e.target.value)}
           style={{ resize: 'none' }} />
       </div>
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onClose} className="btn-ghost" disabled={saving}>
-          Cancelar
+          {t('common.cancel')}
         </button>
         <button type="submit" className="btn-primary" disabled={saving}>
-          {saving ? 'Guardando…' : 'Guardar'}
+          {saving ? t('common.saving') : t('common.save')}
         </button>
       </div>
     </form>
@@ -456,6 +459,7 @@ function ProviderForm({ provider, onSave, onClose }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function ProvidersPage() {
   const { user } = useAuth()
+  const { t } = useI18n()
   const [providers, setProviders] = useState([])
   const [loading, setLoading]     = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -493,7 +497,7 @@ export default function ProvidersPage() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('¿Eliminar este proveedor?')) return
+    if (!confirm(t('providers.deleteConfirm'))) return
     await fetch(`/api/providers/${id}`, { method: 'DELETE' })
     setProviders(prev => prev.filter(p => p.id !== id))
   }
@@ -519,17 +523,17 @@ export default function ProvidersPage() {
 
   return (
     <>
-      <Head><title>Proveedores | CRM</title></Head>
+      <Head><title>{t('providers.title')} | CRM</title></Head>
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Header */}
         <div className="px-4 lg:px-6 py-4 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Proveedores</h1>
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{t('providers.title')}</h1>
             {canWrite && (
               <button onClick={openNew} className="btn-primary">
                 <Icons.plus className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Nuevo proveedor</span>
+                <span className="hidden lg:inline">{t('providers.newProvider')}</span>
               </button>
             )}
           </div>
@@ -539,7 +543,7 @@ export default function ProvidersPage() {
               className="input pl-9"
               type="text" value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar proveedor…"
+              placeholder={t('providers.searchPlaceholder')}
             />
           </div>
         </div>
@@ -553,10 +557,10 @@ export default function ProvidersPage() {
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={Icons.truck}
-              title={search ? 'Sin resultados' : 'Sin proveedores'}
+              title={search ? t('providers.noResults') : t('providers.noProviders')}
               description={search ? 'Prueba con otra búsqueda.' : 'Agrega tu primer proveedor para comenzar.'}
               action={!search && canWrite ? openNew : undefined}
-              actionLabel="Nuevo proveedor"
+              actionLabel={t('providers.newProvider')}
             />
           ) : (
             <div className="divide-y divide-gray-100">
@@ -602,17 +606,17 @@ export default function ProvidersPage() {
                       <button
                         onClick={() => openImport(p)}
                         className="btn-ghost btn-sm inline-flex items-center gap-1.5"
-                        title="Importar lista de precios"
+                        title={t('providers.importPrices')}
                       >
                         <Icons.upload className="w-3.5 h-3.5" />
-                        <span className="hidden lg:inline">Importar precios</span>
+                        <span className="hidden lg:inline">{t('providers.importPrices')}</span>
                       </button>
                     )}
                     {canWrite && (
                       <button
                         onClick={() => toggleActive(p)}
                         className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
-                        title={p.isActive ? 'Desactivar' : 'Activar'}
+                        title={p.isActive ? t('providers.deactivate') : t('providers.activate')}
                       >
                         {p.isActive
                           ? <Icons.eyeOff className="w-4 h-4" />
@@ -621,12 +625,12 @@ export default function ProvidersPage() {
                       </button>
                     )}
                     {canWrite && (
-                      <button onClick={() => openEdit(p)} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg" title="Editar">
+                      <button onClick={() => openEdit(p)} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg" title={t('common.edit')}>
                         <Icons.edit className="w-4 h-4" />
                       </button>
                     )}
                     {canDelete && (
-                      <button onClick={() => handleDelete(p.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Eliminar">
+                      <button onClick={() => handleDelete(p.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title={t('common.delete')}>
                         <Icons.trash className="w-4 h-4" />
                       </button>
                     )}
@@ -641,7 +645,7 @@ export default function ProvidersPage() {
       <Modal
         isOpen={showModal}
         onClose={closeModal}
-        title={editProvider ? 'Editar proveedor' : 'Nuevo proveedor'}
+        title={editProvider ? t('providers.editProvider') : t('providers.newProvider')}
         size="md"
       >
         <ProviderForm

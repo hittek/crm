@@ -8,16 +8,18 @@ import { TasksEmptyState } from '../ui/EmptyState'
 import { Drawer } from '../ui/Modal'
 import { formatSmartDate, getFullName, parseNaturalDate } from '../../lib/utils'
 import { useAuth } from '../../lib/AuthContext'
+import { useI18n } from '../../lib/i18n'
 
 const filters = [
-  { id: 'today', label: 'Hoy', icon: Icons.calendar },
-  { id: 'upcoming', label: 'Próximas', icon: Icons.clock },
-  { id: 'overdue', label: 'Vencidas', icon: Icons.alert },
-  { id: 'completed', label: 'Completadas', icon: Icons.check },
+  { id: 'today', icon: Icons.calendar },
+  { id: 'upcoming', icon: Icons.clock },
+  { id: 'overdue', icon: Icons.alert },
+  { id: 'completed', icon: Icons.check },
 ]
 
 export default function TaskList({ onNewTask }) {
   const router = useRouter()
+  const { t } = useI18n()
   const [tasks, setTasks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState('today')
@@ -127,10 +129,10 @@ export default function TaskList({ onNewTask }) {
       {/* Header */}
       <div className="px-4 lg:px-6 py-4 border-b border-gray-200 bg-white">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Tareas</h1>
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{t('tasks.title')}</h1>
           <button onClick={onNewTask} className="btn-primary">
             <Icons.add className="w-4 h-4 lg:mr-2" />
-            <span className="hidden lg:inline">Nueva tarea</span>
+            <span className="hidden lg:inline">{t('tasks.newTask')}</span>
           </button>
         </div>
 
@@ -152,7 +154,7 @@ export default function TaskList({ onNewTask }) {
             disabled={isAdding || !quickAddText.trim()}
             className="btn-secondary"
           >
-            {isAdding ? <Spinner size="sm" /> : 'Agregar'}
+            {isAdding ? <Spinner size="sm" /> : t('common.add')}
           </button>
         </form>
       </div>
@@ -170,7 +172,7 @@ export default function TaskList({ onNewTask }) {
               className={`filter-pill ${isActive ? 'filter-pill-active' : ''}`}
             >
               <filter.icon className="w-4 h-4" />
-              {filter.label}
+              {t(`tasks.filters.${filter.id}`)}
               {count > 0 && filter.id !== 'completed' && (
                 <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-full ${
                   isActive ? 'bg-primary-200' : 'bg-gray-200'
@@ -298,6 +300,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
   const [localTask, setLocalTask] = useState(task)
   const [isSaving, setIsSaving] = useState(false)
   const { user, permissions } = useAuth()
+  const { t } = useI18n()
 
   // Check if current user can delete this task
   const canDelete = localTask && (
@@ -341,7 +344,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
   }
 
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} title="Detalle de tarea" width="md">
+    <Drawer isOpen={isOpen} onClose={onClose} title={t('tasks.editTask')} width="md">
       <div className="space-y-6">
         {/* Title */}
         <div>
@@ -351,27 +354,27 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
             onChange={(e) => setLocalTask({ ...localTask, title: e.target.value })}
             onBlur={(e) => updateField('title', e.target.value)}
             className="text-lg font-semibold w-full border-0 p-0 focus:ring-0"
-            placeholder="Título de la tarea"
+            placeholder={t('tasks.taskTitle')}
           />
         </div>
 
         {/* Status and Priority */}
         <div className="flex gap-4">
           <div className="flex-1">
-            <label className="text-xs font-medium text-gray-500 uppercase">Estado</label>
+            <label className="text-xs font-medium text-gray-500 uppercase">{t('common.status')}</label>
             <select
               value={localTask.status}
               onChange={(e) => updateField('status', e.target.value)}
               className="input mt-1"
             >
-              <option value="pending">Pendiente</option>
-              <option value="in-progress">En progreso</option>
-              <option value="completed">Completada</option>
-              <option value="cancelled">Cancelada</option>
+              <option value="pending">{t('tasks.status.pending')}</option>
+              <option value="in-progress">{t('tasks.status.inProgress')}</option>
+              <option value="completed">{t('tasks.status.completed')}</option>
+              <option value="cancelled">{t('tasks.status.cancelled')}</option>
             </select>
           </div>
           <div className="flex-1">
-            <label className="text-xs font-medium text-gray-500 uppercase">Prioridad</label>
+            <label className="text-xs font-medium text-gray-500 uppercase">{t('tasks.priority')}</label>
             <select
               value={localTask.priority}
               onChange={(e) => updateField('priority', e.target.value)}
@@ -386,7 +389,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
 
         {/* Due date */}
         <div>
-          <label className="text-xs font-medium text-gray-500 uppercase">Fecha de vencimiento</label>
+          <label className="text-xs font-medium text-gray-500 uppercase">{t('tasks.dueDate')}</label>
           <input
             type="date"
             value={localTask.dueDate ? new Date(localTask.dueDate).toISOString().split('T')[0] : ''}
@@ -413,7 +416,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
                 {type === 'call' && <Icons.phone className="w-4 h-4" />}
                 {type === 'email' && <Icons.mail className="w-4 h-4" />}
                 {type === 'meeting' && <Icons.calendar className="w-4 h-4" />}
-                <span className="text-sm capitalize">{type === 'task' ? 'Tarea' : type === 'call' ? 'Llamada' : type === 'email' ? 'Email' : 'Reunión'}</span>
+                <span className="text-sm capitalize">{t(`tasks.types.${type}`)}</span>
               </button>
             ))}
           </div>
@@ -421,7 +424,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
 
         {/* Description */}
         <div>
-          <label className="text-xs font-medium text-gray-500 uppercase">Descripción</label>
+          <label className="text-xs font-medium text-gray-500 uppercase">{t('tasks.description')}</label>
           <textarea
             value={localTask.description || ''}
             onChange={(e) => setLocalTask({ ...localTask, description: e.target.value })}
@@ -463,7 +466,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
               className="btn-success flex-1"
             >
               <Icons.check className="w-4 h-4 mr-2" />
-              Completar
+              {t('tasks.markComplete')}
             </button>
           )}
           {canDelete && (
@@ -477,7 +480,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
         </div>
 
         {isSaving && (
-          <p className="text-xs text-gray-500 text-center">Guardando...</p>
+          <p className="text-xs text-gray-500 text-center">{t('common.saving')}</p>
         )}
       </div>
     </Drawer>

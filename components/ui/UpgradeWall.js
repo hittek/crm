@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { FiCheck, FiAlertTriangle, FiLock, FiLogOut, FiArrowRight } from 'react-icons/fi'
 import { useAuth } from '../../lib/AuthContext'
+import { useI18n } from '../../lib/i18n'
 import { Spinner } from './Spinner'
 
 const PLANS = [
@@ -22,31 +23,46 @@ const PLANS = [
   },
 ]
 
-const MESSAGES = {
-  trial_expired: {
-    icon: <FiAlertTriangle className="w-8 h-8 text-yellow-500" />,
-    title: 'Tu período de prueba ha terminado',
-    subtitle: 'Para seguir usando el CRM, elige un plan de pago. Tus datos están guardados y seguros.',
-  },
-  canceled: {
-    icon: <FiLock className="w-8 h-8 text-gray-400" />,
-    title: 'Tu suscripción ha sido cancelada',
-    subtitle: 'Reactiva tu cuenta eligiendo un plan para recuperar el acceso a tu CRM.',
-  },
-  suspended: {
-    icon: <FiLock className="w-8 h-8 text-red-500" />,
-    title: 'Tu cuenta ha sido suspendida',
-    subtitle: 'Contacta a soporte para resolver el problema con tu cuenta.',
-    noUpgrade: true,
-  },
-}
-
-export default function UpgradeWall() {
+/**
+ * Full-screen upgrade / access wall.
+ *
+ * @param {string} [reason]  Override the blockReason from auth context.
+ *   Values: 'trial_expired' | 'canceled' | 'suspended' | 'feature_unavailable'
+ *   Defaults to blockReason from auth, then 'trial_expired'.
+ */
+export default function UpgradeWall({ reason: reasonProp }) {
   const { blockReason, logout } = useAuth()
+  const { t } = useI18n()
   const [isUpgrading, setIsUpgrading] = useState(null)
   const [error, setError] = useState(null)
 
-  const msg = MESSAGES[blockReason] ?? MESSAGES.trial_expired
+  const reason = reasonProp ?? blockReason ?? 'trial_expired'
+
+  const MESSAGES = {
+    trial_expired: {
+      icon: <FiAlertTriangle className="w-8 h-8 text-yellow-500" />,
+      title: t('upgrade.trialExpiredTitle'),
+      subtitle: t('upgrade.trialExpiredSubtitle'),
+    },
+    canceled: {
+      icon: <FiLock className="w-8 h-8 text-gray-400" />,
+      title: t('upgrade.canceledTitle'),
+      subtitle: t('upgrade.canceledSubtitle'),
+    },
+    suspended: {
+      icon: <FiLock className="w-8 h-8 text-red-500" />,
+      title: t('upgrade.suspendedTitle'),
+      subtitle: t('upgrade.suspendedSubtitle'),
+      noUpgrade: true,
+    },
+    feature_unavailable: {
+      icon: <FiLock className="w-8 h-8 text-indigo-400" />,
+      title: t('upgrade.featureUnavailableTitle'),
+      subtitle: t('upgrade.featureUnavailableSubtitle'),
+    },
+  }
+
+  const msg = MESSAGES[reason] ?? MESSAGES.trial_expired
 
   const handleUpgrade = async (plan) => {
     setIsUpgrading(plan)
@@ -61,10 +77,10 @@ export default function UpgradeWall() {
       if (data.url) {
         window.location.href = data.url
       } else {
-        setError(data.error || 'Error al iniciar el pago. Intenta de nuevo.')
+        setError(data.error || t('upgrade.checkoutError'))
       }
     } catch {
-      setError('Error de red. Intenta de nuevo.')
+      setError(t('upgrade.networkError'))
     } finally {
       setIsUpgrading(null)
     }
@@ -100,7 +116,7 @@ export default function UpgradeWall() {
             >
               {plan.highlight && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold text-white bg-indigo-600 px-3 py-1 rounded-full">
-                  Más popular
+                  {t('upgrade.mostPopular')}
                 </span>
               )}
               <div className="mb-4">
@@ -129,7 +145,7 @@ export default function UpgradeWall() {
               >
                 {isUpgrading === plan.id
                   ? <Spinner size="sm" />
-                  : <>Continuar con {plan.name} <FiArrowRight className="w-4 h-4" /></>
+                  : <>{t('upgrade.continuePlan', { name: plan.name })} <FiArrowRight className="w-4 h-4" /></>
                 }
               </button>
             </div>
@@ -143,7 +159,7 @@ export default function UpgradeWall() {
           href="mailto:soporte@hittek.mx"
           className="mb-8 flex items-center gap-2 text-indigo-600 hover:underline text-sm font-medium"
         >
-          Contactar soporte →
+          {t('upgrade.contactSupport')}
         </a>
       )}
 
@@ -153,7 +169,7 @@ export default function UpgradeWall() {
         className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
       >
         <FiLogOut className="w-4 h-4" />
-        Cerrar sesión
+        {t('upgrade.logout')}
       </button>
 
       {/* Branding */}

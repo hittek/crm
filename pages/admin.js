@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useAuth } from '../lib/AuthContext'
+import { useI18n } from '../lib/i18n'
 import Icons from '../components/ui/Icons'
 import { Spinner } from '../components/ui/Spinner'
 
@@ -35,6 +36,7 @@ export default function AdminPage() {
   const [planOverride, setPlanOverride] = useState({})
   const [suspendReason, setSuspendReason] = useState({})
   const [toast, setToast] = useState(null)
+  const { t } = useI18n()
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type })
@@ -56,13 +58,13 @@ export default function AdminPage() {
     try {
       const res = await fetch('/api/admin/orgs')
       if (res.status === 403) {
-        setError('No tienes permisos para acceder a esta página.')
+        setError(t('admin.noPermission'))
         return
       }
       const data = await res.json()
       setOrgs(data.orgs ?? [])
     } catch {
-      setError('Error al cargar las organizaciones.')
+      setError(t('admin.loadError'))
     } finally {
       setIsLoading(false)
     }
@@ -78,15 +80,15 @@ export default function AdminPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        showToast(data.error || 'Error', 'error')
+        showToast(data.error || t('errors.generic'), 'error')
         return
       }
       setOrgs((prev) =>
         prev.map((o) => (o.id === orgId ? { ...o, ...data.org } : o))
       )
-      showToast('Actualizado correctamente')
+      showToast(t('admin.updateSuccess'))
     } catch {
-      showToast('Error de red', 'error')
+      showToast(t('errors.networkError'), 'error')
     } finally {
       setActionLoading(null)
     }
@@ -116,7 +118,7 @@ export default function AdminPage() {
   return (
     <>
       <Head>
-        <title>Super Admin | CRM</title>
+        <title>{t('admin.title')} | CRM</title>
       </Head>
 
       <div className="min-h-screen bg-gray-50">
@@ -126,7 +128,7 @@ export default function AdminPage() {
             <button onClick={() => router.push('/contacts')} className="text-gray-400 hover:text-gray-600">
               <Icons.back className="w-5 h-5" />
             </button>
-            <h1 className="text-xl font-bold text-gray-900">Super Admin</h1>
+            <h1 className="text-xl font-bold text-gray-900">{t('admin.title')}</h1>
             <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
               {orgs.length} orgs
             </span>
@@ -150,13 +152,13 @@ export default function AdminPage() {
           <table className="w-full bg-white rounded-2xl shadow-sm border border-gray-200 text-sm">
             <thead>
               <tr className="text-left text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
-                <th className="px-4 py-3 font-medium">Organización</th>
-                <th className="px-4 py-3 font-medium">Plan</th>
-                <th className="px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3 font-medium">Usuarios</th>
-                <th className="px-4 py-3 font-medium">Contactos</th>
-                <th className="px-4 py-3 font-medium">Creada</th>
-                <th className="px-4 py-3 font-medium">Acciones</th>
+                <th className="px-4 py-3 font-medium">{t('admin.organization')}</th>
+                <th className="px-4 py-3 font-medium">{t('admin.plan')}</th>
+                <th className="px-4 py-3 font-medium">{t('admin.status')}</th>
+                <th className="px-4 py-3 font-medium">{t('admin.users')}</th>
+                <th className="px-4 py-3 font-medium">{t('admin.contacts')}</th>
+                <th className="px-4 py-3 font-medium">{t('admin.created')}</th>
+                <th className="px-4 py-3 font-medium">{t('admin.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -211,14 +213,14 @@ export default function AdminPage() {
                         disabled={!!actionLoading}
                         className="text-xs px-2 py-1 bg-indigo-50 text-indigo-700 rounded hover:bg-indigo-100 disabled:opacity-50"
                       >
-                        {actionLoading === `${org.id}-override_plan` ? '...' : 'Aplicar'}
+                        {actionLoading === `${org.id}-override_plan` ? '...' : t('admin.apply')}
                       </button>
 
                       {/* Suspend / unsuspend */}
                       {!org.suspendedAt ? (
                         <button
                           onClick={() => {
-                            const r = window.prompt('Razón de suspensión:') || 'Suspendida por el administrador'
+                            const r = window.prompt(t('admin.suspendReason')) || t('admin.defaultSuspendReason')
                             doAction(org.id, 'suspend', { reason: r })
                           }}
                           disabled={!!actionLoading}
