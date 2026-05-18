@@ -286,7 +286,7 @@ export default function AddressPicker({ value = {}, onChange, className = '' }) 
           <div
             ref={mapRef}
             className="w-full rounded-xl border border-gray-200 overflow-hidden"
-            style={{ height: 260 }}
+            style={{ height: 260, isolation: 'isolate', position: 'relative', zIndex: 0 }}
           />
           <p className="text-xs text-gray-400">{t('contacts.mapHint')}</p>
         </>
