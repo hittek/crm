@@ -56,7 +56,9 @@ export const config = { api: { bodyParser: false }, maxDuration: 60 }
 // ── helpers ─────────────────────────────────────────────────────────────────
 
 async function extractPdf(filePath) {
-  const { default: pdfParse } = await import('pdf-parse')
+  const { createRequire } = await import('module')
+  const require = createRequire(import.meta.url)
+  const pdfParse = require('pdf-parse')
   const data = await pdfParse(fs.readFileSync(filePath))
   return data.text ?? ''
 }
