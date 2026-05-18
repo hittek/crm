@@ -29,7 +29,17 @@ export default async function handler(req, res) {
 
   // ── PATCH — status change ─────────────────────────────────────────────────
   if (req.method === 'PATCH') {
-    const { status, note } = req.body
+    const { status, note, agentActive } = req.body
+
+    // Handle agentActive toggle independently (no status change required)
+    if (agentActive !== undefined && status === undefined) {
+      const updated = await prisma.conversation.update({
+        where: { id: convId },
+        data:  { agentActive: Boolean(agentActive) },
+      })
+      return res.json({ conversation: updated })
+    }
+
     if (!VALID_STATUSES.includes(status)) {
       return res.status(400).json({ error: `Estado inválido. Valores: ${VALID_STATUSES.join(', ')}` })
     }

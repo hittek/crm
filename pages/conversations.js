@@ -210,6 +210,7 @@ function Thread({ conv, onStatusChange, currentUser }) {
   const [replyText, setReplyText]       = useState('')
   const [sending, setSending]           = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [togglingBot, setTogglingBot]   = useState(false)
   const [showForward, setShowForward]   = useState(false)
   const bottomRef = useRef(null)
   const inputRef  = useRef(null)
@@ -286,6 +287,17 @@ function Thread({ conv, onStatusChange, currentUser }) {
     setUpdatingStatus(false)
   }
 
+  async function toggleBot() {
+    setTogglingBot(true)
+    await fetch(`/api/conversations/${conv.id}/status`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ agentActive: !conv.agentActive }),
+    })
+    onStatusChange(conv.id, conv.status, { agentActive: !conv.agentActive })
+    setTogglingBot(false)
+  }
+
   function handleForwarded(toUser) {
     // Refresh events to show forwarded pill
     fetch(`/api/conversations/${conv.id}/messages`)
@@ -331,6 +343,21 @@ function Thread({ conv, onStatusChange, currentUser }) {
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Bot toggle — only relevant for WhatsApp/Telegram channels */}
+          {conv.chatbotId && conv.channel !== 'sandbox' && conv.channel !== 'web' && conv.status !== 'resolved' && (
+            <button
+              onClick={toggleBot}
+              disabled={togglingBot}
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors disabled:opacity-40 ${
+                conv.agentActive
+                  ? 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+              title={conv.agentActive ? 'El bot está silenciado. Clic para reactivarlo.' : 'El bot está activo. Clic para silenciarlo.'}
+            >
+              <span>{conv.agentActive ? '🤖 Reactivar bot' : '🤖 Silenciar bot'}</span>
+            </button>
+          )}
           {canReply && (
             <button
               onClick={() => setShowForward(true)}
@@ -502,10 +529,10 @@ export default function ConversationsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query.id, loading])
 
-  // When an agent resolves / reopens a conv, update it in the list
-  function handleStatusChange(convId, status) {
-    setConvs(prev => prev.map(c => c.id === convId ? { ...c, status } : c))
-    setSelected(prev => prev?.id === convId ? { ...prev, status } : prev)
+  // When an agent resolves / reopens a conv, or toggles the bot
+  function handleStatusChange(convId, status, extra = {}) {
+    setConvs(prev => prev.map(c => c.id === convId ? { ...c, status, ...extra } : c))
+    setSelected(prev => prev?.id === convId ? { ...prev, status, ...extra } : prev)
   }
 
   const totalPages = Math.ceil(total / 30)

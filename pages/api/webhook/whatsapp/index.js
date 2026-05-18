@@ -93,6 +93,21 @@ export default async function handler(req, res) {
 
       const { accessToken } = decryptJSON(config.credentials)
 
+      // Check if a human agent has taken over this conversation
+      const sessionId = `wa-${from}`
+      const activeConv = await prisma.conversation.findFirst({
+        where:  { sessionId, channel: 'whatsapp', status: { in: ['open', 'escalated'] } },
+        select: { id: true, agentActive: true },
+      })
+      if (activeConv?.agentActive) {
+        // Log inbound message to the existing conversation but don't invoke bot
+        await prisma.conversationMessage.create({
+          data: { conversationId: activeConv.id, role: 'user', content: text },
+        }).catch(() => {})
+        console.log(`[webhook/whatsapp] bot silenced (agent active) conv=${activeConv.id} from=${from}`)
+        return
+      }
+
       const { reply, imageAttachments } = await processMessage({
         chatbot:     config.chatbot,
         channel:     'whatsapp',

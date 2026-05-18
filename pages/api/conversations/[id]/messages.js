@@ -114,7 +114,8 @@ export default async function handler(req, res) {
       prisma.conversation.update({
         where: { id: convId },
         data:  {
-          updatedAt: new Date(),
+          updatedAt:   new Date(),
+          agentActive: true,   // silence the bot for future inbound messages
           ...statusUpdate,
           // First reply on unassigned → pick it up
           ...(isUnassigned ? { assignedToId: agentId } : {}),

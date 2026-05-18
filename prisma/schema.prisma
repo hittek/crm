@@ -390,6 +390,7 @@ model Conversation {
   contact      Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
   summary      String?   // AI-generated summary produced when conversation resolves
   metadata     String?   // JSON (IP, user-agent, etc.)
+  agentActive  Boolean   @default(false) // true = human agent took over; bot is silenced
   // Denormalized current assignee — updated on every pickup / forward
   assignedToId Int?
   assignedTo   User?     @relation("ConversationAssignee", fields: [assignedToId], references: [id])
