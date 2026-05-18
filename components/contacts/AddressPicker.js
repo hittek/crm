@@ -10,17 +10,40 @@ import { useI18n } from '../../lib/i18n'
  */
 export default function AddressPicker({ value = {}, onChange, className = '' }) {
   const { t } = useI18n()
-  const [query, setQuery]         = useState(value.address || '')
-  const [results, setResults]     = useState([])
-  const [loading, setLoading]     = useState(false)
-  const [showMap, setShowMap]     = useState(false)
-  const [coords, setCoords]       = useState(
+
+  // Track whether this is the initial mount so we don't override user edits
+  const initialised = useRef(false)
+
+  const [query, setQuery]     = useState(value.address || '')
+  const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [coords, setCoords]   = useState(
     value.lat && value.lng ? { lat: value.lat, lng: value.lng } : null
   )
-  const mapRef      = useRef(null)   // DOM node
-  const leafletMap  = useRef(null)   // Leaflet map instance
-  const markerRef   = useRef(null)   // Leaflet marker instance
-  const debounceRef = useRef(null)
+  // Auto-open map when editing a contact that already has coordinates
+  const [showMap, setShowMap] = useState(!!(value.lat && value.lng))
+
+  const mapRef     = useRef(null)  // DOM node
+  const leafletMap = useRef(null)  // Leaflet map instance
+  const markerRef  = useRef(null)  // Leaflet marker
+  const debounce   = useRef(null)
+  const leafletReady = useRef(!!window?.L) // true if already loaded
+
+  // Sync when value prop changes (e.g. editing contact — data arrives after first render)
+  useEffect(() => {
+    if (initialised.current) return // only sync on prop change, not after user interaction
+    if (value.address && value.address !== query) {
+      setQuery(value.address)
+    }
+    if (value.lat && value.lng) {
+      setCoords({ lat: value.lat, lng: value.lng })
+      setShowMap(true)
+    }
+    if (value.address || value.lat) {
+      initialised.current = true
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value.address, value.lat, value.lng])
 
   // ── Nominatim search ──────────────────────────────────────────────────────
   const search = useCallback(async (q) => {
@@ -40,42 +63,90 @@ export default function AddressPicker({ value = {}, onChange, className = '' }) 
   const handleInput = (e) => {
     const v = e.target.value
     setQuery(v)
-    clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => search(v), 350)
+    clearTimeout(debounce.current)
+    debounce.current = setTimeout(() => search(v), 350)
   }
 
   // ── Select a Nominatim result ─────────────────────────────────────────────
   const selectResult = (r) => {
     const a = r.address || {}
-    const address  = [a.road, a.house_number].filter(Boolean).join(' ')
-    const city     = a.city || a.town || a.village || a.municipality || ''
-    const state    = a.state || a.region || ''
-    const country  = a.country || ''
+    const address    = [a.road, a.house_number].filter(Boolean).join(' ')
+    const city       = a.city || a.town || a.village || a.municipality || ''
+    const state      = a.state || a.region || ''
+    const country    = a.country || ''
     const postalCode = a.postcode || ''
     const lat = parseFloat(r.lat)
     const lng = parseFloat(r.lon)
 
+    initialised.current = true // stop prop sync after user picks
     setQuery(r.display_name)
     setResults([])
     setCoords({ lat, lng })
     onChange?.({ address, city, state, country, postalCode, lat, lng })
 
-    // If map is open, pan to new coords
     if (leafletMap.current) {
       leafletMap.current.setView([lat, lng], 16)
-      markerRef.current?.setLatLng([lat, lng])
+      if (markerRef.current) {
+        markerRef.current.setLatLng([lat, lng])
+      } else {
+        placeMarker(leafletMap.current, lat, lng)
+      }
     }
   }
 
-  // ── Leaflet map init ──────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!showMap || !mapRef.current) return
-    if (leafletMap.current) return // already initialised
+  // ── Reverse geocode helper ────────────────────────────────────────────────
+  const reverseGeocode = useCallback(async (lat, lng) => {
+    try {
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${lat}&lon=${lng}`,
+        { headers: { 'Accept-Language': 'es' } }
+      )
+      const data = await r.json()
+      const a = data.address || {}
+      const address    = [a.road, a.house_number].filter(Boolean).join(' ')
+      const city       = a.city || a.town || a.village || a.municipality || ''
+      const state      = a.state || a.region || ''
+      const country    = a.country || ''
+      const postalCode = a.postcode || ''
+      setQuery(data.display_name || '')
+      setCoords({ lat, lng })
+      onChange?.({ address, city, state, country, postalCode, lat, lng })
+    } catch (e) {
+      setCoords({ lat, lng })
+      onChange?.({ ...value, lat, lng })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onChange])
 
+  // ── Leaflet marker placement ──────────────────────────────────────────────
+  const placeMarker = useCallback((map, lat, lng) => {
     const L = window.L
-    if (!L) { console.error('Leaflet not loaded'); return }
+    if (!L || !map) return
+    const icon = L.divIcon({
+      html: '<div style="font-size:28px;line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))">📍</div>',
+      className: '',
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+    })
+    if (markerRef.current) {
+      markerRef.current.setLatLng([lat, lng])
+    } else {
+      const m = L.marker([lat, lng], { icon, draggable: true }).addTo(map)
+      m.on('dragend', () => {
+        const pos = m.getLatLng()
+        initialised.current = true
+        reverseGeocode(pos.lat, pos.lng)
+      })
+      markerRef.current = m
+    }
+  }, [reverseGeocode])
 
-    const center = coords ? [coords.lat, coords.lng] : [23.6345, -102.5528] // Mexico center
+  // ── Leaflet map init ──────────────────────────────────────────────────────
+  const initMap = useCallback(() => {
+    const L = window.L
+    if (!L || !mapRef.current || leafletMap.current) return
+
+    const center = coords ? [coords.lat, coords.lng] : [23.6345, -102.5528]
     const zoom   = coords ? 16 : 5
 
     const map = L.map(mapRef.current, { zoomControl: true }).setView(center, zoom)
@@ -86,93 +157,53 @@ export default function AddressPicker({ value = {}, onChange, className = '' }) 
       maxZoom: 19,
     }).addTo(map)
 
-    // Custom pin icon using emoji (no image files needed)
-    const icon = L.divIcon({
-      html: '<div style="font-size:28px;line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,0.4))">📍</div>',
-      className: '',
-      iconSize: [28, 28],
-      iconAnchor: [14, 28],
+    if (coords) placeMarker(map, coords.lat, coords.lng)
+
+    map.on('click', (e) => {
+      const { lat, lng } = e.latlng
+      initialised.current = true
+      placeMarker(map, lat, lng)
+      reverseGeocode(lat, lng)
     })
+  }, [coords, placeMarker, reverseGeocode])
 
-    const marker = coords
-      ? L.marker([coords.lat, coords.lng], { icon, draggable: true }).addTo(map)
-      : null
+  // Run initMap when showMap becomes true — handles both first open and re-open
+  useEffect(() => {
+    if (!showMap) return
 
-    if (marker) {
-      markerRef.current = marker
-      marker.on('dragend', async () => {
-        const { lat, lng } = marker.getLatLng()
-        setCoords({ lat, lng })
-        // Reverse geocode
-        try {
-          const r = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${lat}&lon=${lng}`,
-            { headers: { 'Accept-Language': 'es' } }
-          )
-          const data = await r.json()
-          const a = data.address || {}
-          const address  = [a.road, a.house_number].filter(Boolean).join(' ')
-          const city     = a.city || a.town || a.village || a.municipality || ''
-          const state    = a.state || a.region || ''
-          const country  = a.country || ''
-          const postalCode = a.postcode || ''
-          setQuery(data.display_name || '')
-          onChange?.({ address, city, state, country, postalCode, lat, lng })
-        } catch (e) {
-          onChange?.({ ...value, lat, lng })
-        }
-      })
+    // If Leaflet is already available, init immediately
+    if (window.L) {
+      // Small rAF to ensure the DOM node is rendered
+      requestAnimationFrame(initMap)
+      return
     }
 
-    // Click on map to place/move marker
-    map.on('click', async (e) => {
-      const { lat, lng } = e.latlng
-      setCoords({ lat, lng })
-      if (markerRef.current) {
-        markerRef.current.setLatLng([lat, lng])
-      } else {
-        markerRef.current = L.marker([lat, lng], { icon, draggable: true }).addTo(map)
-        markerRef.current.on('dragend', async () => {
-          const pos = markerRef.current.getLatLng()
-          await reverseGeocode(pos.lat, pos.lng)
-        })
-      }
-      // Reverse geocode the clicked point
-      try {
-        const r = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${lat}&lon=${lng}`,
-          { headers: { 'Accept-Language': 'es' } }
-        )
-        const data = await r.json()
-        const a = data.address || {}
-        const address  = [a.road, a.house_number].filter(Boolean).join(' ')
-        const city     = a.city || a.town || a.village || a.municipality || ''
-        const state    = a.state || a.region || ''
-        const country  = a.country || ''
-        const postalCode = a.postcode || ''
-        setQuery(data.display_name || '')
-        onChange?.({ address, city, state, country, postalCode, lat, lng })
-      } catch (e) {
-        onChange?.({ ...value, lat, lng })
-      }
-    })
+    // Otherwise wait for the script onload event
+    const script = document.getElementById('leaflet-js')
+    if (script) {
+      const onLoad = () => requestAnimationFrame(initMap)
+      script.addEventListener('load', onLoad)
+      return () => script.removeEventListener('load', onLoad)
+    }
+  }, [showMap, initMap])
 
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
-      map.remove()
+      leafletMap.current?.remove()
       leafletMap.current = null
       markerRef.current  = null
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showMap])
+  }, [])
 
-  // Sync external coords change into map
+  // Sync external coord updates into map (e.g. prop re-sync)
   useEffect(() => {
     if (!leafletMap.current || !coords) return
     leafletMap.current.setView([coords.lat, coords.lng], 16)
-    markerRef.current?.setLatLng([coords.lat, coords.lng])
-  }, [coords])
+    placeMarker(leafletMap.current, coords.lat, coords.lng)
+  }, [coords, placeMarker])
 
-  const hasCoords = coords?.lat && coords?.lng
+  const hasCoords = !!(coords?.lat && coords?.lng)
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -197,7 +228,13 @@ export default function AddressPicker({ value = {}, onChange, className = '' }) 
           {query && !loading && (
             <button
               type="button"
-              onClick={() => { setQuery(''); setResults([]); setCoords(null); onChange?.({}) }}
+              onClick={() => {
+                initialised.current = true
+                setQuery('')
+                setResults([])
+                setCoords(null)
+                onChange?.({})
+              }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <Icons.close className="w-4 h-4" />
@@ -239,11 +276,10 @@ export default function AddressPicker({ value = {}, onChange, className = '' }) 
         </button>
       </div>
 
-      {/* Leaflet map — lazy-loaded */}
+      {/* Leaflet map */}
       {showMap && (
         <>
-          {/* Load Leaflet CSS + JS from CDN once */}
-          <LeafletLoader />
+          <LeafletLoader onReady={initMap} />
           <div
             ref={mapRef}
             className="w-full rounded-xl border border-gray-200 overflow-hidden"
@@ -256,20 +292,36 @@ export default function AddressPicker({ value = {}, onChange, className = '' }) 
   )
 }
 
-// Load Leaflet CSS+JS from CDN once per page
-function LeafletLoader() {
+// Load Leaflet CSS+JS from CDN once; calls onReady when JS is loaded
+function LeafletLoader({ onReady }) {
   useEffect(() => {
-    if (document.getElementById('leaflet-css')) return
-    const link = document.createElement('link')
-    link.id   = 'leaflet-css'
-    link.rel  = 'stylesheet'
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-    document.head.appendChild(link)
+    // CSS
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link')
+      link.id   = 'leaflet-css'
+      link.rel  = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
+    }
 
-    const script = document.createElement('script')
-    script.id  = 'leaflet-js'
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-    document.head.appendChild(script)
+    // JS — if already loaded, fire onReady immediately
+    if (window.L) {
+      onReady?.()
+      return
+    }
+
+    let script = document.getElementById('leaflet-js')
+    if (!script) {
+      script = document.createElement('script')
+      script.id  = 'leaflet-js'
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+      document.head.appendChild(script)
+    }
+
+    const handler = () => onReady?.()
+    script.addEventListener('load', handler)
+    return () => script.removeEventListener('load', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return null
 }
