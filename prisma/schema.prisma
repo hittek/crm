@@ -380,8 +380,8 @@ model Chatbot {
 
 model Conversation {
   id           Int       @id @default(autoincrement())
-  chatbotId    Int
-  chatbot      Chatbot   @relation(fields: [chatbotId], references: [id])
+  chatbotId    Int?
+  chatbot      Chatbot?  @relation(fields: [chatbotId], references: [id], onDelete: SetNull)
   orgId        Int
   sessionId    String    // client-generated UUID per browser/device session
   channel      String    @default("web") // web | sandbox | whatsapp | facebook
