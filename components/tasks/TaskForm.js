@@ -63,7 +63,7 @@ export default function TaskForm({ isOpen, onClose, onSave, task = null, contact
         const q = contactSearch ? `&search=${encodeURIComponent(contactSearch)}` : ''
         const res = await fetch(`/api/contacts?limit=20${q}`)
         const data = await res.json()
-        setContacts(data.data || [])
+        setContacts(data.contacts || [])
       } catch (e) { console.error('contact search:', e) }
       setLoadingContacts(false)
     }, 250)
