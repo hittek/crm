@@ -1,5 +1,8 @@
 import fs from 'fs'
+import { createRequire } from 'module'
 import { waitUntil } from '@vercel/functions'
+
+const _require = createRequire(import.meta.url)
 import prisma from '../../../../../../lib/prisma'
 import { getSession } from '../../../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse, checkPlanLimit, planLimitResponse } from '../../../../../../lib/planLimits'
@@ -383,7 +386,7 @@ export default async function handler(req, res) {
     const contentType = req.headers['content-type'] ?? ''
 
     if (contentType.includes('multipart/form-data')) {
-      const { IncomingForm } = _require('formidable')
+      const { IncomingForm } = await import('formidable')
       const form = new IncomingForm({ maxFileSize: 20 * 1024 * 1024 })
       await new Promise((resolve, reject) => {
         form.parse(req, (err, f, files) => {
