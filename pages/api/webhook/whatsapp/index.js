@@ -93,7 +93,52 @@ export default async function handler(req, res) {
 
       const { accessToken } = decryptJSON(config.credentials)
 
-      // Check if a human agent has taken over this conversation
+      // ── Agent message sent directly from WhatsApp app ─────────────────────
+      // When the business number sends a message (agent using WA app), Meta
+      // echoes it back as a webhook with msg.from === the business display number.
+      // Detect #agente / #bot commands anywhere in the text (case-insensitive).
+      const isAgentMessage = value?.metadata?.display_phone_number &&
+        from.replace(/\D/g, '').endsWith(value.metadata.display_phone_number.replace(/\D/g, ''))
+
+      if (isAgentMessage) {
+        const lowerText = text.toLowerCase()
+        const takeoverMatch = lowerText.match(/#agente(?:\s+([\d\s+\-()]+))?/)
+        const reactivateMatch = lowerText.match(/#bot(?:\s+([\d\s+\-()]+))?/)
+
+        const command = takeoverMatch ? 'takeover' : reactivateMatch ? 'reactivate' : null
+        if (!command) return  // agent message without command — ignore silently
+
+        // Extract optional customer number from command, e.g. "#agente 521234567890"
+        const rawPhone = (takeoverMatch?.[1] || reactivateMatch?.[1] || '').replace(/\D/g, '')
+        const customerSessionId = rawPhone ? `wa-${rawPhone}` : null
+
+        const convWhere = {
+          orgId:   config.chatbot.orgId,
+          channel: 'whatsapp',
+          status:  { in: ['open', 'escalated'] },
+          ...(customerSessionId ? { sessionId: customerSessionId } : {}),
+          ...(command === 'reactivate' ? { agentActive: true } : {}),
+        }
+
+        const targetConv = await prisma.conversation.findFirst({
+          where:   convWhere,
+          orderBy: { updatedAt: 'desc' },
+          select:  { id: true, sessionId: true },
+        })
+
+        if (targetConv) {
+          await prisma.conversation.update({
+            where: { id: targetConv.id },
+            data:  { agentActive: command === 'takeover' },
+          })
+          console.log(`[webhook/whatsapp] ${command} via WA app — conv=${targetConv.id} session=${targetConv.sessionId}`)
+        } else {
+          console.log(`[webhook/whatsapp] ${command} via WA app — no matching conv found (phone=${rawPhone || 'any'})`)
+        }
+        return
+      }
+
+      // ── Check if a human agent has taken over this conversation ───────────
       const sessionId = `wa-${from}`
       const activeConv = await prisma.conversation.findFirst({
         where:  { sessionId, channel: 'whatsapp', status: { in: ['open', 'escalated'] } },
