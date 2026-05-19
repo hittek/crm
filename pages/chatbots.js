@@ -434,12 +434,18 @@ function ChannelsModal({ bot, onClose }) {
                             />
                           </div>
                           <div>
-                            <label className="text-xs font-medium text-gray-600 block mb-1">Verify Token <span className="text-gray-400 font-normal">(elige uno, lo mismo que en Meta Dashboard)</span></label>
-                            <input
-                              type="text" placeholder="mi_token_secreto"
-                              value={form.verifyToken || ''} onChange={e => setForm(f => ({ ...f, verifyToken: e.target.value }))}
-                              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
-                            />
+                            <label className="text-xs font-medium text-gray-600 block mb-1">Verify Token <span className="text-gray-400 font-normal">(lo mismo que en Meta Dashboard)</span></label>
+                            <div className="flex gap-2">
+                              <input
+                                type="text" placeholder="mi_token_secreto"
+                                value={form.verifyToken || ''} onChange={e => setForm(f => ({ ...f, verifyToken: e.target.value }))}
+                                className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+                              />
+                              <button type="button" onClick={() => setForm(f => ({ ...f, verifyToken: crypto.randomUUID().replace(/-/g, '').slice(0, 24) }))}
+                                className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors whitespace-nowrap">
+                                Generar
+                              </button>
+                            </div>
                           </div>
                           <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
                             <p className="font-medium mb-1">URL del webhook para Meta Dashboard:</p>
@@ -468,11 +474,17 @@ function ChannelsModal({ bot, onClose }) {
                           </div>
                           <div>
                             <label className="text-xs font-medium text-gray-600 block mb-1">Verify Token</label>
-                            <input
-                              type="text" placeholder="mi_token_secreto"
-                              value={form.verifyToken || ''} onChange={e => setForm(f => ({ ...f, verifyToken: e.target.value }))}
-                              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
-                            />
+                            <div className="flex gap-2">
+                              <input
+                                type="text" placeholder="mi_token_secreto"
+                                value={form.verifyToken || ''} onChange={e => setForm(f => ({ ...f, verifyToken: e.target.value }))}
+                                className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+                              />
+                              <button type="button" onClick={() => setForm(f => ({ ...f, verifyToken: crypto.randomUUID().replace(/-/g, '').slice(0, 24) }))}
+                                className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors whitespace-nowrap">
+                                Generar
+                              </button>
+                            </div>
                           </div>
                           <div>
                             <label className="text-xs font-medium text-gray-600 block mb-1">App Secret <span className="text-gray-400 font-normal">(para validar firmas, opcional)</span></label>
