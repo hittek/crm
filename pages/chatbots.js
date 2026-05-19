@@ -441,6 +441,11 @@ function ChannelsModal({ bot, onClose }) {
                                 value={form.verifyToken || ''} onChange={e => setForm(f => ({ ...f, verifyToken: e.target.value }))}
                                 className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
                               />
+                              <button type="button" onClick={() => { navigator.clipboard.writeText(form.verifyToken || ''); setCopied('verifyToken-wa'); setTimeout(() => setCopied(false), 2000) }}
+                                disabled={!form.verifyToken}
+                                className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors whitespace-nowrap disabled:opacity-40">
+                                {copied === 'verifyToken-wa' ? '✓ Copiado' : 'Copiar'}
+                              </button>
                               <button type="button" onClick={() => setForm(f => ({ ...f, verifyToken: crypto.randomUUID().replace(/-/g, '').slice(0, 24) }))}
                                 className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors whitespace-nowrap">
                                 Generar
@@ -480,6 +485,11 @@ function ChannelsModal({ bot, onClose }) {
                                 value={form.verifyToken || ''} onChange={e => setForm(f => ({ ...f, verifyToken: e.target.value }))}
                                 className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
                               />
+                              <button type="button" onClick={() => { navigator.clipboard.writeText(form.verifyToken || ''); setCopied('verifyToken-fb'); setTimeout(() => setCopied(false), 2000) }}
+                                disabled={!form.verifyToken}
+                                className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors whitespace-nowrap disabled:opacity-40">
+                                {copied === 'verifyToken-fb' ? '✓ Copiado' : 'Copiar'}
+                              </button>
                               <button type="button" onClick={() => setForm(f => ({ ...f, verifyToken: crypto.randomUUID().replace(/-/g, '').slice(0, 24) }))}
                                 className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors whitespace-nowrap">
                                 Generar
