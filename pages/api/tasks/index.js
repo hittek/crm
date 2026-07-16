@@ -3,6 +3,7 @@ import { createHandler, success, created, parseFilters } from '../../../lib/api'
 import { logAudit, AuditActions, AuditEntities } from '../../../lib/audit'
 import { getSession } from '../../../lib/auth'
 import { notifications } from '../../../lib/notifications'
+import { checkPlanLimit, planLimitResponse, checkOrgAccess, orgAccessResponse } from '../../../lib/planLimits'
 
 const methods = {
   GET: async (req, res) => {
@@ -50,6 +51,15 @@ const methods = {
     if (filters.priority) where.priority = filters.priority
     if (filters.status) where.status = filters.status
 
+    // Calendar range query: ?from=ISO&to=ISO overrides named filters
+    if (req.query.from || req.query.to) {
+      where.dueDate = {
+        ...(req.query.from ? { gte: new Date(req.query.from) } : {}),
+        ...(req.query.to   ? { lte: new Date(req.query.to)   } : {}),
+      }
+      delete where.status  // show all statuses in calendar view
+    }
+
     // Visibility filtering based on user role
     // If userId provided and showAll is not true, filter by visibility
     if (userId && showAll !== 'true') {
@@ -71,7 +81,7 @@ const methods = {
         take: limit,
         include: {
           contact: {
-            select: { id: true, firstName: true, lastName: true }
+            select: { id: true, firstName: true, lastName: true, address: true, city: true, state: true, country: true, postalCode: true, lat: true, lng: true }
           },
           deal: {
             select: { id: true, title: true }
@@ -112,6 +122,13 @@ const methods = {
     if (!organizationId) {
       return res.status(401).json({ error: 'No autenticado' })
     }
+
+    // Enforce plan limit
+    const accessCheck = await checkOrgAccess(prisma, organizationId)
+    if (accessCheck.blocked) return orgAccessResponse(res, accessCheck)
+
+    const limitCheck = await checkPlanLimit(prisma, organizationId, 'tasks')
+    if (!limitCheck.allowed) return planLimitResponse(res, { ...limitCheck, entity: 'tareas' })
     
     const { assignedToId, ownerId, visibility, ...rest } = req.body
     
@@ -127,7 +144,7 @@ const methods = {
       },
       include: {
         contact: {
-          select: { id: true, firstName: true, lastName: true }
+          select: { id: true, firstName: true, lastName: true, address: true, city: true, state: true, country: true, postalCode: true, lat: true, lng: true }
         },
         deal: {
           select: { id: true, title: true }

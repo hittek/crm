@@ -9,8 +9,10 @@ import { DealsEmptyState } from '../ui/EmptyState'
 import DealDrawer from './DealDrawer'
 import { formatCurrency, formatSmartDate } from '../../lib/utils'
 import { useDealStages, useOrganization } from '../../lib/SettingsContext'
+import { useI18n } from '../../lib/i18n'
 
 export default function Pipeline({ onNewDeal }) {
+  const { t } = useI18n()
   const router = useRouter()
   const dealStages = useDealStages()
   const organization = useOrganization()
@@ -139,7 +141,7 @@ export default function Pipeline({ onNewDeal }) {
       {/* Mobile Header */}
       <div className="px-4 py-3 bg-white border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-gray-900">Pipeline</h1>
+          <h1 className="text-xl font-bold text-gray-900">{t('nav.pipeline')}</h1>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setMobileViewMode('board')}
@@ -171,7 +173,7 @@ export default function Pipeline({ onNewDeal }) {
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            Todos ({deals.length})
+            {t('common.all')} ({deals.length})
           </button>
           {dealStages.map((stage) => {
             const count = getStageDeals(stage.id).length
@@ -197,7 +199,7 @@ export default function Pipeline({ onNewDeal }) {
         {getFilteredDeals().length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center px-4">
             <Icons.deals className="w-12 h-12 text-gray-300 mb-3" />
-            <p className="text-gray-500">No hay oportunidades en esta etapa</p>
+            <p className="text-gray-500">{t('deals.title')} — {t('common.noResults')}</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -264,7 +266,7 @@ export default function Pipeline({ onNewDeal }) {
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Mobile board header */}
             <div className="px-4 py-3 bg-white border-b border-gray-200 flex items-center justify-between">
-              <h1 className="text-xl font-bold text-gray-900">Pipeline</h1>
+              <h1 className="text-xl font-bold text-gray-900">{t('nav.pipeline')}</h1>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setMobileViewMode('board')}
@@ -435,7 +437,7 @@ export default function Pipeline({ onNewDeal }) {
                     className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center gap-1"
                   >
                     <Icons.add className="w-4 h-4" />
-                    Agregar
+                    {t('common.add')}
                   </button>
                 </div>
               </div>

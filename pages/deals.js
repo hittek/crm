@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Pipeline from '../components/deals/Pipeline'
 import DealForm from '../components/deals/DealForm'
+import { useI18n } from '../lib/i18n'
 
 export default function DealsPage() {
+  const { t } = useI18n()
+  const router = useRouter()
   const [showForm, setShowForm] = useState(false)
   const [editingDeal, setEditingDeal] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -21,6 +25,14 @@ export default function DealsPage() {
     setShowForm(true)
   }, [])
 
+  // Auto-open form when navigated here via quick-add (?new=deal)
+  useEffect(() => {
+    if (router.query.new === 'deal') {
+      handleNewDeal()
+      router.replace({ pathname: '/deals' }, undefined, { shallow: true })
+    }
+  }, [router.query.new, handleNewDeal, router])
+
   // Listen for global add deal event
   useEffect(() => {
     const handleAddDeal = () => handleNewDeal()
@@ -31,7 +43,7 @@ export default function DealsPage() {
   return (
     <>
       <Head>
-        <title>Pipeline | CRM</title>
+        <title>{t('nav.pipeline')} | CRM</title>
       </Head>
 
       <div className="flex h-full">

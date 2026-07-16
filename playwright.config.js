@@ -12,6 +12,10 @@ module.exports = defineConfig({
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Signal to the app that this is a test run:
+    // - SSE stream returns immediately (no persistent DB polling per tab)
+    // - Semantic AI escalation fallback is skipped (save tokens + speed)
+    extraHTTPHeaders: { 'x-playwright-test': '1' },
   },
   projects: [
     {

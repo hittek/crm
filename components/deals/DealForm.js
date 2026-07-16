@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { Modal } from '../ui/Modal'
 import Icons from '../ui/Icons'
 import { useDealStages } from '../../lib/SettingsContext'
+import { useI18n } from '../../lib/i18n'
 
 export default function DealForm({ isOpen, onClose, onSave, deal = null, contacts = [] }) {
+  const { t } = useI18n()
   const dealStages = useDealStages()
   const [formData, setFormData] = useState({
     title: deal?.title || '',
@@ -25,10 +27,10 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
   const validate = () => {
     const newErrors = {}
     if (!formData.title.trim()) {
-      newErrors.title = 'El título es requerido'
+      newErrors.title = t('deals.dealName') + ' ' + t('common.required').toLowerCase()
     }
     if (formData.value && isNaN(parseFloat(formData.value))) {
-      newErrors.value = 'Valor inválido'
+      newErrors.value = t('dealsExt.invalidValue')
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -64,7 +66,7 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
       onClose()
     } catch (error) {
       console.error('Error saving deal:', error)
-      setErrors({ submit: 'Error al guardar la oportunidad' })
+      setErrors({ submit: t('errors.generic') })
     }
     setIsSubmitting(false)
   }
@@ -105,7 +107,7 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={deal ? 'Editar oportunidad' : 'Nueva oportunidad'}
+      title={deal ? t('deals.editDeal') : t('deals.newDeal')}
       size="lg"
     >
       <form onSubmit={handleSubmit}>
@@ -113,7 +115,7 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Título <span className="text-red-500">*</span>
+              {t('deals.dealName')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -132,7 +134,7 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Valor
+                {t('deals.value')}
               </label>
               <input
                 type="number"
@@ -167,7 +169,7 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Etapa
+                {t('deals.stage')}
               </label>
               <select
                 value={formData.stage}
@@ -181,7 +183,7 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Probabilidad: {formData.probability}%
+                {t('deals.probability')}: {formData.probability}%
               </label>
               <input
                 type="range"
@@ -198,7 +200,7 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha de cierre esperada
+                {t('deals.expectedClose')}
               </label>
               <input
                 type="date"
@@ -209,16 +211,16 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prioridad
+                {t('deals.priority')}
               </label>
               <select
                 value={formData.priority}
                 onChange={(e) => handleChange('priority', e.target.value)}
                 className="input"
               >
-                <option value="low">Baja</option>
-                <option value="medium">Media</option>
-                <option value="high">Alta</option>
+                <option value="low">{t('deals.priorities.low')}</option>
+                <option value="medium">{t('deals.priorities.medium')}</option>
+                <option value="high">{t('deals.priorities.high')}</option>
               </select>
             </div>
           </div>
@@ -273,7 +275,7 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Descripción
+              {t('deals.description')}
             </label>
             <textarea
               value={formData.description}
@@ -295,10 +297,10 @@ export default function DealForm({ isOpen, onClose, onSave, deal = null, contact
         {/* Actions */}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
           <button type="button" onClick={onClose} className="btn-secondary">
-            Cancelar
+            {t('common.cancel')}
           </button>
           <button type="submit" disabled={isSubmitting} className="btn-primary">
-            {isSubmitting ? 'Guardando...' : deal ? 'Guardar cambios' : 'Crear oportunidad'}
+            {isSubmitting ? t('common.saving') : deal ? t('dealsExt.saveChanges') : t('deals.newDeal')}
           </button>
         </div>
       </form>

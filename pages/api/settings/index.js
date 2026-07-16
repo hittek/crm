@@ -32,9 +32,17 @@ const DEFAULT_SETTINGS = {
     { id: 'medium', label: 'Media', color: 'yellow' },
     { id: 'high', label: 'Alta', color: 'red' },
   ],
+  taskTypes: [
+    { id: 'task',    label: 'Tarea',    emoji: '✅', color: 'gray',   requiresContact: false, showMapsLink: false, builtIn: true },
+    { id: 'call',    label: 'Llamada',  emoji: '📞', color: 'blue',   requiresContact: false, showMapsLink: false, builtIn: true },
+    { id: 'email',   label: 'Correo',   emoji: '✉️', color: 'cyan',   requiresContact: false, showMapsLink: false, builtIn: true },
+    { id: 'meeting', label: 'Reunión',  emoji: '📅', color: 'purple', requiresContact: false, showMapsLink: false, builtIn: true },
+  ],
   notifications: {
     emailEnabled: true,
     taskReminders: true,
+    newContacts: true,
+    dealsWon: true,
     dealUpdates: true,
     dailyDigest: false,
   },
@@ -76,9 +84,11 @@ async function getSettings(req, res, organizationId) {
         logo: true,
         favicon: true,
         primaryColor: true,
+        secondaryColor: true,
         timezone: true,
         currency: true,
         locale: true,
+        customDomain: true,
         orgSettings: true,
       }
     })
@@ -107,15 +117,18 @@ async function getSettings(req, res, organizationId) {
       logo: organization.logo,
       favicon: organization.favicon,
       primaryColor: organization.primaryColor,
+      secondaryColor: organization.secondaryColor,
       timezone: organization.timezone,
       currency: organization.currency,
       locale: organization.locale,
+      customDomain: organization.customDomain ?? '',
     }
     
     // Override with custom settings from orgSettings JSON
     if (orgSettings.dealStages) settings.dealStages = orgSettings.dealStages
     if (orgSettings.contactStatuses) settings.contactStatuses = orgSettings.contactStatuses
     if (orgSettings.taskPriorities) settings.taskPriorities = orgSettings.taskPriorities
+    if (orgSettings.taskTypes) settings.taskTypes = orgSettings.taskTypes
     if (orgSettings.notifications) settings.notifications = orgSettings.notifications
 
     return res.status(200).json(settings)
@@ -154,20 +167,23 @@ async function updateSettings(req, res, currentUser, organizationId) {
 
     // Handle organization-level settings (stored in Organization columns)
     if (updates.organization) {
-      const { name, logo, favicon, primaryColor, timezone, currency, locale } = updates.organization
+      const { name, logo, favicon, primaryColor, secondaryColor, timezone, currency, locale, customDomain } = updates.organization
       if (name !== undefined) orgUpdate.name = name
       if (logo !== undefined) orgUpdate.logo = logo
       if (favicon !== undefined) orgUpdate.favicon = favicon
       if (primaryColor !== undefined) orgUpdate.primaryColor = primaryColor
+      if (secondaryColor !== undefined) orgUpdate.secondaryColor = secondaryColor
       if (timezone !== undefined) orgUpdate.timezone = timezone
       if (currency !== undefined) orgUpdate.currency = currency
       if (locale !== undefined) orgUpdate.locale = locale
+      if (customDomain !== undefined) orgUpdate.customDomain = customDomain || null
     }
 
     // Handle custom settings (stored in orgSettings JSON)
     if (updates.dealStages) orgSettings.dealStages = updates.dealStages
     if (updates.contactStatuses) orgSettings.contactStatuses = updates.contactStatuses
     if (updates.taskPriorities) orgSettings.taskPriorities = updates.taskPriorities
+    if (updates.taskTypes) orgSettings.taskTypes = updates.taskTypes
     if (updates.notifications) orgSettings.notifications = updates.notifications
 
     // Update organization with both column updates and orgSettings JSON

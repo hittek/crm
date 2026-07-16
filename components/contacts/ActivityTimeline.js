@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Icons from '../ui/Icons'
 import { formatRelative, ACTIVITY_TYPES } from '../../lib/utils'
+import { useI18n } from '../../lib/i18n'
 
 const activityIcons = {
   email: Icons.mail,
@@ -21,6 +22,7 @@ const activityColors = {
 }
 
 export default function ActivityTimeline({ contactId, dealId, activities = [], onActivityAdded }) {
+  const { t } = useI18n()
   const [isAdding, setIsAdding] = useState(false)
   const [newActivity, setNewActivity] = useState({
     type: 'note',
@@ -104,7 +106,7 @@ export default function ActivityTimeline({ contactId, dealId, activities = [], o
             type="text"
             value={newActivity.subject}
             onChange={(e) => setNewActivity({ ...newActivity, subject: e.target.value })}
-            placeholder="Asunto (ej: Llamada de seguimiento)"
+            placeholder={t('contacts.notes')}
             className="input mb-2"
             autoFocus
           />
@@ -112,7 +114,7 @@ export default function ActivityTimeline({ contactId, dealId, activities = [], o
           <textarea
             value={newActivity.content}
             onChange={(e) => setNewActivity({ ...newActivity, content: e.target.value })}
-            placeholder="Notas adicionales..."
+            placeholder={t('contacts.notes')}
             className="input resize-none mb-3"
             rows={3}
           />
@@ -125,7 +127,7 @@ export default function ActivityTimeline({ contactId, dealId, activities = [], o
                 onChange={(e) => setNewActivity({ ...newActivity, createFollowUp: e.target.checked })}
                 className="rounded border-gray-300"
               />
-              Crear tarea de seguimiento
+              {t('tasks.newTask')}
             </label>
             
             <div className="flex gap-2">
@@ -134,14 +136,14 @@ export default function ActivityTimeline({ contactId, dealId, activities = [], o
                 onClick={() => setIsAdding(false)}
                 className="btn-ghost btn-sm"
               >
-                Cancelar
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || !newActivity.subject.trim()}
                 className="btn-primary btn-sm"
               >
-                {isSubmitting ? 'Guardando...' : 'Guardar'}
+                {isSubmitting ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -152,8 +154,8 @@ export default function ActivityTimeline({ contactId, dealId, activities = [], o
       {activities.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <Icons.activity className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <p>No hay actividad registrada</p>
-          <p className="text-sm mt-1">Registra una llamada, email o nota para comenzar</p>
+          <p>{t('contacts.noContacts')}</p>
+          <p className="text-sm mt-1">{t('contacts.addFirstContact')}</p>
         </div>
       ) : (
         <div className="space-y-4">

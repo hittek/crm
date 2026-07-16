@@ -16,6 +16,7 @@ const NOTIFICATION_CONFIG = {
   deal_lost: { icon: Icons.close, color: 'text-red-500', bg: 'bg-red-100' },
   deal_stage_changed: { icon: Icons.deals, color: 'text-purple-500', bg: 'bg-purple-100' },
   deal_assigned: { icon: Icons.deals, color: 'text-purple-500', bg: 'bg-purple-100' },
+  chat_escalated: { icon: Icons.alert, color: 'text-red-500', bg: 'bg-red-100' },
   mention: { icon: Icons.mail, color: 'text-blue-500', bg: 'bg-blue-100' },
   system: { icon: Icons.alert, color: 'text-gray-500', bg: 'bg-gray-100' },
 }
@@ -29,29 +30,96 @@ export default function NotificationBell() {
   const [isLoading, setIsLoading] = useState(false)
   const dropdownRef = useRef(null)
   const buttonRef = useRef(null)
+  const seenIdsRef = useRef(new Set())
 
-  // Fetch notifications
+  // Request browser notification permission once on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  // Fire a browser (OS-level) notification for a CRM notification object
+  function fireBrowserNotif(notif) {
+    if (typeof window === 'undefined') return
+    if (!('Notification' in window)) return
+    if (Notification.permission !== 'granted') return
+    try {
+      const n = new Notification(notif.title, {
+        body:     notif.message || '',
+        icon:     '/favicon.ico',
+        tag:      `crm-notif-${notif.id}`,
+        renotify: false,
+      })
+      if (notif.link) n.onclick = () => { window.focus(); router.push(notif.link); n.close() }
+    } catch (_) {}
+  }
+
+  // Initial load: fetch existing notifications + unread count via REST
   const fetchNotifications = useCallback(async () => {
     try {
       const res = await fetch('/api/notifications?limit=10')
       if (res.ok) {
         const data = await res.json()
-        setNotifications(data.data || [])
+        const notifs = data.data || []
+        notifs.forEach(n => seenIdsRef.current.add(n.id))
+        setNotifications(notifs)
         setUnreadCount(data.unreadCount || 0)
       }
-    } catch (error) {
-      console.error('Error fetching notifications:', error)
+    } catch (err) {
+      console.error('Error fetching notifications:', err)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Initial fetch and polling
+  // Poll only the lightweight /count endpoint every 60s.
+  // Full notification list is only fetched on mount and when the dropdown opens.
   useEffect(() => {
-    fetchNotifications()
-    
-    // Poll every 30 seconds for new notifications
-    const interval = setInterval(fetchNotifications, 30000)
-    return () => clearInterval(interval)
-  }, [fetchNotifications])
+    fetchNotifications() // full fetch on mount
+
+    let intervalId = null
+
+    const pollCount = async () => {
+      if (document.visibilityState === 'hidden') return
+      try {
+        const res = await fetch('/api/notifications/count')
+        if (!res.ok) return
+        const { unreadCount: newCount } = await res.json()
+        // If unread count grew, do a full fetch to surface new notifications
+        setUnreadCount(prev => {
+          if (newCount > prev) fetchNotifications()
+          return newCount
+        })
+      } catch (_) {}
+    }
+
+    const startPolling = () => {
+      if (intervalId) return
+      intervalId = setInterval(pollCount, 60_000)
+    }
+
+    const stopPolling = () => {
+      if (intervalId) { clearInterval(intervalId); intervalId = null }
+    }
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications()
+        startPolling()
+      } else {
+        stopPolling()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility)
+    startPolling()
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      stopPolling()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Close dropdown when clicking outside
   useEffect(() => {

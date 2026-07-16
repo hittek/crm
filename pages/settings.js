@@ -4,6 +4,9 @@ import Head from 'next/head'
 import Icons from '../components/ui/Icons'
 import { Spinner } from '../components/ui/Spinner'
 import { useAuth } from '../lib/AuthContext'
+import { useModalClose } from '../components/ui/Modal'
+import { FiCheck, FiArrowRight } from 'react-icons/fi'
+import { useI18n } from '../lib/i18n'
 
 const COLOR_MAP = {
   gray: '#6B7280',
@@ -55,16 +58,34 @@ const DATE_FORMATS = [
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { t } = useI18n()
   const [activeTab, setActiveTab] = useState('general')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState(null)
+
+  // Billing tab state
+  const [billing, setBilling] = useState(null)
+  const [isBillingLoading, setIsBillingLoading] = useState(false)
+  const [isUpgrading, setIsUpgrading] = useState(null)
+  const [billingMessage, setBillingMessage] = useState(null)
+  const [invoices, setInvoices] = useState(null)
+  const [isInvoicesLoading, setIsInvoicesLoading] = useState(false)
+  const [isPortalLoading, setIsPortalLoading] = useState(false)
   
   // Sync activeTab with URL query parameter
   useEffect(() => {
-    const { tab } = router.query
+    const { tab, success, canceled } = router.query
     if (tab && typeof tab === 'string') {
       setActiveTab(tab)
+    }
+    if (success) {
+      setBillingMessage({ type: 'success', text: t('billing.subscriptionActivated') })
+      router.replace({ pathname: '/settings', query: { tab: 'billing' } }, undefined, { shallow: true })
+    }
+    if (canceled) {
+      setBillingMessage({ type: 'info', text: t('billing.paymentCanceled') })
+      router.replace({ pathname: '/settings', query: { tab: 'billing' } }, undefined, { shallow: true })
     }
   }, [router.query])
 
@@ -79,13 +100,25 @@ export default function SettingsPage() {
     name: 'Mi CRM',
     logo: null,
     primaryColor: '#4F46E5',
+    secondaryColor: '#7c3aed',
     timezone: 'America/Mexico_City',
     currency: 'MXN',
     dateFormat: 'dd/MM/yyyy',
+    customDomain: '',
   })
+  const [logoUploading, setLogoUploading] = useState(false)
   
   const [dealStages, setDealStages] = useState([])
   const [contactStatuses, setContactStatuses] = useState([])
+  const [taskTypes, setTaskTypes] = useState([])
+  const [notifications, setNotifications] = useState({
+    taskReminders: true,
+    newContacts: true,
+    dealsWon: true,
+    emailEnabled: true,
+    dealUpdates: true,
+    dailyDigest: false,
+  })
   
   // User management state
   const [users, setUsers] = useState([])
@@ -107,16 +140,19 @@ export default function SettingsPage() {
   // Redirect non-admin users away from settings page
   useEffect(() => {
     if (!authLoading && !isAdmin) {
-      router.push('/')
+      router.push('/contacts')
     }
   }, [authLoading, isAdmin, router])
 
   const tabs = [
-    { id: 'general', label: 'General', icon: Icons.settings },
-    { id: 'users', label: 'Usuarios', icon: Icons.contacts, adminOnly: true },
-    { id: 'pipeline', label: 'Pipeline', icon: Icons.trending },
-    { id: 'contacts', label: 'Contactos', icon: Icons.contacts },
-    { id: 'integrations', label: 'Integraciones', icon: Icons.link },
+    { id: 'general', label: t('settings.general'), icon: Icons.settings },
+    { id: 'users', label: t('settings.users'), icon: Icons.contacts, adminOnly: true },
+    { id: 'pipeline', label: t('settings.pipeline'), icon: Icons.trending },
+    { id: 'contacts', label: t('settings.contacts'), icon: Icons.contacts },
+    { id: 'tasks', label: t('settings.tasks'), icon: Icons.tasks },
+    { id: 'notifications', label: t('settings.notifications'), icon: Icons.bell },
+    { id: 'integrations', label: t('settings.integrations'), icon: Icons.link },
+    { id: 'billing', label: t('billing.plan'), icon: Icons.creditCard, adminOnly: true },
   ].filter(tab => !tab.adminOnly || isAdmin)
 
   // Fetch settings
@@ -129,6 +165,7 @@ export default function SettingsPage() {
         if (data.organization) setOrganization(data.organization)
         if (data.dealStages) setDealStages(data.dealStages)
         if (data.contactStatuses) setContactStatuses(data.contactStatuses)
+        if (data.taskTypes) setTaskTypes(data.taskTypes)
         if (data.notifications) setNotifications(data.notifications)
       } catch (error) {
         console.error('Error fetching settings:', error)
@@ -141,7 +178,7 @@ export default function SettingsPage() {
   // Save settings
   const saveSettings = useCallback(async (key, value) => {
     if (!isAdmin) {
-      setSaveMessage({ type: 'error', text: 'No tienes permisos para cambiar configuración' })
+      setSaveMessage({ type: 'error', text: t('errors.unauthorized') })
       return
     }
     
@@ -156,13 +193,13 @@ export default function SettingsPage() {
       })
       
       if (res.ok) {
-        setSaveMessage({ type: 'success', text: 'Cambios guardados' })
+        setSaveMessage({ type: 'success', text: t('settings.changesSaved') })
         setTimeout(() => setSaveMessage(null), 3000)
       } else {
         throw new Error('Error saving')
       }
     } catch (error) {
-      setSaveMessage({ type: 'error', text: 'Error al guardar' })
+      setSaveMessage({ type: 'error', text: t('common.error') })
     }
     setIsSaving(false)
   }, [isAdmin])
@@ -186,6 +223,70 @@ export default function SettingsPage() {
       fetchUsers()
     }
   }, [activeTab, fetchUsers])
+
+  // Load billing when switching to billing tab
+  useEffect(() => {
+    if (activeTab === 'billing' && !billing) {
+      setIsBillingLoading(true)
+      fetch('/api/billing/status')
+        .then((r) => r.json())
+        .then((d) => { setBilling(d); setIsBillingLoading(false) })
+        .catch(() => setIsBillingLoading(false))
+    }
+  }, [activeTab, billing])
+
+  // Load invoices alongside billing status
+  useEffect(() => {
+    if (activeTab === 'billing' && invoices === null) {
+      setIsInvoicesLoading(true)
+      fetch('/api/billing/invoices')
+        .then((r) => r.json())
+        .then((d) => { setInvoices(d.invoices ?? []); setIsInvoicesLoading(false) })
+        .catch(() => { setInvoices([]); setIsInvoicesLoading(false) })
+    }
+  }, [activeTab, invoices])
+
+  // Open Stripe Customer Portal
+  const handlePortal = async () => {
+    setIsPortalLoading(true)
+    setBillingMessage(null)
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setBillingMessage({ type: 'error', text: data.error || t('billing.portalError') })
+      }
+    } catch {
+      setBillingMessage({ type: 'error', text: t('errors.networkError') })
+    } finally {
+      setIsPortalLoading(false)
+    }
+  }
+
+  // Handle plan upgrade from settings
+  const handleUpgrade = async (plan) => {
+    setIsUpgrading(plan)
+    setBillingMessage(null)
+    try {
+      const res = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setBillingMessage({ type: 'error', text: data.error || t('billing.checkoutError') })
+      }
+    } catch {
+      setBillingMessage({ type: 'error', text: t('errors.networkError') })
+    } finally {
+      setIsUpgrading(null)
+    }
+  }
 
   // User management handlers
   const openUserModal = (user = null) => {
@@ -216,22 +317,23 @@ export default function SettingsPage() {
     setEditingUser(null)
     setUserForm({ name: '', email: '', password: '', role: 'user', isActive: true })
   }
+  useModalClose(() => { if (showUserModal) closeUserModal() })
 
   const saveUser = async () => {
     if (!userForm.name || !userForm.email) {
-      setSaveMessage({ type: 'error', text: 'Nombre y email son requeridos' })
+      setSaveMessage({ type: 'error', text: t('users.nameEmailRequired') })
       return
     }
 
     // Require password for new users
     if (!editingUser && !userForm.password) {
-      setSaveMessage({ type: 'error', text: 'La contraseña es requerida para nuevos usuarios' })
+      setSaveMessage({ type: 'error', text: t('users.passwordRequired') })
       return
     }
 
     // Password minimum length
     if (userForm.password && userForm.password.length < 6) {
-      setSaveMessage({ type: 'error', text: 'La contraseña debe tener al menos 6 caracteres' })
+      setSaveMessage({ type: 'error', text: t('users.passwordTooShort') })
       return
     }
 
@@ -253,36 +355,36 @@ export default function SettingsPage() {
       })
 
       if (res.ok) {
-        setSaveMessage({ type: 'success', text: editingUser ? 'Usuario actualizado' : 'Usuario creado' })
+        setSaveMessage({ type: 'success', text: editingUser ? t('users.updated') : t('users.created') })
         closeUserModal()
         fetchUsers()
         setTimeout(() => setSaveMessage(null), 3000)
       } else {
         const error = await res.json()
-        setSaveMessage({ type: 'error', text: error.error || 'Error al guardar usuario' })
+        setSaveMessage({ type: 'error', text: error.error || t('users.saveError') })
       }
     } catch (error) {
-      setSaveMessage({ type: 'error', text: 'Error al guardar usuario' })
+      setSaveMessage({ type: 'error', text: t('users.saveError') })
     }
     setIsSaving(false)
   }
 
   const deleteUser = async (user) => {
-    if (!confirm(`¿Estás seguro de desactivar a ${user.name}?`)) return
+    if (!confirm(t('users.confirmDeactivate', { name: user.name }))) return
 
     try {
       const res = await fetch(`/api/users/${user.id}`, { method: 'DELETE' })
       const data = await res.json()
       if (res.ok) {
-        setSaveMessage({ type: 'success', text: 'Usuario desactivado' })
+        setSaveMessage({ type: 'success', text: t('users.deactivated') })
         fetchUsers()
         setTimeout(() => setSaveMessage(null), 3000)
       } else {
-        setSaveMessage({ type: 'error', text: data.error || 'Error al desactivar usuario' })
+        setSaveMessage({ type: 'error', text: data.error || t('users.deactivateError') })
         setTimeout(() => setSaveMessage(null), 5000)
       }
     } catch (error) {
-      setSaveMessage({ type: 'error', text: 'Error al desactivar usuario' })
+      setSaveMessage({ type: 'error', text: t('users.deactivateError') })
     }
   }
 
@@ -343,6 +445,20 @@ export default function SettingsPage() {
     setContactStatuses(contactStatuses.filter((_, i) => i !== index))
   }
 
+  // Task types handlers
+  const TASK_TYPE_EMOJIS = ['✅','📞','✉️','📅','🔧','🏠','📦','🚗','💡','🔑','📋','🛠️','🏭','🎯','📍']
+  const addTaskType = () => {
+    const newId = `custom_${Date.now()}`
+    setTaskTypes(prev => [...prev, { id: newId, label: 'Nuevo tipo', emoji: '🔧', color: 'gray', requiresContact: false, showMapsLink: false, builtIn: false }])
+  }
+  const updateTaskType = (index, field, value) => {
+    setTaskTypes(prev => { const u = [...prev]; u[index] = { ...u[index], [field]: value }; return u })
+  }
+  const removeTaskType = (index) => {
+    if (taskTypes[index]?.builtIn) return // never delete built-in types
+    setTaskTypes(prev => prev.filter((_, i) => i !== index))
+  }
+
   // Show loading while checking auth or redirecting non-admin users
   if (authLoading || !isAdmin || isLoading) {
     return (
@@ -355,13 +471,13 @@ export default function SettingsPage() {
   return (
     <>
       <Head>
-        <title>Configuración | CRM</title>
+        <title>{t('nav.settings')} | CRM</title>
       </Head>
 
-      <div className="flex flex-col lg:flex-row h-full">
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0">
         {/* Settings Sidebar */}
         <div className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-gray-200 bg-gray-50 p-4">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 hidden lg:block">Configuración</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 hidden lg:block">{t('settings.title')}</h2>
           <nav className="flex lg:flex-col gap-1 lg:gap-0 lg:space-y-1 overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => (
               <button
@@ -396,7 +512,7 @@ export default function SettingsPage() {
           {/* General Settings */}
           {activeTab === 'general' && (
             <div className="max-w-2xl">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">Configuración general</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">{t('settings.generalSettings')}</h3>
               
               {/* Logo Upload */}
               <div className="card mb-6">
@@ -416,36 +532,48 @@ export default function SettingsPage() {
                     </div>
                     <div className="flex-1">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Logo de la organización
+                        {t('settingsExt.orgLogo')}
                       </label>
                       <p className="text-sm text-gray-500 mb-3">
-                        Sube el logo de tu empresa. Recomendado: PNG o SVG, máximo 1MB.
+                        {t('settingsExt.orgLogoHint')}
                       </p>
                       <div className="flex gap-2">
-                        <label className="btn btn-secondary cursor-pointer">
+                        <label className={`btn btn-secondary cursor-pointer ${logoUploading ? 'opacity-50' : ''}`}>
                           <input
                             type="file"
                             accept="image/*"
                             className="hidden"
-                            onChange={(e) => {
+                            disabled={logoUploading}
+                            onChange={async (e) => {
                               const file = e.target.files?.[0]
-                              if (file) {
-                                const reader = new FileReader()
-                                reader.onload = (ev) => {
-                                  setOrganization({ ...organization, logo: ev.target?.result })
+                              if (!file) return
+                              setLogoUploading(true)
+                              try {
+                                const res = await fetch(
+                                  `/api/settings/upload-logo?filename=logo`,
+                                  {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': file.type },
+                                    body: file,
+                                  }
+                                )
+                                const data = await res.json()
+                                if (data.url) {
+                                  setOrganization({ ...organization, logo: data.url })
                                 }
-                                reader.readAsDataURL(file)
+                              } finally {
+                                setLogoUploading(false)
                               }
                             }}
                           />
-                          Subir logo
+                          {logoUploading ? t('settingsExt.uploading') : t('settingsExt.uploadLogo')}
                         </label>
                         {organization.logo && (
                           <button
                             onClick={() => setOrganization({ ...organization, logo: null })}
                             className="btn btn-secondary text-red-600 hover:text-red-700"
                           >
-                            Eliminar
+                            {t('common.delete')}
                           </button>
                         )}
                       </div>
@@ -454,7 +582,7 @@ export default function SettingsPage() {
 
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre de la organización
+                      {t('settings.organizationName')}
                     </label>
                     <input
                       type="text"
@@ -467,7 +595,7 @@ export default function SettingsPage() {
 
                   <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Color principal
+                      {t('settingsExt.primaryColor')}
                     </label>
                     <div className="flex items-center gap-3">
                       <input
@@ -485,18 +613,89 @@ export default function SettingsPage() {
                       />
                     </div>
                   </div>
+
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('settingsExt.secondaryColor')}
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      {t('settingsExt.secondaryColorHint')}
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={organization.secondaryColor || '#7c3aed'}
+                        onChange={(e) => setOrganization({ ...organization, secondaryColor: e.target.value })}
+                        className="w-10 h-10 rounded cursor-pointer border border-gray-300"
+                      />
+                      <input
+                        type="text"
+                        value={organization.secondaryColor || '#7c3aed'}
+                        onChange={(e) => setOrganization({ ...organization, secondaryColor: e.target.value })}
+                        className="input w-32"
+                        placeholder="#7c3aed"
+                      />
+                    </div>
+                    {/* Live preview */}
+                    <div className="mt-3 flex items-center gap-3 flex-wrap">
+                      <span
+                        className="text-xs px-3 py-1.5 rounded-lg font-medium text-white"
+                        style={{ backgroundColor: organization.secondaryColor || '#7c3aed' }}
+                      >
+                        Botón secundario
+                      </span>
+                      <span
+                        className="text-xs px-3 py-1.5 rounded-lg font-medium border"
+                        style={{
+                          color: organization.secondaryColor || '#7c3aed',
+                          borderColor: organization.secondaryColor || '#7c3aed',
+                          backgroundColor: `${organization.secondaryColor || '#7c3aed'}15`,
+                        }}
+                      >
+                        Badge / Acento
+                      </span>
+                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <span
+                          className="inline-block w-3 h-3 rounded-full"
+                          style={{ backgroundColor: organization.primaryColor || '#2563eb' }}
+                        />
+                        Principal
+                        <span
+                          className="inline-block w-3 h-3 rounded-full ml-1"
+                          style={{ backgroundColor: organization.secondaryColor || '#7c3aed' }}
+                        />
+                        Secundario
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('settingsExt.customDomain')}
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      {t('settingsExt.customDomainHint')}
+                    </p>
+                    <input
+                      type="text"
+                      className="input max-w-md"
+                      value={organization.customDomain || ''}
+                      onChange={(e) => setOrganization({ ...organization, customDomain: e.target.value })}
+                      placeholder="crm.miempresa.com"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Regional Settings */}
               <div className="card">
                 <div className="card-header">
-                  <h4 className="font-medium text-gray-900">Configuración regional</h4>
+                  <h4 className="font-medium text-gray-900">{t('settingsExt.regionalSettings')}</h4>
                 </div>
                 <div className="card-body space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Moneda predeterminada
+                      {t('settings.currency')}
                     </label>
                     <select
                       className="input max-w-md"
@@ -511,7 +710,7 @@ export default function SettingsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Zona horaria
+                      {t('settings.timezone')}
                     </label>
                     <select
                       className="input max-w-md"
@@ -526,7 +725,7 @@ export default function SettingsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Formato de fecha
+                      {t('settings.dateFormat')}
                     </label>
                     <select
                       className="input max-w-md"
@@ -547,7 +746,7 @@ export default function SettingsPage() {
                   disabled={isSaving || !isAdmin}
                   className="btn btn-primary"
                 >
-                  {isSaving ? 'Guardando...' : 'Guardar cambios'}
+                  {isSaving ? t('common.saving') : t('settings.saveChanges')}
                 </button>
               </div>
             </div>
@@ -558,34 +757,34 @@ export default function SettingsPage() {
             <div className="max-w-4xl">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Gestión de Usuarios</h3>
-                  <p className="text-gray-500">Administra los usuarios de tu organización y sus permisos.</p>
+                  <h3 className="text-xl font-semibold text-gray-900">{t('settings.users')}</h3>
+                  <p className="text-gray-500">{t('settingsExt.usersSubtitle')}</p>
                 </div>
                 <button
                   onClick={() => openUserModal()}
                   className="btn btn-primary flex items-center gap-2"
                 >
                   <Icons.plus className="w-4 h-4" />
-                  Nuevo usuario
+                  {t('users.newUser')}
                 </button>
               </div>
 
               {/* Role Legend */}
               <div className="card mb-6">
                 <div className="card-body">
-                  <h4 className="font-medium text-gray-900 mb-3">Roles y permisos</h4>
+                  <h4 className="font-medium text-gray-900 mb-3">{t('settingsExt.rolesAndPermissions')}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div className="p-3 bg-red-50 rounded-lg">
-                      <span className="font-medium text-red-700">Administrador</span>
-                      <p className="text-red-600 mt-1">Acceso total. Puede cambiar configuración y gestionar usuarios.</p>
+                      <span className="font-medium text-red-700">{t('roles.admin')}</span>
+                      <p className="text-red-600 mt-1">{t('roles.adminDesc')}</p>
                     </div>
                     <div className="p-3 bg-blue-50 rounded-lg">
-                      <span className="font-medium text-blue-700">Manager</span>
-                      <p className="text-blue-600 mt-1">Ve todos los datos. Puede asignar tareas a otros usuarios.</p>
+                      <span className="font-medium text-blue-700">{t('roles.manager')}</span>
+                      <p className="text-blue-600 mt-1">{t('roles.managerDesc')}</p>
                     </div>
                     <div className="p-3 bg-gray-50 rounded-lg">
-                      <span className="font-medium text-gray-700">Usuario</span>
-                      <p className="text-gray-600 mt-1">Solo ve tareas asignadas y datos con visibilidad pública.</p>
+                      <span className="font-medium text-gray-700">{t('roles.user')}</span>
+                      <p className="text-gray-600 mt-1">{t('roles.userDesc')}</p>
                     </div>
                   </div>
                 </div>
@@ -594,7 +793,7 @@ export default function SettingsPage() {
               {/* Users List */}
               <div className="card">
                 <div className="card-header">
-                  <h4 className="font-medium text-gray-900">Usuarios ({users.length})</h4>
+                  <h4 className="font-medium text-gray-900">{t('settings.users')} ({users.length})</h4>
                 </div>
                 <div className="divide-y divide-gray-200">
                   {isLoadingUsers ? (
@@ -603,7 +802,7 @@ export default function SettingsPage() {
                     </div>
                   ) : users.length === 0 ? (
                     <div className="p-8 text-center text-gray-500">
-                      No hay usuarios registrados. Crea el primero.
+                      {t('users.empty')}
                     </div>
                   ) : (
                     users.map((user) => (
@@ -618,7 +817,7 @@ export default function SettingsPage() {
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-gray-900">{user.name}</span>
                               {!user.isActive && (
-                                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Inactivo</span>
+                                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">{t('users.inactive')}</span>
                               )}
                             </div>
                             <p className="text-sm text-gray-500">{user.email}</p>
@@ -632,20 +831,20 @@ export default function SettingsPage() {
                                 ? 'bg-blue-100 text-blue-700' 
                                 : 'bg-gray-100 text-gray-700'
                           }`}>
-                            {user.role === 'admin' ? 'Administrador' : user.role === 'manager' ? 'Manager' : 'Usuario'}
+                            {user.role === 'admin' ? t('roles.admin') : user.role === 'manager' ? t('roles.manager') : t('roles.user')}
                           </span>
                           <div className="flex gap-2">
                             <button
                               onClick={() => openUserModal(user)}
                               className="text-gray-400 hover:text-gray-600"
-                              title="Editar"
+                              title={t('common.edit')}
                             >
                               <Icons.edit className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => deleteUser(user)}
                               className="text-gray-400 hover:text-red-600"
-                              title="Desactivar"
+                              title={t('users.deactivate')}
                             >
                               <Icons.trash className="w-4 h-4" />
                             </button>
@@ -659,17 +858,17 @@ export default function SettingsPage() {
 
               {/* User Modal */}
               {showUserModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={closeUserModal}>
+                  <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
                     <div className="p-6 border-b border-gray-200">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {editingUser ? 'Editar usuario' : 'Nuevo usuario'}
+                        {editingUser ? t('users.editUser') : t('users.newUser')}
                       </h3>
                     </div>
                     <div className="p-6 space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Nombre <span className="text-red-500">*</span>
+                          {t('common.name')} <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -693,33 +892,33 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Contraseña {!editingUser && <span className="text-red-500">*</span>}
+                          {t('auth.password')} {!editingUser && <span className="text-red-500">*</span>}
                         </label>
                         <input
                           type="password"
                           className="input w-full"
                           value={userForm.password}
                           onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                          placeholder={editingUser ? 'Dejar vacío para mantener la actual' : 'Mínimo 6 caracteres'}
+                          placeholder={editingUser ? t('users.passwordKeepEmpty') : t('users.passwordMin')}
                         />
                         {editingUser && (
                           <p className="text-xs text-gray-500 mt-1">
-                            Deja vacío si no deseas cambiar la contraseña
+                            {t('users.passwordKeepEmptyHint')}
                           </p>
                         )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Rol
+                          {t('common.role')}
                         </label>
                         <select
                           className="input w-full"
                           value={userForm.role}
                           onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
                         >
-                          <option value="user">Usuario</option>
+                          <option value="user">{t('roles.user')}</option>
                           <option value="manager">Manager</option>
-                          <option value="admin">Administrador</option>
+                          <option value="admin">{t('roles.admin')}</option>
                         </select>
                       </div>
                       <div className="flex items-center gap-2">
@@ -731,7 +930,7 @@ export default function SettingsPage() {
                           className="rounded border-gray-300"
                         />
                         <label htmlFor="userActive" className="text-sm text-gray-700">
-                          Usuario activo
+                          {t('users.activeUser')}
                         </label>
                       </div>
                     </div>
@@ -740,14 +939,14 @@ export default function SettingsPage() {
                         onClick={closeUserModal}
                         className="btn btn-secondary"
                       >
-                        Cancelar
+                        {t('common.cancel')}
                       </button>
                       <button
                         onClick={saveUser}
                         disabled={isSaving}
                         className="btn btn-primary"
                       >
-                        {isSaving ? 'Guardando...' : editingUser ? 'Actualizar' : 'Crear usuario'}
+                        {isSaving ? t('common.saving') : editingUser ? t('users.update') : t('users.create')}
                       </button>
                     </div>
                   </div>
@@ -759,20 +958,20 @@ export default function SettingsPage() {
           {/* Pipeline Settings */}
           {activeTab === 'pipeline' && (
             <div className="max-w-2xl">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Configuración del pipeline</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('settings.pipelineSettings')}</h3>
               <p className="text-gray-500 mb-6">
-                Personaliza las etapas de tu proceso de ventas. Arrastra para reordenar.
+                {t('settingsExt.pipelineHint')}
               </p>
               
               <div className="card">
                 <div className="card-header flex items-center justify-between">
-                  <h4 className="font-medium text-gray-900">Etapas del pipeline</h4>
+                  <h4 className="font-medium text-gray-900">{t('settings.pipelineStages')}</h4>
                   <button
                     onClick={addDealStage}
                     className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
                   >
                     <Icons.plus className="w-4 h-4" />
-                    Agregar etapa
+                    {t('settings.addStage')}
                   </button>
                 </div>
                 <div className="card-body">
@@ -783,55 +982,72 @@ export default function SettingsPage() {
                         <div
                           key={stage.id}
                           data-testid="deal-stage"
-                          className={`flex items-center gap-4 p-3 rounded-lg ${
+                          className={`p-3 rounded-lg ${
                             isTerminal ? 'bg-gray-100' : 'bg-gray-50'
                           }`}
                         >
-                          {!isTerminal && (
-                            <div className="flex flex-col">
-                              <button
-                                onClick={() => moveDealStage(index, -1)}
-                                className="text-gray-400 hover:text-gray-600"
-                                disabled={index === 0}
-                              >
-                                <Icons.chevronUp className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => moveDealStage(index, 1)}
-                                className="text-gray-400 hover:text-gray-600"
-                                disabled={index >= dealStages.length - 3}
-                              >
-                                <Icons.chevronDown className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )}
-                          
-                          {/* Color picker */}
-                          <input
-                            type="color"
-                            value={getColorHex(stage.color)}
-                            onChange={(e) => updateDealStage(index, 'color', e.target.value)}
-                            className={`color-picker-circle ${isTerminal ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={isTerminal}
-                          />
-
-                          <input
-                            type="text"
-                            className={`flex-1 bg-transparent border-none text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded px-2 py-1 ${
-                              isTerminal ? 'cursor-not-allowed' : ''
-                            }`}
-                            value={stage.label}
-                            onChange={(e) => updateDealStage(index, 'label', e.target.value)}
-                            disabled={isTerminal}
-                          />
-
+                          {/* Main row: reorder + color + label + delete */}
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">Prob:</span>
+                            {!isTerminal ? (
+                              <div className="flex flex-col shrink-0">
+                                <button
+                                  onClick={() => moveDealStage(index, -1)}
+                                  className="text-gray-400 hover:text-gray-600"
+                                  disabled={index === 0}
+                                >
+                                  <Icons.chevronUp className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => moveDealStage(index, 1)}
+                                  className="text-gray-400 hover:text-gray-600"
+                                  disabled={index >= dealStages.length - 3}
+                                >
+                                  <Icons.chevronDown className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="w-4 shrink-0" />
+                            )}
+
+                            {/* Color picker */}
+                            <input
+                              type="color"
+                              value={getColorHex(stage.color)}
+                              onChange={(e) => updateDealStage(index, 'color', e.target.value)}
+                              className={`color-picker-circle shrink-0 ${isTerminal ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              disabled={isTerminal}
+                            />
+
+                            <input
+                              type="text"
+                              className={`flex-1 min-w-0 bg-transparent border-none text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded px-2 py-1 ${
+                                isTerminal ? 'cursor-not-allowed' : ''
+                              }`}
+                              value={stage.label}
+                              onChange={(e) => updateDealStage(index, 'label', e.target.value)}
+                              disabled={isTerminal}
+                            />
+
+                            {!isTerminal ? (
+                              <button
+                                onClick={() => removeDealStage(index)}
+                                className="text-gray-400 hover:text-red-500 shrink-0"
+                              >
+                                <Icons.trash className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <div className="w-4 shrink-0" />
+                            )}
+                          </div>
+
+                          {/* Probability row (below on all sizes) */}
+                          <div className="mt-2 flex items-center gap-2 pl-10">
+                            <span className="text-xs text-gray-500">{t('settingsExt.probability')}</span>
                             <input
                               type="number"
                               min="0"
                               max="100"
-                              className={`w-16 text-sm text-center bg-white border border-gray-200 rounded px-2 py-1 ${
+                              className={`w-14 text-sm text-center bg-white border border-gray-200 rounded px-2 py-1 ${
                                 isTerminal ? 'cursor-not-allowed bg-gray-100' : ''
                               }`}
                               value={stage.probability}
@@ -840,24 +1056,13 @@ export default function SettingsPage() {
                             />
                             <span className="text-xs text-gray-500">%</span>
                           </div>
-
-                          {!isTerminal ? (
-                            <button
-                              onClick={() => removeDealStage(index)}
-                              className="text-gray-400 hover:text-red-500"
-                            >
-                              <Icons.trash className="w-4 h-4" />
-                            </button>
-                          ) : (
-                            <div className="w-4" /> 
-                          )}
                         </div>
                       )
                     })}
                   </div>
 
                   <p className="mt-4 text-xs text-gray-500">
-                    Las etapas "Ganado" y "Perdido" son fijas y no pueden eliminarse ni reordenarse.
+                    {t('settingsExt.fixedStagesNote')}
                   </p>
                 </div>
               </div>
@@ -868,7 +1073,7 @@ export default function SettingsPage() {
                   disabled={isSaving}
                   className="btn btn-primary"
                 >
-                  {isSaving ? 'Guardando...' : 'Guardar cambios'}
+                  {isSaving ? t('common.saving') : t('settings.saveChanges')}
                 </button>
               </div>
             </div>
@@ -877,20 +1082,20 @@ export default function SettingsPage() {
           {/* Contact Statuses Settings */}
           {activeTab === 'contacts' && (
             <div className="max-w-2xl">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Estados de contactos</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('settings.contactStatuses')}</h3>
               <p className="text-gray-500 mb-6">
-                Define los estados disponibles para clasificar tus contactos.
+                {t('settingsExt.contactStatusesHint')}
               </p>
               
               <div className="card">
                 <div className="card-header flex items-center justify-between">
-                  <h4 className="font-medium text-gray-900">Estados disponibles</h4>
+                  <h4 className="font-medium text-gray-900">{t('settings.availableStatuses')}</h4>
                   <button
                     onClick={addContactStatus}
                     className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
                   >
                     <Icons.plus className="w-4 h-4" />
-                    Agregar estado
+                    {t('settings.addStatus')}
                   </button>
                 </div>
                 <div className="card-body">
@@ -934,7 +1139,159 @@ export default function SettingsPage() {
                   disabled={isSaving}
                   className="btn btn-primary"
                 >
-                  {isSaving ? 'Guardando...' : 'Guardar cambios'}
+                  {isSaving ? t('common.saving') : t('settings.saveChanges')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Task Types Settings */}
+          {activeTab === 'tasks' && (
+            <div className="max-w-2xl">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('settingsExt.taskTypesTitle')}</h3>
+              <p className="text-sm text-gray-500 mb-6">
+                {t('settingsExt.taskTypesHint')}
+              </p>
+
+              <div className="space-y-2 mb-4">
+                {taskTypes.map((type, index) => (
+                  <div key={type.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    {/* Emoji picker */}
+                    <div className="relative group">
+                      <button
+                        type="button"
+                        className="w-9 h-9 flex items-center justify-center text-xl rounded-lg border border-gray-200 bg-white hover:border-primary-400 transition-colors"
+                        title={t('settingsExt.taskTypeChangEmoji')}
+                      >
+                        {type.emoji}
+                      </button>
+                      {/* Emoji grid on hover */}
+                      <div className="absolute left-0 top-full mt-1 p-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 hidden group-hover:grid grid-cols-5 gap-1 w-40">
+                        {TASK_TYPE_EMOJIS.map(em => (
+                          <button
+                            key={em}
+                            type="button"
+                            onClick={() => updateTaskType(index, 'emoji', em)}
+                            className="w-7 h-7 flex items-center justify-center text-base hover:bg-gray-100 rounded transition-colors"
+                          >
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Label */}
+                    <input
+                      className="flex-1 bg-transparent border-none text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded px-2 py-1"
+                      value={type.label}
+                      onChange={e => updateTaskType(index, 'label', e.target.value)}
+                      disabled={type.builtIn}
+                      placeholder={t('settingsExt.taskTypeNamePlaceholder')}
+                    />
+
+                    {/* Toggles — only for custom types */}
+                    {!type.builtIn && (
+                      <div className="flex items-center gap-3 text-xs text-gray-600 shrink-0">
+                        <label className="flex items-center gap-1.5 cursor-pointer" title={t('settingsExt.taskTypeRequiresContactFull')}>
+                          <input
+                            type="checkbox"
+                            checked={!!type.requiresContact}
+                            onChange={e => updateTaskType(index, 'requiresContact', e.target.checked)}
+                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="hidden sm:inline">{t('settingsExt.taskTypeRequiresContact')}</span>
+                          <span className="sm:hidden">👤</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer" title={t('settingsExt.taskTypeShowMapsFull')}>
+                          <input
+                            type="checkbox"
+                            checked={!!type.showMapsLink}
+                            onChange={e => updateTaskType(index, 'showMapsLink', e.target.checked)}
+                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="hidden sm:inline">{t('settingsExt.taskTypeShowMaps')}</span>
+                          <span className="sm:hidden">📍</span>
+                        </label>
+                      </div>
+                    )}
+
+                    {type.builtIn && (
+                      <span className="text-xs text-gray-400 shrink-0 hidden sm:inline">{t('settingsExt.taskTypeBuiltIn')}</span>
+                    )}
+
+                    {/* Delete — only custom */}
+                    <button
+                      onClick={() => removeTaskType(index)}
+                      disabled={type.builtIn}
+                      className="text-gray-300 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      title={type.builtIn ? t('settingsExt.taskTypeBuiltInDelete') : t('settingsExt.taskTypeDelete')}
+                    >
+                      <Icons.trash className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={addTaskType}
+                className="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium mb-8"
+              >
+                <Icons.add className="w-4 h-4" />
+                {t('settingsExt.addTaskType')}
+              </button>
+
+              <div className="pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => saveSettings('taskTypes', taskTypes)}
+                  disabled={isSaving}
+                  className="btn btn-primary"
+                >
+                  {isSaving ? t('common.saving') : t('settings.saveChanges')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Notifications Settings */}
+          {activeTab === 'notifications' && (
+            <div className="max-w-2xl">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">{t('settings.notifications')}</h3>
+
+              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                <div className="space-y-4">
+                  {[
+                    { key: 'taskReminders', label: t('settings.taskReminders'), description: t('settingsExt.taskRemindersDesc') },
+                    { key: 'newContacts', label: t('settingsExt.newContacts'), description: t('settingsExt.newContactsDesc') },
+                    { key: 'dealsWon', label: t('settingsExt.dealsWon'), description: t('settingsExt.dealsWonDesc') },
+                    { key: 'dealUpdates', label: t('settings.dealUpdates'), description: t('settingsExt.dealUpdatesDesc') },
+                    { key: 'dailyDigest', label: t('settingsExt.dailyDigest'), description: t('settingsExt.dailyDigestDesc') },
+                  ].map(({ key, label, description }) => (
+                    <div key={key} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{label}</p>
+                        <p className="text-xs text-gray-500">{description}</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={notifications[key] ?? false}
+                          onChange={(e) => setNotifications(prev => ({ ...prev, [key]: e.target.checked }))}
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => saveSettings('notifications', notifications)}
+                  disabled={isSaving}
+                  className="btn-primary"
+                >
+                  {isSaving ? t('common.saving') : t('settings.saveChanges')}
                 </button>
               </div>
             </div>
@@ -943,7 +1300,7 @@ export default function SettingsPage() {
           {/* Integrations Settings */}
           {activeTab === 'integrations' && (
             <div className="max-w-2xl">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">Integraciones</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">{t('settings.integrations')}</h3>
               
               <div className="space-y-4">
                 {/* Google Calendar */}
@@ -960,11 +1317,11 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">Google Calendar</p>
-                        <p className="text-sm text-gray-500">Sincroniza tareas y reuniones</p>
+                        <p className="text-sm text-gray-500">{t('integrations.googleCalendarDesc')}</p>
                       </div>
                     </div>
                     <button className="btn btn-secondary">
-                      Conectar
+                      {t('integrations.connect')}
                     </button>
                   </div>
                 </div>
@@ -983,11 +1340,11 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">Slack</p>
-                        <p className="text-sm text-gray-500">Recibe notificaciones en Slack</p>
+                        <p className="text-sm text-gray-500">{t('integrations.slackDesc')}</p>
                       </div>
                     </div>
                     <button className="btn btn-secondary">
-                      Conectar
+                      {t('integrations.connect')}
                     </button>
                   </div>
                 </div>
@@ -1003,11 +1360,11 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">Zapier</p>
-                        <p className="text-sm text-gray-500">Conecta con miles de aplicaciones</p>
+                        <p className="text-sm text-gray-500">{t('integrations.zapierDesc')}</p>
                       </div>
                     </div>
                     <button className="btn btn-secondary">
-                      Conectar
+                      {t('integrations.connect')}
                     </button>
                   </div>
                 </div>
@@ -1023,19 +1380,330 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">WhatsApp Business</p>
-                        <p className="text-sm text-gray-500">Envía mensajes a contactos</p>
+                        <p className="text-sm text-gray-500">{t('integrations.whatsappDesc')}</p>
                       </div>
                     </div>
                     <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                      Próximamente
+                      {t('common.comingSoon')}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
           )}
+
+          {/* ── Plan y Facturación tab ───────────────────────────────────────── */}
+          {activeTab === 'billing' && (
+            <div className="max-w-2xl">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">{t('billing.title')}</h3>
+
+              {billingMessage && (
+                <div className={`mb-5 p-4 rounded-xl text-sm flex items-center gap-3 ${
+                  billingMessage.type === 'success'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : billingMessage.type === 'error'
+                    ? 'bg-red-50 text-red-700 border border-red-200'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                }`}>
+                  <FiCheck className="w-4 h-4 shrink-0" />
+                  {billingMessage.text}
+                </div>
+              )}
+
+              {isBillingLoading ? (
+                <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+              ) : billing ? (
+                <>
+                  {/* Current plan */}
+                  <BillingCurrentPlan billing={billing} />
+
+                  {/* Upgrade options */}
+                  {billing.plan !== 'enterprise' && (
+                    <div className="mt-8">
+                      <h4 className="text-base font-semibold text-gray-900 mb-4">
+                        {billing.plan === 'trial'
+                          ? t('billing.choosePlan')
+                          : t('billing.changePlan')}
+                      </h4>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        {billing.plan !== 'starter' && billing.plan !== 'pro' && (
+                          <PlanCard
+                            id="starter"
+                            name="Starter"
+                            price="$499"
+                            period="/mes MXN"
+                            features={['500 contactos', '500 negocios', '5 usuarios', '1 chatbot IA', 'Soporte prioritario']}
+                            highlight={false}
+                            onUpgrade={handleUpgrade}
+                            isUpgrading={isUpgrading}
+                          />
+                        )}
+                        {billing.plan !== 'pro' && (
+                          <PlanCard
+                            id="pro"
+                            name="Pro"
+                            price="$1,299"
+                            period="/mes MXN"
+                            features={['5,000 contactos', '5,000 negocios', '20 usuarios', '3 chatbots IA', 'Soporte dedicado', 'White-label']}
+                            highlight={true}
+                            onUpgrade={handleUpgrade}
+                            isUpgrading={isUpgrading}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {billing.plan === 'enterprise' && (
+                    <p className="mt-6 text-sm text-gray-500">
+                      {t('billing.enterpriseContact')}
+                    </p>
+                  )}
+
+                  {/* ── Payment method & portal ─────────────────────────── */}
+                  {billing.stripeCustomerId && (
+                    <div className="mt-8 pt-6 border-t border-gray-100">
+                      <h4 className="text-base font-semibold text-gray-900 mb-1">{t('billing.paymentMethod')}</h4>
+                      <p className="text-sm text-gray-500 mb-4">
+                        {t('billing.paymentMethodHint')}
+                      </p>
+                      <button
+                        onClick={handlePortal}
+                        disabled={isPortalLoading}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors disabled:opacity-60"
+                      >
+                        {isPortalLoading ? <Spinner size="sm" /> : <Icons.creditCard className="w-4 h-4" />}
+                        {t('billing.managePaymentMethod')}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* ── Invoice history ──────────────────────────────────── */}
+                  <div className="mt-8 pt-6 border-t border-gray-100">
+                    <h4 className="text-base font-semibold text-gray-900 mb-4">{t('billing.invoiceHistory')}</h4>
+                    <InvoiceHistory invoices={invoices} isLoading={isInvoicesLoading} />
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-gray-400">{t('billing.loadError')}</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
+  )
+}
+
+// ── Billing sub-components ────────────────────────────────────────────────────
+
+const PLAN_LABELS = {
+  trial:      { name: 'Prueba gratuita', color: 'gray' },
+  starter:    { name: 'Starter',         color: 'blue' },
+  pro:        { name: 'Pro',             color: 'indigo' },
+  enterprise: { name: 'Enterprise',      color: 'purple' },
+}
+
+const STATUS_LABELS = {
+  trialing:  { label: 'En prueba',     color: 'yellow' },
+  active:    { label: 'Activo',        color: 'green' },
+  past_due:  { label: 'Pago atrasado', color: 'red' },
+  canceled:  { label: 'Cancelado',     color: 'gray' },
+  suspended: { label: 'Suspendido',    color: 'red' },
+}
+
+function BillingCurrentPlan({ billing }) {
+  const plan       = billing?.plan ?? 'trial'
+  const status     = billing?.planStatus ?? 'trialing'
+  const trialEndsAt = billing?.trialEndsAt
+  const planInfo   = PLAN_LABELS[plan] ?? PLAN_LABELS.trial
+  const statusInfo = STATUS_LABELS[status] ?? STATUS_LABELS.trialing
+
+  const trialDaysLeft = trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt) - Date.now()) / 86400000))
+    : null
+
+  const statusColors = {
+    green:  'bg-green-100 text-green-700',
+    yellow: 'bg-yellow-100 text-yellow-700',
+    red:    'bg-red-100 text-red-700',
+    gray:   'bg-gray-100 text-gray-600',
+  }
+
+  return (
+    <div className="card p-6">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <p className="text-sm text-gray-500 mb-1">Plan actual</p>
+          <p className="text-2xl font-bold text-gray-900">{planInfo.name}</p>
+        </div>
+        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColors[statusInfo.color] ?? statusColors.gray}`}>
+          {statusInfo.label}
+        </span>
+      </div>
+
+      {trialEndsAt && status === 'trialing' && (
+        <div className={`mt-3 p-3 rounded-lg text-sm ${
+          trialDaysLeft <= 3 ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'
+        }`}>
+          {plan === 'trial' ? (
+            // Free trial — no plan committed yet
+            <>
+              {trialDaysLeft > 0
+                ? `Tu período de prueba termina en ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''}.`
+                : 'Tu período de prueba ha terminado.'}
+              {' '}Elige un plan para continuar.
+            </>
+          ) : (
+            // Paid plan in Stripe trial period — already committed
+            <>
+              {trialDaysLeft > 0
+                ? `Tu plan ${PLAN_LABELS[plan]?.name ?? plan} inicia en ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''}. No se realizará ningún cargo hasta entonces.`
+                : `Tu plan ${PLAN_LABELS[plan]?.name ?? plan} inicia hoy.`}
+            </>
+          )}
+        </div>
+      )}
+
+      {status === 'past_due' && (
+        <div className="mt-3 p-3 rounded-lg text-sm bg-red-50 text-red-700">
+          Hay un problema con tu pago. Actualiza tu método de pago para evitar suspensión.
+        </div>
+      )}
+
+      {status === 'active' && plan !== 'enterprise' && (
+        <p className="mt-3 text-xs text-gray-400">
+          Usa el portal de facturación de abajo para gestionar tu suscripción.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function PlanCard({ id, name, price, period, features, highlight, onUpgrade, isUpgrading }) {
+  return (
+    <div className={`relative bg-white rounded-2xl border p-5 flex flex-col ${
+      highlight
+        ? 'border-indigo-500 shadow-md shadow-indigo-100 ring-1 ring-indigo-500'
+        : 'border-gray-200'
+    }`}>
+      {highlight && (
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold text-white bg-indigo-600 px-3 py-1 rounded-full">
+          Más popular
+        </span>
+      )}
+      <div className="mb-4">
+        <p className="font-semibold text-gray-900 mb-1">{name}</p>
+        <div className="flex items-baseline gap-1">
+          <span className="text-2xl font-bold text-gray-900">{price}</span>
+          <span className="text-sm text-gray-400">{period}</span>
+        </div>
+      </div>
+      <ul className="space-y-2 mb-5 flex-1">
+        {features.map((f) => (
+          <li key={f} className="flex items-center gap-2 text-xs text-gray-600">
+            <FiCheck className="w-3.5 h-3.5 text-indigo-500 shrink-0" />{f}
+          </li>
+        ))}
+      </ul>
+      <button
+        onClick={() => onUpgrade(id)}
+        disabled={!!isUpgrading}
+        className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-colors ${
+          highlight
+            ? 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60'
+            : 'border border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50 disabled:opacity-60'
+        }`}
+      >
+        {isUpgrading === id ? <Spinner size="sm" /> : <>Actualizar a {name} <FiArrowRight className="w-3.5 h-3.5" /></>}
+      </button>
+    </div>
+  )
+}
+
+const STATUS_INVOICE_LABELS = {
+  paid:           { label: 'Pagado',     color: 'green' },
+  open:           { label: 'Pendiente',  color: 'yellow' },
+  draft:          { label: 'Borrador',   color: 'gray' },
+  uncollectible:  { label: 'Incobrable', color: 'red' },
+  void:           { label: 'Anulado',    color: 'gray' },
+}
+
+function InvoiceHistory({ invoices, isLoading }) {
+  const statusColors = {
+    green:  'bg-green-100 text-green-700',
+    yellow: 'bg-yellow-100 text-yellow-700',
+    red:    'bg-red-100 text-red-700',
+    gray:   'bg-gray-100 text-gray-500',
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center py-6"><Spinner /></div>
+  }
+
+  if (!invoices || invoices.length === 0) {
+    return (
+      <div className="text-center py-8 text-sm text-gray-400">
+        <Icons.creditCard className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+        No hay pagos registrados aún.
+      </div>
+    )
+  }
+
+  const fmt = (cents, currency) =>
+    new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: currency?.toUpperCase() ?? 'MXN',
+    }).format(cents / 100)
+
+  return (
+    <div className="overflow-x-auto -mx-1">
+      <table className="min-w-full text-sm">
+        <thead>
+          <tr className="text-xs text-gray-400 border-b border-gray-100">
+            <th className="text-left font-medium pb-2 pr-4">Fecha</th>
+            <th className="text-left font-medium pb-2 pr-4">Factura</th>
+            <th className="text-right font-medium pb-2 pr-4">Monto</th>
+            <th className="text-left font-medium pb-2 pr-4">Estado</th>
+            <th className="text-right font-medium pb-2">PDF</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-50">
+          {invoices.map((inv) => {
+            const info = STATUS_INVOICE_LABELS[inv.status] ?? { label: inv.status, color: 'gray' }
+            const date = new Intl.DateTimeFormat('es-MX', { year: 'numeric', month: 'short', day: 'numeric' })
+              .format(new Date(inv.date * 1000))
+            return (
+              <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
+                <td className="py-2.5 pr-4 text-gray-600 whitespace-nowrap">{date}</td>
+                <td className="py-2.5 pr-4 text-gray-500 font-mono text-xs">{inv.number ?? inv.id.slice(-8)}</td>
+                <td className="py-2.5 pr-4 text-right font-semibold text-gray-900 whitespace-nowrap">
+                  {fmt(inv.amount, inv.currency)}
+                </td>
+                <td className="py-2.5 pr-4">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[info.color]}`}>
+                    {info.label}
+                  </span>
+                </td>
+                <td className="py-2.5 text-right">
+                  {inv.pdfUrl ? (
+                    <a
+                      href={inv.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:text-indigo-800 transition-colors text-xs font-medium"
+                    >
+                      Descargar
+                    </a>
+                  ) : (
+                    <span className="text-gray-300 text-xs">—</span>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
   )
 }

@@ -54,7 +54,9 @@ async function main() {
   await prisma.user.deleteMany()
   await prisma.organization.deleteMany()
 
-  // Create organization first
+  // ─────────────────────────────────────────────────────────────────────────
+  // Org 1: Hittek (platform super-admin org — enterprise plan, no limits)
+  // ─────────────────────────────────────────────────────────────────────────
   const organization = await prisma.organization.create({
     data: {
       name: 'Hittek',
@@ -64,14 +66,38 @@ async function main() {
       timezone: 'America/Mexico_City',
       locale: 'es-MX',
       isActive: true,
+      plan: 'enterprise',
+      planStatus: 'active',
     },
   })
-  console.log(`✅ Created organization: ${organization.name}`)
+  console.log(`✅ Created organization: ${organization.name} (plan: enterprise)`)
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Org 2: Acme MX (sample client org — starter plan, limited to 500 contacts)
+  // ─────────────────────────────────────────────────────────────────────────
+  const trialEnds = new Date()
+  trialEnds.setDate(trialEnds.getDate() + 14)
+
+  const acmeOrg = await prisma.organization.create({
+    data: {
+      name: 'Acme MX',
+      slug: 'acmemx',
+      primaryColor: '#16a34a',
+      currency: 'MXN',
+      timezone: 'America/Mexico_City',
+      locale: 'es-MX',
+      isActive: true,
+      plan: 'trial',
+      planStatus: 'trialing',
+      trialEndsAt: trialEnds,
+    },
+  })
+  console.log(`✅ Created organization: ${acmeOrg.name} (plan: trial, trial ends: ${trialEnds.toISOString().split('T')[0]})`)
 
   // Default password for all seeded users (in production, each user would have their own)
   const defaultPassword = await hashPassword('password123')
 
-  // Create users
+  // Create users for Org 1 (Hittek)
   const users = await Promise.all([
     prisma.user.create({
       data: {
@@ -80,6 +106,7 @@ async function main() {
         name: 'Admin User',
         role: 'admin',
         isActive: true,
+        isSuperAdmin: true,
         organizationId: organization.id,
       },
     }),
@@ -114,6 +141,19 @@ async function main() {
       },
     }),
   ])
+
+  // Create admin user for Org 2 (Acme MX)
+  const acmeAdmin = await prisma.user.create({
+    data: {
+      email: 'admin@acmemx.com',
+      password: defaultPassword,
+      name: 'Carlos Acme',
+      role: 'admin',
+      isActive: true,
+      organizationId: acmeOrg.id,
+    },
+  })
+  console.log(`✅ Created Acme MX admin: ${acmeAdmin.email}`)
 
   console.log(`✅ Created ${users.length} users (default password: password123)`)
 

@@ -5,11 +5,14 @@ import { Avatar } from '../ui/Avatar'
 import { StatusChip, PriorityChip } from '../ui/Chip'
 import { InlineEdit, InlineTextarea } from '../ui/InlineEdit'
 import ActivityTimeline from '../contacts/ActivityTimeline'
+import QuoteTab from './QuoteTab'
 import { formatCurrency, formatSmartDate, formatDate } from '../../lib/utils'
 import { useDealStages, useOrganization } from '../../lib/SettingsContext'
 import { useAuth } from '../../lib/AuthContext'
+import { useI18n } from '../../lib/i18n'
 
 export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }) {
+  const { t } = useI18n()
   const [localDeal, setLocalDeal] = useState(deal)
   const [activeTab, setActiveTab] = useState('details')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -78,7 +81,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
                   <InlineEdit
                     value={localDeal.title}
                     onSave={(value) => updateField('title', value)}
-                    placeholder="Título de la oportunidad"
+                    placeholder={t('deals.dealName')}
                   />
                 </h2>
                 {localDeal.contact && (
@@ -96,7 +99,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {isSaving && <span className="text-xs text-gray-500">Guardando...</span>}
+                {isSaving && <span className="text-xs text-gray-500">{t('common.saving')}</span>}
                 {canDelete && (
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
@@ -111,7 +114,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
             {/* Value and stage */}
             <div className="grid grid-cols-2 sm:flex sm:items-center gap-4 sm:gap-6 p-4 bg-gray-50 rounded-lg">
               <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Valor</label>
+                <label className="text-xs font-medium text-gray-500 uppercase">{t('deals.value')}</label>
                 <div className="text-xl sm:text-2xl font-bold text-gray-900">
                   <InlineEdit
                     value={localDeal.value?.toString() || '0'}
@@ -126,7 +129,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
               </div>
               
               <div className="sm:border-l sm:border-gray-200 sm:pl-6">
-                <label className="text-xs font-medium text-gray-500 uppercase">Etapa</label>
+                <label className="text-xs font-medium text-gray-500 uppercase">{t('deals.stage')}</label>
                 <select
                   value={localDeal.stage}
                   onChange={(e) => updateField('stage', e.target.value)}
@@ -139,7 +142,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
               </div>
 
               <div className="col-span-2 sm:col-span-1 sm:border-l sm:border-gray-200 sm:pl-6">
-                <label className="text-xs font-medium text-gray-500 uppercase">Probabilidad</label>
+                <label className="text-xs font-medium text-gray-500 uppercase">{t('deals.probability')}</label>
                 <div className="flex items-center gap-2 mt-1">
                   <input
                     type="range"
@@ -180,16 +183,17 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-gray-200">
+          <div className="flex border-b border-gray-200 overflow-x-auto scrollbar-hide">
             {[
-              { id: 'details', label: 'Detalles' },
-              { id: 'activity', label: 'Actividad' },
-              { id: 'tasks', label: 'Tareas' },
+              { id: 'details', label: t('common.details') },
+              { id: 'activity', label: t('dealsExt.activityTab') },
+              { id: 'tasks', label: t('dealsExt.tasksTab') },
+              { id: 'quotes', label: t('nav.quotes') },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.id
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -205,7 +209,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase">Fecha de cierre esperada</label>
+                  <label className="text-xs font-medium text-gray-500 uppercase">{t('deals.expectedClose')}</label>
                   <input
                     type="date"
                     value={localDeal.expectedClose ? formatDate(localDeal.expectedClose, 'yyyy-MM-dd') : ''}
@@ -215,15 +219,15 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
                 </div>
                 
                 <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase">Prioridad</label>
+                  <label className="text-xs font-medium text-gray-500 uppercase">{t('deals.priority')}</label>
                   <select
                     value={localDeal.priority}
                     onChange={(e) => updateField('priority', e.target.value)}
                     className="input mt-1"
                   >
-                    <option value="low">Baja</option>
-                    <option value="medium">Media</option>
-                    <option value="high">Alta</option>
+                    <option value="low">{t('deals.priorities.low')}</option>
+                    <option value="medium">{t('deals.priorities.medium')}</option>
+                    <option value="high">{t('deals.priorities.high')}</option>
                   </select>
                 </div>
 
@@ -239,7 +243,7 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Descripción</label>
+                <label className="text-xs font-medium text-gray-500 uppercase">{t('deals.description')}</label>
                 <InlineTextarea
                   value={localDeal.description}
                   onSave={(value) => updateField('description', value)}
@@ -284,6 +288,10 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
             </div>
           )}
 
+          {activeTab === 'quotes' && (
+            <QuoteTab deal={localDeal} />
+          )}
+
           {/* Quick actions */}
           <div className="flex gap-2 pt-4 border-t border-gray-200">
             <button
@@ -291,14 +299,14 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
               className="btn-success flex-1"
             >
               <Icons.check className="w-4 h-4 mr-2" />
-              Marcar como ganado
+              {t('deals.stages.won')}
             </button>
             <button
               onClick={() => updateField('stage', 'lost')}
               className="btn-secondary flex-1"
             >
               <Icons.close className="w-4 h-4 mr-2" />
-              Marcar como perdido
+              {t('deals.stages.lost')}
             </button>
           </div>
         </div>
@@ -308,9 +316,9 @@ export default function DealDrawer({ deal, isOpen, onClose, onUpdate, onDelete }
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
-        title="Eliminar oportunidad"
+        title={t('deals.deleteDeal')}
         message={`¿Estás seguro de que deseas eliminar "${localDeal.title}"? Esta acción no se puede deshacer.`}
-        confirmText="Eliminar"
+        confirmText={t('common.delete')}
         variant="danger"
       />
     </>

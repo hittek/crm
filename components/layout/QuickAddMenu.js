@@ -1,40 +1,6 @@
 import { useRouter } from 'next/router'
 import Icons from '../ui/Icons'
-
-const quickAddItems = [
-  { 
-    id: 'contact', 
-    name: 'Contacto', 
-    description: 'Agregar un nuevo contacto',
-    icon: Icons.contacts,
-    color: 'blue',
-    href: '/?new=contact'
-  },
-  { 
-    id: 'deal', 
-    name: 'Oportunidad', 
-    description: 'Crear una nueva oportunidad',
-    icon: Icons.deals,
-    color: 'indigo',
-    href: '/deals?new=deal'
-  },
-  { 
-    id: 'task', 
-    name: 'Tarea', 
-    description: 'Crear una nueva tarea',
-    icon: Icons.tasks,
-    color: 'green',
-    href: '/tasks?new=task'
-  },
-  { 
-    id: 'activity', 
-    name: 'Actividad', 
-    description: 'Registrar una llamada, email o reunión',
-    icon: Icons.activity,
-    color: 'yellow',
-    href: '/?new=activity'
-  },
-]
+import { useI18n } from '../../lib/i18n'
 
 const colorClasses = {
   blue: 'bg-blue-100 text-blue-600',
@@ -45,6 +11,42 @@ const colorClasses = {
 
 export default function QuickAddMenu({ isOpen, onClose }) {
   const router = useRouter()
+  const { t } = useI18n()
+
+  const quickAddItems = [
+    { 
+      id: 'contact', 
+      name: t('nav.contacts'),
+      description: 'Agregar un nuevo contacto',
+      icon: Icons.contacts,
+      color: 'blue',
+      href: '/contacts?new=contact'
+    },
+    { 
+      id: 'deal', 
+      name: 'Oportunidad',
+      description: 'Crear una nueva oportunidad',
+      icon: Icons.deals,
+      color: 'indigo',
+      href: '/deals?new=deal'
+    },
+    { 
+      id: 'task', 
+      name: t('nav.tasks'),
+      description: 'Crear una nueva tarea',
+      icon: Icons.tasks,
+      color: 'green',
+      href: '/tasks?new=task'
+    },
+    { 
+      id: 'activity', 
+      name: 'Actividad',
+      description: 'Registrar una llamada, email o reunión',
+      icon: Icons.activity,
+      color: 'yellow',
+      href: '/?new=activity'
+    },
+  ]
 
   const handleSelect = (item) => {
     onClose()
@@ -59,7 +61,7 @@ export default function QuickAddMenu({ isOpen, onClose }) {
       <div className="flex justify-center pt-24 px-4">
         <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md p-2">
           <div className="px-3 py-2 border-b border-gray-100 mb-2">
-            <h3 className="text-sm font-medium text-gray-900">Crear nuevo</h3>
+            <h3 className="text-sm font-medium text-gray-900">{t('nav.quickAdd')}</h3>
           </div>
           <div className="space-y-1">
             {quickAddItems.map((item) => (

@@ -9,6 +9,7 @@ const colorClasses = {
   indigo: 'bg-indigo-100 text-indigo-700',
   purple: 'bg-purple-100 text-purple-700',
   primary: 'bg-primary-100 text-primary-700',
+  secondary: 'bg-secondary-100 text-secondary-700',
 }
 
 const sizeClasses = {

@@ -1,19 +1,40 @@
 import { test, expect } from '@playwright/test'
-const { login } = require('./helpers/login')
+const { login, resetLocale } = require('./helpers/login')
+
+// Default deal stages - reset before each test to ensure clean state
+const DEFAULT_STAGES = [
+  { id: 'lead', label: 'Lead', color: 'gray', probability: 10 },
+  { id: 'qualified', label: 'Calificado', color: 'blue', probability: 25 },
+  { id: 'proposal', label: 'Propuesta', color: 'indigo', probability: 50 },
+  { id: 'negotiation', label: 'Negociación', color: 'purple', probability: 75 },
+  { id: 'won', label: 'Ganado', color: 'green', probability: 100 },
+  { id: 'lost', label: 'Perdido', color: 'red', probability: 0 },
+]
 
 test.describe('Settings Page', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
+    await resetLocale(page)
+    // Reset deal stages to defaults so pipeline tests see predictable data
+    await page.evaluate(async (stages) => {
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealStages: stages }),
+        credentials: 'include',
+      })
+    }, DEFAULT_STAGES)
     await page.goto('/settings')
   })
 
   test('should display settings page with tabs', async ({ page }) => {
-    // Check all tabs are present
-    await expect(page.getByRole('button', { name: 'General' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Pipeline' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Contactos' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Notificaciones' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Integraciones' })).toBeVisible()
+    // Check all tabs are present — scope to main to avoid matching the global notification bell
+    const main = page.locator('main')
+    await expect(main.getByRole('button', { name: 'General' })).toBeVisible()
+    await expect(main.getByRole('button', { name: 'Pipeline' })).toBeVisible()
+    await expect(main.getByRole('button', { name: 'Contactos' })).toBeVisible()
+    await expect(main.getByRole('button', { name: 'Notificaciones' })).toBeVisible()
+    await expect(main.getByRole('button', { name: 'Integraciones' })).toBeVisible()
   })
 
   test('should display general settings by default', async ({ page }) => {
@@ -79,7 +100,7 @@ test.describe('Settings Page', () => {
   })
 
   test('should switch to Notificaciones tab', async ({ page }) => {
-    await page.getByRole('button', { name: 'Notificaciones' }).click()
+    await page.locator('main').getByRole('button', { name: 'Notificaciones' }).click()
     
     await expect(page.getByRole('heading', { name: 'Notificaciones' })).toBeVisible()
     await expect(page.getByText('Recordatorios de tareas')).toBeVisible()
@@ -88,7 +109,7 @@ test.describe('Settings Page', () => {
   })
 
   test('should toggle notification settings', async ({ page }) => {
-    await page.getByRole('button', { name: 'Notificaciones' }).click()
+    await page.locator('main').getByRole('button', { name: 'Notificaciones' }).click()
     
     // Find the toggle for "Nuevos contactos"
     const toggle = page.locator('input[type="checkbox"]').nth(1)
@@ -124,7 +145,7 @@ test.describe('Settings Page', () => {
   })
 
   test('should change primary color', async ({ page }) => {
-    const colorInput = page.locator('input[type="color"]')
+    const colorInput = page.locator('input[type="color"]').first()
     await colorInput.fill('#ff5500')
     
     await page.getByRole('button', { name: 'Guardar cambios' }).click()

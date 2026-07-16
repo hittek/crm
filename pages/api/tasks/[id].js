@@ -77,7 +77,7 @@ const methods = {
         data,
         include: {
           contact: {
-            select: { id: true, firstName: true, lastName: true }
+            select: { id: true, firstName: true, lastName: true, address: true, city: true, state: true, country: true, postalCode: true, lat: true, lng: true }
           },
           deal: {
             select: { id: true, title: true }

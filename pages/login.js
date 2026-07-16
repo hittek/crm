@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
+import Link from 'next/link'
 import { useOrganization } from '../lib/SettingsContext'
 import { useAuth } from '../lib/AuthContext'
+import { useI18n } from '../lib/i18n'
 import Icons from '../components/ui/Icons'
 import { Spinner } from '../components/ui/Spinner'
 
@@ -15,11 +17,12 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const { t } = useI18n()
 
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      const redirectTo = router.query.redirect || '/'
+      const redirectTo = router.query.redirect || '/contacts'
       router.push(redirectTo)
     }
   }, [authLoading, isAuthenticated, router])
@@ -32,13 +35,13 @@ export default function LoginPage() {
     const result = await login(email, password)
 
     if (!result.success) {
-      setError(result.error || 'Error al iniciar sesión')
+      setError(result.error || t('login.genericError'))
       setIsLoading(false)
       return
     }
 
     // Redirect to home or intended destination
-    const redirectTo = router.query.redirect || '/'
+    const redirectTo = router.query.redirect || '/contacts'
     router.push(redirectTo)
   }
 
@@ -54,7 +57,7 @@ export default function LoginPage() {
   return (
     <>
       <Head>
-        <title>Iniciar Sesión | {organization.name || 'CRM'}</title>
+        <title>{t('auth.login')} | {organization.name || 'CRM'}</title>
       </Head>
 
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -80,10 +83,10 @@ export default function LoginPage() {
               )}
             </div>
             <h2 className="mt-6 text-3xl font-bold text-gray-900">
-              Iniciar Sesión
+              {t('login.signIn')}
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Accede a tu cuenta de {organization.name || 'CRM'}
+              {t('login.subtitle')} {organization.name || 'CRM'}
             </p>
           </div>
 
@@ -99,7 +102,7 @@ export default function LoginPage() {
             <div className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Correo electrónico
+                  {t('auth.email')}
                 </label>
                 <input
                   id="email"
@@ -110,13 +113,13 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none relative block w-full px-3 py-2.5 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                  placeholder="tu@email.com"
+                  placeholder={t('login.emailPlaceholder')}
                 />
               </div>
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Contraseña
+                  {t('auth.password')}
                 </label>
                 <div className="relative">
                   <input
@@ -128,7 +131,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="appearance-none relative block w-full px-3 py-2.5 pr-10 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                    placeholder="••••••••"
+                    placeholder={t('login.passwordPlaceholder')}
                   />
                   <button
                     type="button"
@@ -162,10 +165,10 @@ export default function LoginPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Iniciando sesión...
+                    {t('login.signingIn')}
                   </>
                 ) : (
-                  'Iniciar Sesión'
+                  t('login.signIn')
                 )}
               </button>
             </div>
@@ -174,6 +177,12 @@ export default function LoginPage() {
           {/* Footer text */}
           <p className="text-center text-xs text-gray-500">
             ¿Olvidaste tu contraseña? Contacta al administrador del sistema.
+          </p>
+          <p className="text-center text-sm text-gray-500 mt-3">
+            {t('login.noAccount')}{' '}
+            <Link href="/signup" className="text-primary-600 hover:text-primary-700 font-medium">
+              {t('login.createAccount')}
+            </Link>
           </p>
         </div>
       </div>

@@ -13,12 +13,25 @@ model Organization {
   slug        String    @unique // URL-friendly identifier
   logo        String?
   favicon     String?
-  primaryColor String?  @default("#2563eb")
+  primaryColor   String?  @default("#2563eb")
+  secondaryColor String?  @default("#7c3aed")
   currency    String    @default("MXN")
   timezone    String    @default("America/Mexico_City")
   locale      String    @default("es-MX")
   isActive    Boolean   @default(true)
   orgSettings String?   // JSON for org-specific settings
+
+  // SaaS billing & plan
+  plan                 String    @default("trial")     // trial, starter, pro, enterprise
+  planStatus           String    @default("trialing")  // trialing, active, past_due, canceled, suspended
+  trialEndsAt          DateTime?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  planLimits           String?   // JSON: { contacts: 50, users: 3, deals: 50, chatbots: 0 }
+  customDomain         String?   @unique
+  suspendedAt          DateTime?
+  suspendedReason      String?
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -31,6 +44,11 @@ model Organization {
   savedViews    SavedView[]
   auditLogs     AuditLog[]
   notifications Notification[]
+  knowledgeBases KnowledgeBase[]
+  chatbots      Chatbot[]
+  channelConfigs ChannelConfig[]
+  providers     Provider[]
+  products      Product[]
 }
 
 // Contact model - the core entity in a contacts-first CRM
@@ -48,6 +66,8 @@ model Contact {
   state       String?
   country     String?
   postalCode  String?
+  lat         Float?
+  lng         Float?
   website     String?
   linkedin    String?
   twitter     String?
@@ -55,6 +75,7 @@ model Contact {
   status      String    @default("active") // active, inactive, lead, prospect
   tags        String?   // comma-separated tags
   notes       String?
+  aiSummary   String?   // AI-generated customer context from chat conversations
   avatar      String?
   isPrivate   Boolean   @default(false)
   visibility  String    @default("org") // org = visible to all, private = only owner/assigned users
@@ -69,9 +90,11 @@ model Contact {
   updatedBy   String?
 
   // Relations
-  deals       Deal[]
-  tasks       Task[]
-  activities  Activity[]
+  deals         Deal[]
+  tasks         Task[]
+  activities    Activity[]
+  conversations Conversation[]
+  quotes        Quote[]
 
   @@unique([email, organizationId]) // Email unique per organization
   @@index([organizationId])
@@ -108,6 +131,7 @@ model Deal {
   contact         Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
   tasks           Task[]
   activities      Activity[]
+  quotes          Quote[]
 
   @@index([organizationId])
 }
@@ -186,6 +210,7 @@ model User {
   isActive    Boolean   @default(true)
   preferences String?   // JSON for user preferences
   lastLoginAt DateTime? // Track last login time
+  isSuperAdmin Boolean  @default(false) // Hittek platform super-admins
   organizationId Int    // Organization this user belongs to
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
@@ -195,9 +220,12 @@ model User {
   assignedTasks   Task[]          @relation("TaskAssignee")
   ownedTasks      Task[]          @relation("TaskOwner")
   ownedContacts   Contact[]       @relation("ContactOwner")
-  ownedDeals      Deal[]          @relation("DealOwner")
-  auditLogs       AuditLog[]
-  notifications   Notification[]
+  ownedDeals            Deal[]          @relation("DealOwner")
+  auditLogs             AuditLog[]
+  notifications         Notification[]
+  assignedConversations Conversation[]  @relation("ConversationAssignee")
+  convEventActions      ConversationEvent[] @relation("ConversationEventActor")
+  convEventTargets      ConversationEvent[] @relation("ConversationEventTarget")
 
   @@unique([email, organizationId]) // Email unique per organization
   @@index([organizationId])
@@ -246,6 +274,178 @@ model AuditLog {
   @@index([createdAt])
 }
 
+// ─── Chatbot / Knowledge Base ───────────────────────────────────────────────
+
+// One knowledge base per chatbot configuration (one per org on Starter)
+model KnowledgeBase {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  status      String    @default("empty") // empty | indexing | ready | error
+  orgId       Int
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   String?
+
+  documents   KnowledgeBaseDocument[]
+  chatbots    Chatbot[]
+
+  @@index([orgId])
+}
+
+// A single source ingested into a knowledge base
+model KnowledgeBaseDocument {
+  id              Int            @id @default(autoincrement())
+  knowledgeBaseId Int
+  knowledgeBase   KnowledgeBase  @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  orgId           Int
+  type            String         // pdf | url | qa
+  title           String
+  content         String?        // raw extracted text (plain)
+  fileUrl         String?        // Blob URL for PDFs
+  sourceUrl       String?        // original URL for scraped docs
+  question        String?        // Q&A: question
+  answer          String?        // Q&A: answer
+  fileSize        Int?           // bytes
+  status          String         @default("pending") // pending | processing | chunked | error
+  errorMessage    String?
+  chunkCount      Int            @default(0)
+  metadata        String?        // JSON
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  chunks  KnowledgeBaseChunk[]
+
+  @@index([knowledgeBaseId])
+  @@index([orgId])
+}
+
+// A chunk of text ready for embedding (vectors added in S02)
+model KnowledgeBaseChunk {
+  id          Int                    @id @default(autoincrement())
+  documentId  Int
+  document    KnowledgeBaseDocument  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  kbId        Int
+  orgId       Int
+  content     String                 // chunk text
+  chunkIndex  Int
+  tokenCount  Int                    @default(0)
+  embedded    Boolean                @default(false) // true once Voyage embedding stored
+  embedding   Unsupported("vector(1024)")?  // voyage-4-lite = 1024 dims
+  metadata    String?                // JSON (page number, heading, etc.)
+  createdAt   DateTime               @default(now())
+
+  @@index([kbId])
+  @@index([documentId])
+  @@index([orgId])
+}
+
+// ─── Chatbot models ──────────────────────────────────────────────────────────
+
+model Chatbot {
+  id               Int       @id @default(autoincrement())
+  orgId            Int
+  org              Organization @relation(fields: [orgId], references: [id])
+  kbId             Int
+  kb               KnowledgeBase @relation(fields: [kbId], references: [id])
+  name             String
+  greeting         String    @default("Hola, ¿en qué puedo ayudarte?")
+  escalationPhrase String?   // phrase that triggers human escalation
+  avatarUrl        String?
+  primaryColor     String    @default("#2563eb")
+  isActive         Boolean   @default(true)
+  apiKey           String    @unique @default(cuid()) // used by widget + channel webhooks
+
+  // ── CRM automation ───────────────────────────────────────────────────────
+  // When enabled, a new Contact is auto-created if none is found for the session.
+  autoCreateContact  Boolean  @default(false)
+  // When enabled, a new Deal is opened the first time a (new) contact engages.
+  autoCreateDeal     Boolean  @default(false)
+  defaultDealStage   String?  // stage slug, defaults to 'lead'
+  dealTitleTemplate  String?  // e.g. "Consulta vía WhatsApp" — {channel} interpolated
+
+  // ── Claude tool-use capabilities ─────────────────────────────────────────
+  // Comma-separated list of enabled tool names, e.g. "create_quote,create_contact"
+  enabledTools       String?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  conversations    Conversation[]
+  channelConfigs   ChannelConfig[]
+  quotes           Quote[]
+
+  @@index([orgId])
+  @@index([kbId])
+}
+
+model Conversation {
+  id           Int       @id @default(autoincrement())
+  chatbotId    Int?
+  chatbot      Chatbot?  @relation(fields: [chatbotId], references: [id], onDelete: SetNull)
+  orgId        Int
+  sessionId    String    // client-generated UUID per browser/device session
+  channel      String    @default("web") // web | sandbox | whatsapp | facebook
+  status       String    @default("open") // open | resolved | escalated
+  contactId    Int?      // nullable — linked CRM contact
+  contact      Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  summary      String?   // AI-generated summary produced when conversation resolves
+  metadata     String?   // JSON (IP, user-agent, etc.)
+  agentActive  Boolean   @default(false) // true = human agent took over; bot is silenced
+  // Denormalized current assignee — updated on every pickup / forward
+  assignedToId Int?
+  assignedTo   User?     @relation("ConversationAssignee", fields: [assignedToId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  messages     ConversationMessage[]
+  events       ConversationEvent[]
+  quotes       Quote[]
+
+  @@index([chatbotId])
+  @@index([orgId])
+  @@index([sessionId])
+  @@index([assignedToId])
+}
+
+model ConversationEvent {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  // who acted
+  userId         Int
+  user           User         @relation("ConversationEventActor", fields: [userId], references: [id])
+  // event type
+  type           String       // picked_up | forwarded | resolved | reopened
+  // for 'forwarded': the agent who received the conversation
+  toUserId       Int?
+  toUser         User?        @relation("ConversationEventTarget", fields: [toUserId], references: [id])
+  note           String?      // optional handoff/close note
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([userId])
+  @@index([toUserId])
+}
+
+model ConversationMessage {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String       // user | assistant | agent
+  content        String
+  // Agent attribution (null for user/assistant messages)
+  userId         Int?
+  agentName      String?      // denormalized — avoids join on every poll
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([userId])
+}
+
+// ─── Notification model ──────────────────────────────────────────────────────
+
 // Notification model - in-app notifications
 model Notification {
   id            Int       @id @default(autoincrement())
@@ -265,4 +465,119 @@ model Notification {
   @@index([userId, isRead])
   @@index([organizationId])
   @@index([createdAt])
+}
+
+model ChannelConfig {
+  id            Int       @id @default(autoincrement())
+  orgId         Int
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  chatbotId     Int
+  chatbot       Chatbot   @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
+  channel       String    // telegram | whatsapp | facebook
+  credentials   String    // AES-256-GCM encrypted JSON — never returned to client raw
+  isActive      Boolean   @default(false)
+  // Channel-specific routing keys (plaintext — used for inbound webhook lookup)
+  botUsername   String?   // Telegram: @botname
+  phoneNumberId String?   // WhatsApp: WABA phone number ID
+  pageId        String?   // Facebook: page ID
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([chatbotId, channel])
+  @@index([orgId])
+  @@index([phoneNumberId])
+  @@index([pageId])
+}
+
+// ── Providers ─────────────────────────────────────────────────────────────────
+// Suppliers / vendors whose price lists feed the product catalog.
+// Optional — service-only orgs never need this.
+model Provider {
+  id          Int          @id @default(autoincrement())
+  orgId       Int
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  website     String?
+  notes       String?
+  isActive    Boolean      @default(true)
+  products    Product[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([orgId])
+}
+
+// ── Products ──────────────────────────────────────────────────────────────────
+// Unified catalog for physical products AND services.
+// type=service: sellingPrice entered directly (costPrice/fee/margin not used)
+// type=product: sellingPrice = costPrice × (1 + feePercent/100) × (1 + marginPercent/100)
+model Product {
+  id            Int          @id @default(autoincrement())
+  orgId         Int
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  providerId    Int?
+  provider      Provider?    @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  name          String
+  description   String?
+  sku           String?
+  type          String       @default("service")  // product | service
+  unit          String       @default("unit")     // unit | hr | kg | m | m2 | lt | service | month
+  costPrice     Float?                            // null = service with direct price
+  feePercent    Float        @default(0)
+  marginPercent Float        @default(0)
+  ivaPercent    Float        @default(16)          // 0 or 16 (Mexico IVA rate for this product)
+  sellingPrice  Float        @default(0)          // always the price used in quotes
+  currency      String       @default("MXN")
+  imageUrl      String?                           // CDN URL for product photo
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([orgId])
+  @@index([providerId])
+}
+
+// ── Quotes ────────────────────────────────────────────────────────────────────
+// Quotes are created by agents manually or by the chatbot via Claude tool-use.
+// Items are stored as JSON: [{description, qty, unitPrice, total}]
+// The number field uses an org-scoped sequential format: Q-{year}-{seq}
+model Quote {
+  id             Int       @id @default(autoincrement())
+  orgId          Int
+  number         String    // e.g. "Q-2024-001"
+  status         String    @default("draft") // draft | sent | accepted | rejected | expired
+
+  // Optional CRM associations
+  contactId      Int?
+  contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  dealId         Int?
+  deal           Deal?         @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  // Origin — which conversation/chatbot generated this (may be null for manual quotes)
+  conversationId Int?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  chatbotId      Int?
+  chatbot        Chatbot?      @relation(fields: [chatbotId], references: [id], onDelete: SetNull)
+
+  // Line items (JSON array) + totals
+  items          String    // JSON: [{description: string, qty: number, unitPrice: number, total: number}]
+  subtotal       Float     @default(0)
+  taxRate        Float     @default(0)    // e.g. 0.16 for 16% IVA
+  tax            Float     @default(0)
+  total          Float     @default(0)
+  currency       String    @default("MXN")
+  notes          String?
+  validUntil     DateTime?
+  shareToken     String?   @unique  // public shareable link token
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([orgId])
+  @@index([contactId])
+  @@index([dealId])
+  @@index([conversationId])
 }

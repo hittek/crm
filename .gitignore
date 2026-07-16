@@ -23,6 +23,19 @@ test-results/
 .gsd-id
 .mcp.json
 .bg-shell/
+
+# ── GSD: Runtime / Ephemeral (per-developer, per-session) ──────
+.gsd/auto.lock
+.gsd/completed-units.json
+.gsd/STATE.md
+.gsd/metrics.json
+.gsd/activity/
+.gsd/runtime/
+.gsd/worktrees/
+.gsd/milestones/**/continue.md
+.gsd/milestones/**/*-CONTINUE.md
+.gsd/browser-state/
+.gsd/browser-baselines/
 Thumbs.db
 *.swp
 *.swo

@@ -16,7 +16,7 @@ test.describe('Language Switching (i18n)', () => {
     await login(page)
     // Ensure Spanish is set at the start of each test to avoid state leakage
     await ensureSpanishLocale(page)
-    await page.goto('/')
+    await page.goto('/contacts')
   })
 
   test('should display navigation in Spanish by default', async ({ page }) => {
@@ -131,7 +131,7 @@ test.describe('Language Switching (i18n)', () => {
 
   test('should show user menu items in selected language', async ({ page }) => {
     // Start fresh on home page
-    await page.goto('/')
+    await page.goto('/contacts')
     
     // Now change to English via profile
     await page.goto('/profile')
@@ -141,7 +141,7 @@ test.describe('Language Switching (i18n)', () => {
     await expect(page.getByText(/Profile updated|Perfil actualizado/)).toBeVisible({ timeout: 10000 })
     
     // Go to home and open user menu
-    await page.goto('/')
+    await page.goto('/contacts')
     await page.waitForTimeout(500)
     
     // Click on user area to open menu (the last button in sidebar)
@@ -167,7 +167,7 @@ test.describe('Language-specific content', () => {
     await localeSelect.selectOption('es-MX')
     await page.getByRole('button', { name: /Guardar|Save/ }).click()
     await expect(page.getByText(/Perfil actualizado|Profile updated/)).toBeVisible({ timeout: 10000 })
-    await page.goto('/')
+    await page.goto('/contacts')
   })
 
   test('should show Add button in current language', async ({ page }) => {
@@ -182,7 +182,7 @@ test.describe('Language-specific content', () => {
     await expect(page.getByText(/Profile updated|Perfil actualizado/)).toBeVisible({ timeout: 10000 })
     
     // Go back to home
-    await page.goto('/')
+    await page.goto('/contacts')
     await expect(page.getByRole('button', { name: /Add/ })).toBeVisible()
     
     // Restore Spanish
@@ -204,7 +204,7 @@ test.describe('Language-specific content', () => {
     await expect(page.getByText(/Profile updated|Perfil actualizado/)).toBeVisible({ timeout: 10000 })
     
     // Go back to home
-    await page.goto('/')
+    await page.goto('/contacts')
     await expect(page.getByText('Search...')).toBeVisible()
     
     // Restore Spanish

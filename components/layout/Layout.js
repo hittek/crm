@@ -9,6 +9,14 @@ import { useOrganization } from '../../lib/SettingsContext'
 import { useAuth } from '../../lib/AuthContext'
 import { useI18n } from '../../lib/i18n'
 
+// Nav item is active only if pathname exactly matches href,
+// or starts with href followed by '/' (avoids /chatbot matching /chatbots).
+function isNavActive(href, pathname) {
+  if (pathname === href) return true
+  if (href === '/') return false
+  return pathname.startsWith(href + '/')
+}
+
 export default function Layout({ children }) {
   const router = useRouter()
   const organization = useOrganization()
@@ -18,20 +26,69 @@ export default function Layout({ children }) {
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [escalatedCount, setEscalatedCount] = useState(0)
 
   // Close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false)
   }, [router.pathname])
 
+  // Poll for escalated conversations count every 30s
+  useEffect(() => {
+    if (!user) return
+    async function fetchEscalated() {
+      try {
+        const r = await fetch('/api/conversations?status=escalated&limit=1')
+        if (r.ok) {
+          const data = await r.json()
+          setEscalatedCount(data.total || 0)
+        }
+      } catch { /* non-fatal */ }
+    }
+    fetchEscalated()
+    const interval = setInterval(fetchEscalated, 30000)
+    return () => clearInterval(interval)
+  }, [user])
+
   // Navigation items using translations
   const baseNavigation = [
-    { name: t('nav.contacts'), href: '/', icon: Icons.contacts },
+    { name: t('nav.contacts'), href: '/contacts', icon: Icons.contacts },
     { name: t('nav.pipeline'), href: '/deals', icon: Icons.deals },
     { name: t('nav.tasks'), href: '/tasks', icon: Icons.tasks },
     { name: t('nav.reports'), href: '/reports', icon: Icons.reports },
     { name: t('nav.settings'), href: '/settings', icon: Icons.settings, adminOnly: true },
   ]
+
+  const aiSubNav = [
+    { name: t('nav.chatbot'), href: '/chatbot', icon: Icons.bot },
+    { name: t('nav.chatbots'), href: '/chatbots', icon: Icons.messageSquare },
+    { name: t('nav.conversations'), href: '/conversations', icon: Icons.activity, badge: escalatedCount || null },
+  ]
+
+  const aiRoutes = aiSubNav.map(i => i.href)
+  const isAiRoute = aiRoutes.some(h => isNavActive(h, router.pathname))
+
+  const [aiExpanded, setAiExpanded] = useState(isAiRoute)
+
+  // Auto-expand when navigating into an AI route
+  useEffect(() => {
+    if (isAiRoute) setAiExpanded(true)
+  }, [isAiRoute])
+
+  const catalogSubNav = [
+    { name: t('nav.providers'), href: '/providers', icon: Icons.truck },
+    { name: t('nav.products'), href: '/products', icon: Icons.package },
+    { name: t('nav.quotes'), href: '/quotes', icon: Icons.fileText },
+  ]
+
+  const catalogRoutes = catalogSubNav.map(i => i.href)
+  const isCatalogRoute = catalogRoutes.some(h => isNavActive(h, router.pathname))
+
+  const [catalogExpanded, setCatalogExpanded] = useState(isCatalogRoute)
+
+  useEffect(() => {
+    if (isCatalogRoute) setCatalogExpanded(true)
+  }, [isCatalogRoute])
 
   // Filter navigation based on user role - hide admin-only items for regular users
   const navigation = baseNavigation.filter(item => !item.adminOnly || permissions?.canManageSettings)
@@ -78,7 +135,7 @@ export default function Layout({ children }) {
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Logo */}
         <div className="h-16 flex items-center px-6 border-b border-gray-200">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/contacts" className="flex items-center gap-2">
             {organization.logo ? (
               <img 
                 src={organization.logo} 
@@ -88,7 +145,9 @@ export default function Layout({ children }) {
             ) : (
               <div 
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: organization.primaryColor || '#2563eb' }}
+                style={{
+                  background: `linear-gradient(135deg, ${organization.primaryColor || '#2563eb'}, ${organization.secondaryColor || '#7c3aed'})`,
+                }}
               >
                 <span className="text-white font-bold text-sm">
                   {organization.name?.charAt(0) || 'C'}
@@ -116,9 +175,7 @@ export default function Layout({ children }) {
         {/* Navigation */}
         <nav className="flex-1 px-4 space-y-1">
           {navigation.map((item) => {
-            const isActive = router.pathname === item.href || 
-              (item.href !== '/' && router.pathname.startsWith(item.href))
-            
+            const isActive = isNavActive(item.href, router.pathname)
             return (
               <Link
                 key={item.name}
@@ -130,6 +187,77 @@ export default function Layout({ children }) {
               </Link>
             )
           })}
+
+          {/* AI group */}
+          <div>
+            <button
+              onClick={() => setAiExpanded(e => !e)}
+              className={`sidebar-link w-full ${isAiRoute ? 'text-primary-600' : ''}`}
+            >
+              <Icons.bot className="w-5 h-5" />
+              <span className="flex-1 text-left">Chatbot IA</span>
+              <Icons.chevronDown className={`w-4 h-4 transition-transform duration-150 ${aiExpanded ? 'rotate-180' : ''}`} />
+            </button>
+            {aiExpanded && (
+              <div className="mt-0.5 ml-3 pl-3 border-l border-gray-200 space-y-0.5">
+                {aiSubNav.map(item => {
+                  const isActive = isNavActive(item.href, router.pathname)
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4 shrink-0" />
+                      <span className="flex-1">{item.name}</span>
+                      {item.badge > 0 && (
+                        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Catalog group */}
+          <div>
+            <button
+              onClick={() => setCatalogExpanded(e => !e)}
+              className={`sidebar-link w-full ${isCatalogRoute ? 'text-primary-600' : ''}`}
+            >
+              <Icons.catalog className="w-5 h-5" />
+              <span className="flex-1 text-left">{t('nav.catalog')}</span>
+              <Icons.chevronDown className={`w-4 h-4 transition-transform duration-150 ${catalogExpanded ? 'rotate-180' : ''}`} />
+            </button>
+            {catalogExpanded && (
+              <div className="mt-0.5 ml-3 pl-3 border-l border-gray-200 space-y-0.5">
+                {catalogSubNav.map(item => {
+                  const isActive = isNavActive(item.href, router.pathname)
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4 shrink-0" />
+                      <span className="flex-1">{item.name}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Quick add button */}
@@ -153,11 +281,11 @@ export default function Layout({ children }) {
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="w-full flex items-center gap-3 hover:bg-gray-50 rounded-lg p-1 -m-1 transition-colors"
           >
-            <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
+            <div className="w-8 h-8 bg-secondary-100 rounded-full flex items-center justify-center">
               {user?.avatar ? (
                 <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
               ) : (
-                <span className="text-sm font-medium text-primary-700">
+                <span className="text-sm font-medium text-secondary-700">
                   {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
                 </span>
               )}
@@ -179,7 +307,9 @@ export default function Layout({ children }) {
               <div className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                 <div className="px-3 py-2 border-b border-gray-100">
                   <p className="text-xs text-gray-500">{t('nav.connectedAs')}</p>
-                  <p className="text-sm font-medium text-gray-900 capitalize">{user?.role || 'usuario'}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {{ admin: 'Administrador', manager: 'Manager', user: 'Usuario' }[user?.role] || user?.role || 'Usuario'}
+                  </p>
                 </div>
                 <Link
                   href="/profile"
@@ -189,6 +319,16 @@ export default function Layout({ children }) {
                   <Icons.user className="w-4 h-4" />
                   {t('nav.profile')}
                 </Link>
+                {user?.isSuperAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full px-3 py-2 text-left text-sm text-purple-700 hover:bg-purple-50 flex items-center gap-2"
+                  >
+                    <Icons.settings className="w-4 h-4" />
+                    Panel superadmin
+                  </Link>
+                )}
                 <button
                   onClick={() => {
                     setShowUserMenu(false)

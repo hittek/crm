@@ -31,7 +31,7 @@ All spec files reset locale state in beforeEach; deals pipeline CRUD lifecycle v
   - Files: `tests/e2e/crm.spec.js`
   - Verify: pnpm test:e2e --grep 'Deals Pipeline CRUD' --workers=1 --reporter=line
 
-- [ ] **T03: Full suite run and audit report update** `est:35m`
+- [x] **T03: Full suite run and audit report update** `est:35m`
   Run pnpm test:e2e --workers=1 --reporter=line to get final S03 counts. Update tests/e2e/audit-report.md with new pass/fail table and updated bug status.
   - Files: `tests/e2e/audit-report.md`
   - Verify: pnpm test:e2e --workers=1 --reporter=line

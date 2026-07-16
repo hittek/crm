@@ -2,8 +2,11 @@ import { useState } from 'react'
 import { Modal } from '../ui/Modal'
 import Icons from '../ui/Icons'
 import { useContactStatuses } from '../../lib/SettingsContext'
+import { useI18n } from '../../lib/i18n'
+import AddressPicker from './AddressPicker'
 
 export default function ContactForm({ isOpen, onClose, onSave, contact = null }) {
+  const { t } = useI18n()
   const contactStatuses = useContactStatuses()
   const [formData, setFormData] = useState({
     firstName: contact?.firstName || '',
@@ -17,24 +20,27 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
     city: contact?.city || '',
     state: contact?.state || '',
     country: contact?.country || 'México',
+    postalCode: contact?.postalCode || '',
+    lat: contact?.lat || null,
+    lng: contact?.lng || null,
     status: contact?.status || 'active',
     source: contact?.source || '',
     notes: contact?.notes || '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showMore, setShowMore] = useState(false)
+  const [showMore, setShowMore] = useState(!!(contact?.mobile || contact?.address || contact?.notes))
   const [errors, setErrors] = useState({})
 
   const validate = () => {
     const newErrors = {}
     if (!formData.firstName.trim()) {
-      newErrors.firstName = 'El nombre es requerido'
+      newErrors.firstName = t('contactsExt.firstNameRequired')
     }
     if (!formData.lastName.trim()) {
-      newErrors.lastName = 'El apellido es requerido'
+      newErrors.lastName = t('contactsExt.lastNameRequired')
     }
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email inválido'
+      newErrors.email = t('contactsExt.invalidEmail')
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -58,7 +64,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
         if (res.status === 409 && errorData.field === 'email') {
-          setErrors({ email: errorData.error || 'Ya existe un contacto con este email' })
+          setErrors({ email: errorData.error || t('contactsExt.duplicateEmail') })
           setIsSubmitting(false)
           return
         }
@@ -70,7 +76,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
       onClose()
     } catch (error) {
       console.error('Error saving contact:', error)
-      setErrors({ submit: error.message || 'Error al guardar el contacto' })
+      setErrors({ submit: error.message || t('contactsExt.saveError') })
     }
     setIsSubmitting(false)
   }
@@ -86,7 +92,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={contact ? 'Editar contacto' : 'Nuevo contacto'}
+      title={contact ? t('contacts.editContact') : t('contacts.newContact')}
       size="lg"
     >
       <form onSubmit={handleSubmit}>
@@ -94,7 +100,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
           {/* Basic fields */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre <span className="text-red-500">*</span>
+              {t('contacts.firstName')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -111,7 +117,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Apellido <span className="text-red-500">*</span>
+              {t('contacts.lastName')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -127,7 +133,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+              {t('contacts.email')}
             </label>
             <input
               type="email"
@@ -143,7 +149,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Teléfono
+              {t('contacts.phone')}
             </label>
             <input
               type="tel"
@@ -156,7 +162,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Empresa
+              {t('contacts.company')}
             </label>
             <input
               type="text"
@@ -169,7 +175,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Puesto
+              {t('contacts.role')}
             </label>
             <input
               type="text"
@@ -182,7 +188,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estado
+              {t('contacts.status')}
             </label>
             <select
               value={formData.status}
@@ -197,14 +203,14 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Origen
+              {t('contacts.source')}
             </label>
             <select
               value={formData.source}
               onChange={(e) => handleChange('source', e.target.value)}
               className="input"
             >
-              <option value="">Seleccionar...</option>
+              <option value="">{t('common.select')}...</option>
               <option value="referral">Referido</option>
               <option value="website">Sitio web</option>
               <option value="cold-call">Llamada en frío</option>
@@ -215,6 +221,34 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
           </div>
         </div>
 
+        {/* Address — always visible */}
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {t('contacts.address')}
+          </label>
+          <AddressPicker
+            value={{
+              address:    formData.address,
+              city:       formData.city,
+              state:      formData.state,
+              country:    formData.country,
+              postalCode: formData.postalCode,
+              lat:        formData.lat,
+              lng:        formData.lng,
+            }}
+            onChange={(v) => setFormData(prev => ({
+              ...prev,
+              address:    v.address    ?? prev.address,
+              city:       v.city       ?? prev.city,
+              state:      v.state      ?? prev.state,
+              country:    v.country    ?? prev.country,
+              postalCode: v.postalCode ?? prev.postalCode,
+              lat:        v.lat        ?? null,
+              lng:        v.lng        ?? null,
+            }))}
+          />
+        </div>
+
         {/* More fields toggle */}
         <button
           type="button"
@@ -222,7 +256,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
           className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 mt-4"
         >
           {showMore ? <Icons.chevronDown className="w-4 h-4" /> : <Icons.chevronRight className="w-4 h-4" />}
-          {showMore ? 'Menos campos' : 'Más campos'}
+          {showMore ? t('common.showLess') : t('common.showMore')}
         </button>
 
         {/* Additional fields */}
@@ -230,7 +264,7 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
           <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Móvil
+                {t('contacts.mobile')}
               </label>
               <input
                 type="tel"
@@ -241,55 +275,16 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dirección
-              </label>
-              <input
-                type="text"
-                value={formData.address}
-                onChange={(e) => handleChange('address', e.target.value)}
-                className="input"
-                placeholder="Av. Reforma 123"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ciudad
-              </label>
-              <input
-                type="text"
-                value={formData.city}
-                onChange={(e) => handleChange('city', e.target.value)}
-                className="input"
-                placeholder="Ciudad de México"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estado
-              </label>
-              <input
-                type="text"
-                value={formData.state}
-                onChange={(e) => handleChange('state', e.target.value)}
-                className="input"
-                placeholder="CDMX"
-              />
-            </div>
-
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Notas
+                {t('contacts.notes')}
               </label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => handleChange('notes', e.target.value)}
                 className="input resize-none"
                 rows={3}
-                placeholder="Notas adicionales sobre este contacto..."
+                placeholder={t('contacts.notes')}
               />
             </div>
           </div>
@@ -305,10 +300,10 @@ export default function ContactForm({ isOpen, onClose, onSave, contact = null })
         {/* Actions */}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
           <button type="button" onClick={onClose} className="btn-secondary">
-            Cancelar
+            {t('common.cancel')}
           </button>
           <button type="submit" disabled={isSubmitting} className="btn-primary">
-            {isSubmitting ? 'Guardando...' : contact ? 'Guardar cambios' : 'Crear contacto'}
+            {isSubmitting ? t('common.saving') : contact ? t('common.save') : t('contacts.newContact')}
           </button>
         </div>
       </form>

@@ -5,11 +5,13 @@ import { Avatar } from '../ui/Avatar'
 import { StatusChip } from '../ui/Chip'
 import { formatCurrency, formatSmartDate } from '../../lib/utils'
 import { useOrganization } from '../../lib/SettingsContext'
+import { useI18n } from '../../lib/i18n'
 
 export default function GlobalSearch({ isOpen, onClose }) {
   const router = useRouter()
   const organization = useOrganization()
   const currency = organization?.currency || 'USD'
+  const { t } = useI18n()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState({ contacts: [], deals: [], tasks: [] })
   const [isLoading, setIsLoading] = useState(false)
@@ -102,7 +104,7 @@ export default function GlobalSearch({ isOpen, onClose }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Buscar contactos, oportunidades, tareas..."
+              placeholder={t('search.placeholder')}
               className="flex-1 px-4 py-4 text-base outline-none"
             />
             {isLoading && (
@@ -120,7 +122,7 @@ export default function GlobalSearch({ isOpen, onClose }) {
               {results.contacts.length > 0 && (
                 <div className="px-4 py-2">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-                    Contactos
+                    {t('nav.contacts')}
                   </p>
                   {results.contacts.map((contact, index) => (
                     <button
@@ -151,7 +153,7 @@ export default function GlobalSearch({ isOpen, onClose }) {
               {results.deals.length > 0 && (
                 <div className="px-4 py-2 border-t border-gray-100">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-                    Oportunidades
+                    {t('nav.pipeline')}
                   </p>
                   {results.deals.map((deal) => (
                     <button
@@ -182,7 +184,7 @@ export default function GlobalSearch({ isOpen, onClose }) {
               {results.tasks.length > 0 && (
                 <div className="px-4 py-2 border-t border-gray-100">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-                    Tareas
+                    {t('nav.tasks')}
                   </p>
                   {results.tasks.map((task) => (
                     <button
@@ -214,7 +216,7 @@ export default function GlobalSearch({ isOpen, onClose }) {
           {query.length >= 2 && allResults.length === 0 && !isLoading && (
             <div className="py-12 text-center">
               <Icons.search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">No se encontraron resultados para "{query}"</p>
+              <p className="text-gray-500">{t('search.noResults')} &ldquo;{query}&rdquo;</p>
             </div>
           )}
 
@@ -222,7 +224,7 @@ export default function GlobalSearch({ isOpen, onClose }) {
           {query.length < 2 && (
             <div className="py-8 px-4 text-center">
               <p className="text-sm text-gray-500 mb-4">
-                Busca por nombre, email, empresa o ID de oportunidad
+                {t('search.typeToSearch')}
               </p>
               <div className="flex justify-center gap-4 text-xs text-gray-400">
                 <span><kbd className="px-1.5 py-0.5 bg-gray-100 rounded">↑↓</kbd> navegar</span>

@@ -8,16 +8,20 @@ import { TasksEmptyState } from '../ui/EmptyState'
 import { Drawer } from '../ui/Modal'
 import { formatSmartDate, getFullName, parseNaturalDate } from '../../lib/utils'
 import { useAuth } from '../../lib/AuthContext'
+import { useI18n } from '../../lib/i18n'
+import { useTaskTypes } from '../../lib/SettingsContext'
 
 const filters = [
-  { id: 'today', label: 'Hoy', icon: Icons.calendar },
-  { id: 'upcoming', label: 'Próximas', icon: Icons.clock },
-  { id: 'overdue', label: 'Vencidas', icon: Icons.alert },
-  { id: 'completed', label: 'Completadas', icon: Icons.check },
+  { id: 'today', icon: Icons.calendar },
+  { id: 'upcoming', icon: Icons.clock },
+  { id: 'overdue', icon: Icons.alert },
+  { id: 'completed', icon: Icons.check },
 ]
 
 export default function TaskList({ onNewTask }) {
   const router = useRouter()
+  const { t } = useI18n()
+  const taskTypes = useTaskTypes()
   const [tasks, setTasks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState('today')
@@ -127,10 +131,10 @@ export default function TaskList({ onNewTask }) {
       {/* Header */}
       <div className="px-4 lg:px-6 py-4 border-b border-gray-200 bg-white">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Tareas</h1>
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{t('tasks.title')}</h1>
           <button onClick={onNewTask} className="btn-primary">
             <Icons.add className="w-4 h-4 lg:mr-2" />
-            <span className="hidden lg:inline">Nueva tarea</span>
+            <span className="hidden lg:inline">{t('tasks.newTask')}</span>
           </button>
         </div>
 
@@ -152,7 +156,7 @@ export default function TaskList({ onNewTask }) {
             disabled={isAdding || !quickAddText.trim()}
             className="btn-secondary"
           >
-            {isAdding ? <Spinner size="sm" /> : 'Agregar'}
+            {isAdding ? <Spinner size="sm" /> : t('common.add')}
           </button>
         </form>
       </div>
@@ -170,7 +174,7 @@ export default function TaskList({ onNewTask }) {
               className={`filter-pill ${isActive ? 'filter-pill-active' : ''}`}
             >
               <filter.icon className="w-4 h-4" />
-              {filter.label}
+              {t(`tasks.filters.${filter.id}`)}
               {count > 0 && filter.id !== 'completed' && (
                 <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-full ${
                   isActive ? 'bg-primary-200' : 'bg-gray-200'
@@ -262,11 +266,8 @@ export default function TaskList({ onNewTask }) {
                 <PriorityChip priority={task.priority} />
 
                 {/* Type icon */}
-                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
-                  {task.type === 'call' && <Icons.phone className="w-4 h-4 text-gray-500" />}
-                  {task.type === 'email' && <Icons.mail className="w-4 h-4 text-gray-500" />}
-                  {task.type === 'meeting' && <Icons.calendar className="w-4 h-4 text-gray-500" />}
-                  {task.type === 'task' && <Icons.tasks className="w-4 h-4 text-gray-500" />}
+                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-base" title={taskTypes.find(t => t.id === task.type)?.label || task.type}>
+                  {taskTypes.find(t => t.id === task.type)?.emoji || '✅'}
                 </div>
               </div>
             ))}
@@ -298,6 +299,11 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
   const [localTask, setLocalTask] = useState(task)
   const [isSaving, setIsSaving] = useState(false)
   const { user, permissions } = useAuth()
+  const { t } = useI18n()
+  const taskTypes = useTaskTypes()
+
+  const selectedTypeObj  = taskTypes.find(tp => tp.id === localTask?.type)
+  const showMapsLink     = selectedTypeObj?.showMapsLink
 
   // Check if current user can delete this task
   const canDelete = localTask && (
@@ -341,7 +347,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
   }
 
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} title="Detalle de tarea" width="md">
+    <Drawer isOpen={isOpen} onClose={onClose} title={t('tasks.editTask')} width="md">
       <div className="space-y-6">
         {/* Title */}
         <div>
@@ -351,27 +357,27 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
             onChange={(e) => setLocalTask({ ...localTask, title: e.target.value })}
             onBlur={(e) => updateField('title', e.target.value)}
             className="text-lg font-semibold w-full border-0 p-0 focus:ring-0"
-            placeholder="Título de la tarea"
+            placeholder={t('tasks.taskTitle')}
           />
         </div>
 
         {/* Status and Priority */}
         <div className="flex gap-4">
           <div className="flex-1">
-            <label className="text-xs font-medium text-gray-500 uppercase">Estado</label>
+            <label className="text-xs font-medium text-gray-500 uppercase">{t('common.status')}</label>
             <select
               value={localTask.status}
               onChange={(e) => updateField('status', e.target.value)}
               className="input mt-1"
             >
-              <option value="pending">Pendiente</option>
-              <option value="in-progress">En progreso</option>
-              <option value="completed">Completada</option>
-              <option value="cancelled">Cancelada</option>
+              <option value="pending">{t('tasks.status.pending')}</option>
+              <option value="in-progress">{t('tasks.status.inProgress')}</option>
+              <option value="completed">{t('tasks.status.completed')}</option>
+              <option value="cancelled">{t('tasks.status.cancelled')}</option>
             </select>
           </div>
           <div className="flex-1">
-            <label className="text-xs font-medium text-gray-500 uppercase">Prioridad</label>
+            <label className="text-xs font-medium text-gray-500 uppercase">{t('tasks.priority')}</label>
             <select
               value={localTask.priority}
               onChange={(e) => updateField('priority', e.target.value)}
@@ -386,7 +392,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
 
         {/* Due date */}
         <div>
-          <label className="text-xs font-medium text-gray-500 uppercase">Fecha de vencimiento</label>
+          <label className="text-xs font-medium text-gray-500 uppercase">{t('tasks.dueDate')}</label>
           <input
             type="date"
             value={localTask.dueDate ? new Date(localTask.dueDate).toISOString().split('T')[0] : ''}
@@ -397,31 +403,57 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
 
         {/* Type */}
         <div>
-          <label className="text-xs font-medium text-gray-500 uppercase">Tipo</label>
-          <div className="flex gap-2 mt-1">
-            {['task', 'call', 'email', 'meeting'].map((type) => (
+          <label className="text-xs font-medium text-gray-500 uppercase">{t('tasks.type')}</label>
+          <div className="flex flex-wrap gap-2 mt-1">
+            {taskTypes.map((type) => (
               <button
-                key={type}
-                onClick={() => updateField('type', type)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                  localTask.type === type
+                key={type.id}
+                onClick={() => updateField('type', type.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-colors text-sm ${
+                  localTask.type === type.id
                     ? 'border-primary-500 bg-primary-50 text-primary-700'
                     : 'border-gray-200 hover:bg-gray-50'
                 }`}
               >
-                {type === 'task' && <Icons.tasks className="w-4 h-4" />}
-                {type === 'call' && <Icons.phone className="w-4 h-4" />}
-                {type === 'email' && <Icons.mail className="w-4 h-4" />}
-                {type === 'meeting' && <Icons.calendar className="w-4 h-4" />}
-                <span className="text-sm capitalize">{type === 'task' ? 'Tarea' : type === 'call' ? 'Llamada' : type === 'email' ? 'Email' : 'Reunión'}</span>
+                <span>{type.emoji}</span>
+                <span>{type.label}</span>
               </button>
             ))}
           </div>
         </div>
 
+        {/* Google Maps link — shown when type has showMapsLink and contact has address */}
+        {showMapsLink && localTask.contact && (
+          (() => {
+            const c = localTask.contact
+            const addr = [c.address, c.city, c.state, c.country].filter(Boolean).join(', ')
+            if (!addr && !c.lat) return null
+            const mapsUrl = c.lat && c.lng
+              ? `https://www.google.com/maps?q=${c.lat},${c.lng}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`
+            return (
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">{t('tasks.address')}</label>
+                <div className="mt-1 flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                  <span className="text-sm text-blue-800 flex-1 truncate">{addr || `${c.lat?.toFixed(5)}, ${c.lng?.toFixed(5)}`}</span>
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shrink-0"
+                  >
+                    <Icons.external className="w-3.5 h-3.5" />
+                    {t('tasks.openInMaps')}
+                  </a>
+                </div>
+              </div>
+            )
+          })()
+        )}
+
         {/* Description */}
         <div>
-          <label className="text-xs font-medium text-gray-500 uppercase">Descripción</label>
+          <label className="text-xs font-medium text-gray-500 uppercase">{t('tasks.description')}</label>
           <textarea
             value={localTask.description || ''}
             onChange={(e) => setLocalTask({ ...localTask, description: e.target.value })}
@@ -463,7 +495,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
               className="btn-success flex-1"
             >
               <Icons.check className="w-4 h-4 mr-2" />
-              Completar
+              {t('tasks.markComplete')}
             </button>
           )}
           {canDelete && (
@@ -477,7 +509,7 @@ function TaskDrawer({ task, isOpen, onClose, onUpdate, onDelete }) {
         </div>
 
         {isSaving && (
-          <p className="text-xs text-gray-500 text-center">Guardando...</p>
+          <p className="text-xs text-gray-500 text-center">{t('common.saving')}</p>
         )}
       </div>
     </Drawer>

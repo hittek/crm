@@ -5,13 +5,16 @@ import { AuthProvider, useAuth } from '../lib/AuthContext'
 import { I18nProvider } from '../lib/i18n'
 import { useRouter } from 'next/router'
 import { Spinner } from '../components/ui/Spinner'
+import UpgradeWall from '../components/ui/UpgradeWall'
 
 // Pages that don't require authentication
-const PUBLIC_PAGES = ['/login']
+const PUBLIC_PAGES = ['/login', '/signup', '/', '/privacidad']
+// Prefix patterns that are always public (shareable quote links, widget)
+const PUBLIC_PREFIXES = ['/q/']
 
 function AuthenticatedApp({ Component, pageProps }) {
   const router = useRouter()
-  const { user, isLoading, isAuthenticated } = useAuth()
+  const { user, isLoading, isAuthenticated, isAccessBlocked } = useAuth()
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -23,7 +26,7 @@ function AuthenticatedApp({ Component, pageProps }) {
   }
 
   // Public pages don't need authentication check
-  if (PUBLIC_PAGES.includes(router.pathname)) {
+  if (PUBLIC_PAGES.includes(router.pathname) || PUBLIC_PREFIXES.some(p => router.pathname.startsWith(p))) {
     if (Component.getLayout) {
       return Component.getLayout(<Component {...pageProps} />)
     }
@@ -37,6 +40,11 @@ function AuthenticatedApp({ Component, pageProps }) {
         <Spinner size="lg" />
       </div>
     )
+  }
+
+  // Blocked org (trial expired, subscription canceled, suspended)
+  if (isAccessBlocked) {
+    return <UpgradeWall />
   }
 
   // Check if page wants to skip layout
