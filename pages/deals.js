@@ -8,27 +8,13 @@ export default function DealsPage() {
   const [editingDeal, setEditingDeal] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const handleFormSubmit = useCallback(async (data) => {
-    try {
-      const url = editingDeal
-        ? `/api/deals/${editingDeal.id}`
-        : '/api/deals'
-
-      const res = await fetch(url, {
-        method: editingDeal ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-
-      if (res.ok) {
-        setShowForm(false)
-        setEditingDeal(null)
-        setRefreshKey(prev => prev + 1)
-      }
-    } catch (error) {
-      console.error('Error saving deal:', error)
-    }
-  }, [editingDeal])
+  // DealForm handles the API call itself and calls onSave with the saved deal
+  // This callback just updates local state: close form, trigger refresh
+  const handleFormSubmit = useCallback((savedDeal) => {
+    setShowForm(false)
+    setEditingDeal(null)
+    setRefreshKey(prev => prev + 1)
+  }, [])
 
   const handleNewDeal = useCallback(() => {
     setEditingDeal(null)
@@ -57,8 +43,9 @@ export default function DealsPage() {
 
       {showForm && (
         <DealForm
+          isOpen={showForm}
           deal={editingDeal}
-          onSubmit={handleFormSubmit}
+          onSave={handleFormSubmit}
           onClose={() => {
             setShowForm(false)
             setEditingDeal(null)
