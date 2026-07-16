@@ -1,10 +1,10 @@
 /**
  * POST /api/products/[id]/upload-image
- * Uploads a product image to Vercel Blob and saves the URL.
- * Requires CRM session auth. Body: raw image bytes, Content-Type header set.
+ * Uploads a product image and saves the URL.
+ * Body: raw image bytes, Content-Type header set.
  * Query param: ?filename=my-product
  */
-import { put } from '@vercel/blob'
+import { uploadFile } from '../../../../lib/storage'
 import prisma from '../../../../lib/prisma'
 import { getSession } from '../../../../lib/auth'
 
@@ -34,15 +34,7 @@ export default async function handler(req, res) {
   const filename    = req.query.filename || `product-${productId}`
   const pathname    = `products/org-${organizationId}/${filename}.${ext}`
 
-  let url
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    url = `data:${contentType};base64,${buffer.toString('base64')}`
-  } else {
-    const blob = await put(pathname, buffer, {
-      access: 'public', contentType, addRandomSuffix: false,
-    })
-    url = blob.url
-  }
+  const { url } = await uploadFile(pathname, buffer, { contentType, addRandomSuffix: false })
 
   await prisma.product.update({
     where: { id: productId },

@@ -1,0 +1,18 @@
+.git
+.gsd
+node_modules
+.next
+.env
+.env.*
+!.env.example
+*.md
+tests
+playwright-report
+.nvmrc
+jest.config.js
+jest.setup.js
+playwright.config.js
+# Ops files — don't affect Next.js build, keep builder cache stable
+Dockerfile
+docker-compose.yaml
+.dockerignore

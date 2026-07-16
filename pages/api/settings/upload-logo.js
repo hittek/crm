@@ -1,4 +1,4 @@
-import { put } from '@vercel/blob'
+import { uploadFile } from '../../../lib/storage'
 import { getSession } from '../../../lib/auth'
 
 export const config = {
@@ -19,17 +19,6 @@ export default async function handler(req, res) {
   const orgId = session.user.organizationId
   const filename = req.query.filename || 'logo'
 
-  // Require Vercel Blob token in production; fall back gracefully in dev
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    // Dev fallback: read raw body and return a data URL
-    const chunks = []
-    for await (const chunk of req) chunks.push(chunk)
-    const buffer = Buffer.concat(chunks)
-    const contentType = req.headers['content-type'] || 'image/png'
-    const dataUrl = `data:${contentType};base64,${buffer.toString('base64')}`
-    return res.status(200).json({ url: dataUrl })
-  }
-
   try {
     const chunks = []
     for await (const chunk of req) chunks.push(chunk)
@@ -38,13 +27,9 @@ export default async function handler(req, res) {
     const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'png'
     const pathname = `logos/org-${orgId}/${filename}.${ext}`
 
-    const blob = await put(pathname, buffer, {
-      access: 'public',
-      contentType,
-      addRandomSuffix: false,
-    })
+    const { url } = await uploadFile(pathname, buffer, { contentType, addRandomSuffix: false })
 
-    return res.status(200).json({ url: blob.url })
+    return res.status(200).json({ url })
   } catch (error) {
     console.error('Logo upload error:', error)
     return res.status(500).json({ error: 'Error al subir el logo' })

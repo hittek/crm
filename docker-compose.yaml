@@ -1,32 +1,99 @@
-version: '3.8'
-
 services:
-  db:
-    image: postgres:13
-    container_name: crm-db
+
+  # ─── PostgreSQL with pgvector ─────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: hittek-crm-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: crm
+      POSTGRES_USER: ${POSTGRES_USER:-crm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-crm_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d
+    networks:
+      - crm-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crm} -d ${POSTGRES_DB:-crm_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
-  app:
-    image: node:18
-    container_name: crm-app
-    command: sh -c "npm install && npm run prisma-generate && npm run dev"
+  # ─── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: hittek-crm-redis
+    restart: unless-stopped
     volumes:
-      - .:/app
-    working_dir: /app
+      - redis_data:/data
+    networks:
+      - crm-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ─── CRM App ─────────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+    image: hittek-crm:latest
+    container_name: hittek-crm-app
+    restart: unless-stopped
+    env_file: .env
     environment:
-      DATABASE_URL: postgres://postgres:postgres@db:5432/crm
-      DISABLE_ERD: true
+      # Override DATABASE_URL to use the postgres service by container name
+      DATABASE_URL: postgres://${POSTGRES_USER:-crm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-crm_db}
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
     ports:
       - "3000:3000"
+    volumes:
+      - uploads_data:/data/uploads
+    networks:
+      - crm-network
     depends_on:
-      - db
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ─── ngrok tunnel ────────────────────────────────────────────────────────────
+  # Static domain — URL never changes across restarts.
+  # Inspection UI: http://localhost:4043
+  # Port 4043 avoids conflict with YAMS (4042) and homeblinds (4040).
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: hittek-crm-ngrok
+    command: http --url=${NGROK_DOMAIN:?NGROK_DOMAIN is required} app:3000
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?NGROK_AUTHTOKEN is required}
+    ports:
+      - "4043:4040"
+    networks:
+      - crm-network
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  redis_data:
+  uploads_data:
+
+networks:
+  crm-network:
+    driver: bridge

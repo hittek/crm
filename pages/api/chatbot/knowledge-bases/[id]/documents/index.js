@@ -1,6 +1,6 @@
 import fs from 'fs'
 import { createRequire } from 'module'
-import { waitUntil } from '@vercel/functions'
+// waitUntil removed — in self-hosted Docker the process stays alive; plain Promise.resolve() suffices
 
 const _require = createRequire(import.meta.url)
 import prisma from '../../../../../../lib/prisma'
@@ -434,8 +434,8 @@ export default async function handler(req, res) {
     await prisma.knowledgeBase.update({ where: { id: kbId }, data: { status: 'indexing' } })
 
     // Fire-and-forget background processing.
-    // waitUntil() keeps the Vercel Lambda alive until the promise resolves.
-    waitUntil(processDocument({
+    // In self-hosted Docker the Node.js process stays alive — no waitUntil needed.
+    processDocument({
       docId:    doc.id,
       kbId,
       orgId:    organizationId,
@@ -444,7 +444,7 @@ export default async function handler(req, res) {
       filePath: file?.filepath         ?? null,
       fileName: file?.originalFilename ?? null,
       fileSize: file?.size             ?? null,
-    }))
+    }).catch(err => console.error('[chatbot] background processDocument error:', err.message))
 
     return res.status(201).json(doc)
   }
