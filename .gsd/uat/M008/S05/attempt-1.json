@@ -1,0 +1,153 @@
+{
+  "runId": "uat:M008:S05:attempt-1",
+  "attempt": 1,
+  "milestoneId": "M008",
+  "sliceId": "S05",
+  "uatType": "mixed",
+  "verdict": "PASS",
+  "gateVerdict": "pass",
+  "evaluatedAt": "2026-07-21T20:54:52.585Z",
+  "worktreeRoot": "/srv/stacks/hittek-chatbot",
+  "browserToolsPresented": true,
+  "modePolicy": {
+    "browserTools": true,
+    "partialEligible": true,
+    "passWithHumanFollowUp": true,
+    "requiredAnyModes": []
+  },
+  "checks": [
+    {
+      "description": "chatwoot added to CHANNEL_META with violet badge",
+      "evidence": [
+        {
+          "executionId": "78732bf9-bd21-4375-829e-d485677b4931",
+          "kind": "gsd_uat_exec",
+          "ref": "78732bf9-bd21-4375-829e-d485677b4931"
+        }
+      ],
+      "id": "UAT-S05-01",
+      "mode": "artifact",
+      "notes": "chatwoot: { color: 'bg-violet-100 text-violet-700' } confirmed in conversations.js",
+      "result": "PASS"
+    },
+    {
+      "description": "GET /api/conversations?channel=chatwoot returns 4 conversations",
+      "evidence": [
+        {
+          "executionId": "2a86c038-ea8e-4131-925e-d352ad457074",
+          "kind": "gsd_uat_exec",
+          "ref": "2a86c038-ea8e-4131-925e-d352ad457074"
+        }
+      ],
+      "id": "UAT-S05-02",
+      "mode": "runtime",
+      "notes": "count: 4 channels: ['chatwoot']",
+      "result": "PASS"
+    },
+    {
+      "description": "GET /api/conversations/52 returns chatwootConvUrl",
+      "evidence": [
+        {
+          "executionId": "14c8af84-1484-403d-b146-31f118cf9a65",
+          "kind": "gsd_uat_exec",
+          "ref": "14c8af84-1484-403d-b146-31f118cf9a65"
+        }
+      ],
+      "id": "UAT-S05-03",
+      "mode": "runtime",
+      "notes": "url: https://chatwoot.hittek.mx/app/accounts/1/conversations/4",
+      "result": "PASS"
+    },
+    {
+      "description": "Agent reply from CRM routes to Chatwoot",
+      "evidence": [
+        {
+          "executionId": "35e6017f-cbc6-45f3-afeb-59e68f763fb5",
+          "kind": "gsd_uat_exec",
+          "ref": "35e6017f-cbc6-45f3-afeb-59e68f763fb5"
+        }
+      ],
+      "id": "UAT-S05-04",
+      "mode": "runtime",
+      "notes": "Chatwoot msg_id=12; [chatwoot-reply] in app log",
+      "result": "PASS"
+    }
+  ],
+  "presentation": {
+    "surface": "hybrid",
+    "presentedTools": [
+      "gsd_uat_exec",
+      "gsd_uat_result_save",
+      "gsd_resume",
+      "gsd_milestone_status",
+      "gsd_journal_query",
+      "find",
+      "glob",
+      "grep",
+      "ls",
+      "read",
+      "browser_navigate",
+      "browser_click",
+      "browser_type",
+      "browser_fill_form",
+      "browser_click_ref",
+      "browser_fill_ref",
+      "browser_wait_for",
+      "browser_assert",
+      "browser_verify",
+      "browser_screenshot",
+      "browser_snapshot_refs",
+      "browser_find",
+      "browser_get_console_logs",
+      "browser_get_network_logs",
+      "browser_evaluate",
+      "browser_reload",
+      "browser_batch",
+      "browser_act"
+    ],
+    "blockedTools": [
+      {
+        "name": "edit",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "write",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "gsd_exec",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "gsd_summary_save",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "gsd_save_gate_result",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "search-the-web",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "WebSearch",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "Bash",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "Write",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "Edit",
+        "reason": "forbidden during run-uat"
+      }
+    ],
+    "toolPresentationPlanId": "run-uat/default-v1"
+  },
+  "notes": "All M008 acceptance criteria verified via API and log evidence. Browser tool unstable on host; API-level evidence confirms all observable claims."
+}

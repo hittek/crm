@@ -25,6 +25,28 @@ function isAdminOrManager(role) {
 async function forwardToChannel(conv, content) {
   if (!conv.channel || conv.channel === 'sandbox' || conv.channel === 'web') return
 
+  // Chatwoot-managed conversations — no ChannelConfig row needed
+  if (conv.channel === 'chatwoot') {
+    try {
+      const parts = (conv.sessionId || '').split('-')
+      if (parts.length === 3 && parts[0] === 'chatwoot') {
+        const accountId = parseInt(parts[1], 10)
+        const chatwootConvId = parseInt(parts[2], 10)
+        const org = await prisma.organization.findUnique({
+          where: { id: conv.orgId },
+          select: { chatwootAgentBotToken: true },
+        })
+        if (org?.chatwootAgentBotToken && accountId && chatwootConvId) {
+          await sendChatwootMessage(accountId, chatwootConvId, content, org.chatwootAgentBotToken)
+          console.log(`[chatwoot-reply] sent agent reply to conv ${chatwootConvId} in account ${accountId}`)
+        }
+      }
+    } catch (err) {
+      console.error('[messages] chatwoot forwardToChannel failed:', err.message)
+    }
+    return
+  }
+
   try {
     const channelConfig = await prisma.channelConfig.findFirst({
       where: { chatbotId: conv.chatbotId, channel: conv.channel, isActive: true },
@@ -42,22 +64,7 @@ async function forwardToChannel(conv, content) {
       await sendTelegram(creds.botToken, chatId, content)
     }
 
-    if (conv.channel === 'chatwoot') {
-      // sessionId format: chatwoot-{accountId}-{chatwootConvId}
-      const parts = (conv.sessionId || '').split('-')
-      if (parts.length === 3 && parts[0] === 'chatwoot') {
-        const accountId = parseInt(parts[1], 10)
-        const chatwootConvId = parseInt(parts[2], 10)
-        const org = await prisma.organization.findUnique({
-          where: { id: conv.orgId },
-          select: { chatwootAgentBotToken: true },
-        })
-        if (org?.chatwootAgentBotToken && accountId && chatwootConvId) {
-          await sendChatwootMessage(accountId, chatwootConvId, content, org.chatwootAgentBotToken)
-          console.log(`[chatwoot-reply] sent agent reply to conv ${chatwootConvId} in account ${accountId}`)
-        }
-      }
-    }
+    // WhatsApp / Facebook placeholders — implement when Meta credentials are wired
   } catch (err) {
     console.error('[messages] forwardToChannel failed:', err.message)
   }
