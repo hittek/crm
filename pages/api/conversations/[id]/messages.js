@@ -7,6 +7,7 @@ import { getSession } from '../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse } from '../../../../lib/planLimits'
 import { hasMinRole } from '../../../../lib/auth'
 import { sendMessage as sendTelegram } from '../../../../lib/channels/telegram'
+import { sendChatwootMessage } from '../../../../lib/chatwoot'
 import { decryptJSON } from '../../../../lib/crypto'
 
 async function getConv(id, orgId) {
@@ -41,7 +42,22 @@ async function forwardToChannel(conv, content) {
       await sendTelegram(creds.botToken, chatId, content)
     }
 
-    // WhatsApp / Facebook placeholders — implement when those channels are wired
+    if (conv.channel === 'chatwoot') {
+      // sessionId format: chatwoot-{accountId}-{chatwootConvId}
+      const parts = (conv.sessionId || '').split('-')
+      if (parts.length === 3 && parts[0] === 'chatwoot') {
+        const accountId = parseInt(parts[1], 10)
+        const chatwootConvId = parseInt(parts[2], 10)
+        const org = await prisma.organization.findUnique({
+          where: { id: conv.orgId },
+          select: { chatwootAgentBotToken: true },
+        })
+        if (org?.chatwootAgentBotToken && accountId && chatwootConvId) {
+          await sendChatwootMessage(accountId, chatwootConvId, content, org.chatwootAgentBotToken)
+          console.log(`[chatwoot-reply] sent agent reply to conv ${chatwootConvId} in account ${accountId}`)
+        }
+      }
+    }
   } catch (err) {
     console.error('[messages] forwardToChannel failed:', err.message)
   }

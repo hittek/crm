@@ -7,6 +7,7 @@
 import prisma from '../../../../lib/prisma'
 import { getSession } from '../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse } from '../../../../lib/planLimits'
+import { updateAgentBot, ensureOrgProvisioned } from '../../../../lib/chatwoot'
 
 export default async function handler(req, res) {
   const session = await getSession(req, res)
@@ -60,6 +61,19 @@ export default async function handler(req, res) {
       data,
       include: { kb: { select: { id: true, name: true, status: true } } },
     })
+
+    // Sync name change to Chatwoot AgentBot (non-blocking)
+    if (data.name) {
+      try {
+        const org = await prisma.organization.findUnique({ where: { id: organizationId } })
+        if (org?.chatwootAgentBotId) {
+          await updateAgentBot(org.chatwootAgentBotId, { name: `${data.name} Bot` })
+        }
+      } catch (err) {
+        console.error(`[chatbot/bots] AgentBot name sync failed for bot ${id}:`, err.message)
+      }
+    }
+
     return res.json(updated)
   }
 
@@ -67,6 +81,20 @@ export default async function handler(req, res) {
   if (req.method === 'DELETE') {
     if (role !== 'admin') return res.status(403).json({ error: 'Solo administradores pueden eliminar chatbots' })
     await prisma.chatbot.delete({ where: { id } })
+
+    // Reset AgentBot webhook to org default (non-blocking)
+    try {
+      const org = await prisma.organization.findUnique({ where: { id: organizationId } })
+      if (org?.chatwootAgentBotId) {
+        const crmBase = process.env.NEXT_PUBLIC_APP_URL || 'https://crm.hittek.mx'
+        await updateAgentBot(org.chatwootAgentBotId, {
+          outgoing_url: `${crmBase}/api/chatbot/agentbot/${org.slug}`,
+        })
+      }
+    } catch (err) {
+      console.error(`[chatbot/bots] AgentBot webhook reset failed for bot ${id}:`, err.message)
+    }
+
     return res.status(204).end()
   }
 

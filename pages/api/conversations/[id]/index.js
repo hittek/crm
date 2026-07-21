@@ -28,5 +28,17 @@ export default async function handler(req, res) {
 
   if (!conversation) return res.status(404).json({ error: 'Conversación no encontrada' })
 
-  return res.json({ conversation })
+  // Add Chatwoot conversation URL for chatwoot-channel conversations
+  let chatwootConvUrl = null
+  if (conversation.channel === 'chatwoot' && conversation.sessionId) {
+    const parts = conversation.sessionId.split('-')
+    if (parts.length === 3 && parts[0] === 'chatwoot') {
+      const accountId = parts[1]
+      const chatwootConvId = parts[2]
+      const chatwootBase = process.env.NEXT_PUBLIC_CHATWOOT_URL || 'https://chatwoot.hittek.mx'
+      chatwootConvUrl = `${chatwootBase}/app/accounts/${accountId}/conversations/${chatwootConvId}`
+    }
+  }
+
+  return res.json({ conversation, chatwootConvUrl })
 }

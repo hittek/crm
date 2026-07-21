@@ -15,6 +15,7 @@ const CHANNEL_META = {
   whatsapp:  { color: 'bg-green-100 text-green-700' },
   facebook:  { color: 'bg-indigo-100 text-indigo-700' },
   telegram:  { color: 'bg-sky-100 text-sky-700' },
+  chatwoot:  { color: 'bg-violet-100 text-violet-700' },
 }
 
 const STATUS_META = {
@@ -326,6 +327,16 @@ function Thread({ conv, onStatusChange, currentUser }) {
     ...events.map(e   => ({ ...e, _kind: 'event'   })),
   ].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
 
+  // Derive Chatwoot conversation URL from sessionId if applicable
+  const chatwootConvUrl = (() => {
+    if (conv.channel !== 'chatwoot' || !conv.sessionId) return null
+    const parts = conv.sessionId.split('-')
+    if (parts.length === 3 && parts[0] === 'chatwoot') {
+      return `https://chatwoot.hittek.mx/app/accounts/${parts[1]}/conversations/${parts[2]}`
+    }
+    return null
+  })()
+
   return (
     <div className="flex flex-col h-full">
       {/* Thread header */}
@@ -343,6 +354,19 @@ function Thread({ conv, onStatusChange, currentUser }) {
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Chatwoot link for chatwoot-channel conversations */}
+          {chatwootConvUrl && (
+            <a
+              href={chatwootConvUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg border border-violet-200 text-violet-700 hover:bg-violet-50 transition-colors"
+              title="Ver en Chatwoot"
+            >
+              <Icons.globe className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Chatwoot</span>
+            </a>
+          )}
           {/* Bot toggle — only relevant for WhatsApp/Telegram channels */}
           {conv.chatbotId && conv.channel !== 'sandbox' && conv.channel !== 'web' && conv.status !== 'resolved' && (
             <button

@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "lastWriter": "gsd-pi",
-  "lastProjectedAt": "2026-07-21T17:55:08.750Z",
+  "lastProjectedAt": "2026-07-21T20:47:19.190Z",
   "projections": {
     "phases/01-m001-ui-ux-validation-stabilization/01-ROADMAP.md": {
       "sha": "7d79841e67173171",
@@ -398,7 +398,7 @@
       ]
     },
     "phases/08-chatwoot-integration-u2014-channel-layer/08-ROADMAP.md": {
-      "sha": "5385ed3174e54908",
+      "sha": "7424f45b5c9ff86c",
       "entities": [
         "M008"
       ]
@@ -415,6 +415,48 @@
       "entities": [
         "M007",
         "M007/S05"
+      ]
+    },
+    "phases/08-chatwoot-integration-u2014-channel-layer/08-01-PLAN.md": {
+      "sha": "0af862892a546e57",
+      "entities": [
+        "M008",
+        "M008/S02b"
+      ]
+    },
+    "phases/08-chatwoot-integration-u2014-channel-layer/08-02-PLAN.md": {
+      "sha": "97c150a348c9b80f",
+      "entities": [
+        "M008",
+        "M008/S02"
+      ]
+    },
+    "phases/08-chatwoot-integration-u2014-channel-layer/08-02-ASSESSMENT.md": {
+      "sha": "078ddbaeaf74f122",
+      "entities": [
+        "M008",
+        "M008/S02"
+      ]
+    },
+    "phases/08-chatwoot-integration-u2014-channel-layer/08-03-PLAN.md": {
+      "sha": "157768a00b359601",
+      "entities": [
+        "M008",
+        "M008/S03"
+      ]
+    },
+    "phases/08-chatwoot-integration-u2014-channel-layer/08-04-PLAN.md": {
+      "sha": "0c5b4f3acaa9c5f0",
+      "entities": [
+        "M008",
+        "M008/S04"
+      ]
+    },
+    "phases/08-chatwoot-integration-u2014-channel-layer/08-05-PLAN.md": {
+      "sha": "21ffc769fb3e9b88",
+      "entities": [
+        "M008",
+        "M008/S05"
       ]
     }
   },

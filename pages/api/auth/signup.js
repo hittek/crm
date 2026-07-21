@@ -1,5 +1,6 @@
 import prisma from '../../../lib/prisma'
 import { getSession, hashPassword } from '../../../lib/auth'
+import { provisionOrg, ensureOrgProvisioned } from '../../../lib/chatwoot'
 
 /**
  * Derives a URL-safe slug from an org name.
@@ -107,6 +108,14 @@ export default async function handler(req, res) {
 
       return { org, user }
     })
+
+    // ── Provision Chatwoot account + AgentBot (non-blocking) ─────────────
+    try {
+      await ensureOrgProvisioned({ id: org.id, name: org.name, slug: org.slug, chatwootAccountId: null }, prisma)
+    } catch (chatwootErr) {
+      // Log but do not block signup — can be backfilled later
+      console.error(`[signup] Chatwoot provisioning failed for org ${org.id}:`, chatwootErr.message)
+    }
 
     // ── Create session ────────────────────────────────────────────────────
     const session = await getSession(req, res)

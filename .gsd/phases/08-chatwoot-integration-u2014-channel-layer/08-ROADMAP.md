@@ -13,20 +13,23 @@
 
 ## Slices
 
-- [ ] **S01: Deploy Chatwoot on Shared Docker Stack** `risk:medium` `depends:[]`
+- [x] **S01: Deploy Chatwoot on Shared Docker Stack** `risk:medium` `depends:[]`
   > After this: curl chatwoot.localhost/auth/sign_in returns 200. Chatwoot super admin console accessible.
 
-- [ ] **S02: Multi-tenant Org Provisioning via Platform API** `risk:high` `depends:[S01]`
+- [x] **S02: Multi-tenant Org Provisioning via Platform API** `risk:high` `depends:[S01]`
   > After this: Create org in CRM → Chatwoot account + AgentBot auto-provisioned via Platform API.
 
-- [ ] **S03: AgentBot Bridge — Replace Raw Webhooks** `risk:high` `depends:[S02]`
+- [x] **S03: AgentBot Bridge — Replace Raw Webhooks** `risk:high` `depends:[S02]`
   > After this: Send WhatsApp message → Claude+RAG responds — via Chatwoot AgentBot, zero raw Meta webhook code remaining
 
-- [ ] **S04: OAuth Channel Connect UI** `risk:medium` `depends:[S02]`
+- [x] **S04: OAuth Channel Connect UI** `risk:medium` `depends:[S02]`
   > After this: Connect WhatsApp Business via one OAuth click. Channel active in under 60 seconds. No tokens pasted.
 
-- [ ] **S05: Conversations Page — Chatwoot-backed Messages** `risk:medium` `depends:[S03]`
+- [x] **S05: Conversations Page — Chatwoot-backed Messages** `risk:medium` `depends:[S03]`
   > After this: Open /conversations → click conversation → full message thread from Chatwoot. Agent reply delivered via WhatsApp. Chatwoot inbox link in sidebar.
+
+- [x] **S02b: Org and Chatbot Lifecycle Hooks** `risk:low` `depends:[S02]`
+  > After this: After this: create org via admin panel OR create chatbot in CRM → Chatwoot account+AgentBot auto-provisioned; chatbot update propagates webhook URL to AgentBot; all paths idempotent
 
 ## Boundary Map
 

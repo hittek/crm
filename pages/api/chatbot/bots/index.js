@@ -6,6 +6,7 @@
 import prisma from '../../../../lib/prisma'
 import { getSession } from '../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse } from '../../../../lib/planLimits'
+import { updateAgentBot, ensureOrgProvisioned } from '../../../../lib/chatwoot'
 
 export default async function handler(req, res) {
   const session = await getSession(req, res)
@@ -43,12 +44,31 @@ export default async function handler(req, res) {
         orgId:           organizationId,
         kbId:            parseInt(kbId),
         name:            name.trim(),
-        greeting:        greeting?.trim() || 'Hola, ¿en qué puedo ayudarte?',
+        greeting:        greeting?.trim() || 'Hola, \u00bfen qu\u00e9 puedo ayudarte?',
         escalationPhrase: escalationPhrase?.trim() || null,
         primaryColor:    primaryColor || '#2563eb',
       },
       include: { kb: { select: { id: true, name: true, status: true } } },
     })
+
+    // Update AgentBot webhook to route to this specific chatbot (non-blocking)
+    try {
+      const org = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { id: true, name: true, slug: true, chatwootAccountId: true, chatwootAgentBotId: true },
+      })
+      if (org) {
+        const ids = await ensureOrgProvisioned(org, prisma)
+        const crmBase = process.env.NEXT_PUBLIC_APP_URL || 'https://crm.hittek.mx'
+        await updateAgentBot(ids.chatwootAgentBotId, {
+          outgoing_url: `${crmBase}/api/chatbot/agentbot/${org.slug}?botKey=${bot.apiKey}`,
+        })
+        console.log(`[chatbot/bots] AgentBot webhook set for bot ${bot.id} (org ${org.id})`)
+      }
+    } catch (err) {
+      console.error(`[chatbot/bots] AgentBot webhook update failed for bot ${bot.id}:`, err.message)
+    }
+
     return res.status(201).json(bot)
   }
 

@@ -1,5 +1,6 @@
 import prisma from '../../../lib/prisma'
 import { requireSuperAdmin } from '../../../lib/superAdmin'
+import { ensureOrgProvisioned } from '../../../lib/chatwoot'
 
 export default async function handler(req, res) {
   const admin = await requireSuperAdmin(req, res)
@@ -9,12 +10,48 @@ export default async function handler(req, res) {
     return listOrgs(res)
   }
 
+  if (req.method === 'POST') {
+    return createOrg(req, res)
+  }
+
   if (req.method === 'PATCH') {
     return updateOrg(req, res)
   }
 
-  res.setHeader('Allow', ['GET', 'PATCH'])
+  res.setHeader('Allow', ['GET', 'POST', 'PATCH'])
   return res.status(405).end()
+}
+
+async function createOrg(req, res) {
+  const { name, plan = 'trial', adminEmail, adminPassword, adminName } = req.body
+
+  if (!name?.trim()) return res.status(400).json({ error: 'El nombre es requerido' })
+
+  // Derive slug
+  const base = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '').slice(0, 30) || 'org'
+  let slug = base, attempt = 0
+  while (true) {
+    const candidate = attempt === 0 ? slug : `${base}${attempt}`
+    const existing = await prisma.organization.findUnique({ where: { slug: candidate } })
+    if (!existing) { slug = candidate; break }
+    if (++attempt > 99) return res.status(500).json({ error: 'No se pudo generar un slug único' })
+  }
+
+  const trialEndsAt = new Date()
+  trialEndsAt.setDate(trialEndsAt.getDate() + 14)
+
+  const org = await prisma.organization.create({
+    data: { name: name.trim(), slug, plan, planStatus: 'trialing', trialEndsAt, isActive: true },
+  })
+
+  // Provision Chatwoot — non-blocking
+  try {
+    await ensureOrgProvisioned({ id: org.id, name: org.name, slug: org.slug, chatwootAccountId: null }, prisma)
+  } catch (err) {
+    console.error(`[admin/orgs] Chatwoot provisioning failed for org ${org.id}:`, err.message)
+  }
+
+  return res.status(201).json({ org })
 }
 
 async function listOrgs(res) {

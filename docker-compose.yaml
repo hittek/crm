@@ -89,10 +89,88 @@ services:
       app:
         condition: service_healthy
 
+  # ─── Chatwoot Rails (web) ───────────────────────────────────────────────────────────────
+  chatwoot-app:
+    image: chatwoot/chatwoot:latest
+    container_name: hittek-chatwoot-app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      RAILS_ENV: production
+      INSTALLATION_ENV: docker
+      SECRET_KEY_BASE: ${CHATWOOT_SECRET_KEY_BASE}
+      FRONTEND_URL: ${CHATWOOT_FRONTEND_URL:-https://chatwoot.hittek.mx}
+      POSTGRES_DATABASE: ${CHATWOOT_POSTGRES_DB:-chatwoot_production}
+      POSTGRES_USERNAME: ${POSTGRES_USER:-crm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379
+    entrypoint: docker/entrypoints/rails.sh
+    command: ["bundle", "exec", "rails", "s", "-p", "3000", "-b", "0.0.0.0"]
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - crm-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ─── Chatwoot Sidekiq (background jobs) ───────────────────────────────────────────────
+  chatwoot-sidekiq:
+    image: chatwoot/chatwoot:latest
+    container_name: hittek-chatwoot-sidekiq
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      RAILS_ENV: production
+      INSTALLATION_ENV: docker
+      SECRET_KEY_BASE: ${CHATWOOT_SECRET_KEY_BASE}
+      FRONTEND_URL: ${CHATWOOT_FRONTEND_URL:-https://chatwoot.hittek.mx}
+      POSTGRES_DATABASE: ${CHATWOOT_POSTGRES_DB:-chatwoot_production}
+      POSTGRES_USERNAME: ${POSTGRES_USER:-crm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379
+    command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - crm-network
+    depends_on:
+      chatwoot-app:
+        condition: service_healthy
+
+  # ─── Chatwoot ngrok tunnel ───────────────────────────────────────────────────────────────
+  ngrok-chatwoot:
+    image: ngrok/ngrok:latest
+    container_name: hittek-chatwoot-ngrok
+    command: http --url=${NGROK_DOMAIN_CHATWOOT:?NGROK_DOMAIN_CHATWOOT is required} chatwoot-app:3000
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    networks:
+      - crm-network
+    restart: unless-stopped
+    depends_on:
+      chatwoot-app:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:
   uploads_data:
+  chatwoot_storage:
 
 networks:
   crm-network:

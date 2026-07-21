@@ -363,7 +363,6 @@ function ChannelsModal({ bot, onClose }) {
                         <p className={`text-xs flex items-center gap-1 mt-0.5 ${connected.isActive ? 'text-green-600' : 'text-amber-600'}`}>
                           {connected.isActive ? <Icons.check className="w-3 h-3" /> : <Icons.alert className="w-3 h-3" />}
                           {connected.botUsername ? `@${connected.botUsername}` : connected.phoneNumberId || connected.pageId || 'Conectado'}
-                          {!connected.isActive && <span className="text-amber-500">(pendiente HTTPS)</span>}
                         </p>
                       ) : (
                         <p className="text-xs text-gray-400 mt-0.5">No conectado</p>
@@ -371,14 +370,17 @@ function ChannelsModal({ bot, onClose }) {
                     </div>
                     {connected ? (
                       <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => copyWebhook(key)}
-                          className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center gap-1"
-                          title="Copiar URL del webhook"
-                        >
-                          {copied === key ? <Icons.check className="w-3 h-3 text-green-500" /> : <Icons.copy className="w-3 h-3" />}
-                          URL
-                        </button>
+                        {/* Only show webhook URL button for non-Chatwoot channels */}
+                        {key !== 'telegram' && (
+                          <button
+                            onClick={() => copyWebhook(key)}
+                            className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center gap-1"
+                            title="Copiar URL del webhook"
+                          >
+                            {copied === key ? <Icons.check className="w-3 h-3 text-green-500" /> : <Icons.copy className="w-3 h-3" />}
+                            URL
+                          </button>
+                        )}
                         <button
                           onClick={() => disconnect(key)}
                           className="px-2.5 py-1.5 text-xs rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition-colors"
@@ -410,7 +412,7 @@ function ChannelsModal({ bot, onClose }) {
                               value={form.botToken || ''} onChange={e => setForm(f => ({ ...f, botToken: e.target.value }))}
                               className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300 font-mono"
                             />
-                            <p className="text-xs text-gray-400 mt-1">Obtén el token de <span className="font-medium">@BotFather</span> en Telegram</p>
+                            <p className="text-xs text-gray-400 mt-1">Obtén el token de <span className="font-medium">@BotFather</span> en Telegram. El webhook se configura automáticamente.</p>
                           </div>
                         </>
                       )}

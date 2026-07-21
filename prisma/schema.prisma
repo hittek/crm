@@ -32,6 +32,12 @@ model Organization {
   suspendedAt          DateTime?
   suspendedReason      String?
 
+  // Chatwoot integration
+  chatwootAccountId    Int?      // Chatwoot account ID (provisioned on org creation)
+  chatwootAgentBotId   Int?      // Chatwoot global AgentBot ID for this org
+  chatwootAgentBotToken String?   // AgentBot access token for Conversations API
+  chatwootAdminToken    String?   // Per-account admin user token for inbox management
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -480,6 +486,7 @@ model ChannelConfig {
   botUsername   String?   // Telegram: @botname
   phoneNumberId String?   // WhatsApp: WABA phone number ID
   pageId        String?   // Facebook: page ID
+  chatwootInboxId Int?    // Chatwoot inbox ID (when channel is managed via Chatwoot)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

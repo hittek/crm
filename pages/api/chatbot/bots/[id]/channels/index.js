@@ -9,7 +9,8 @@ import prisma             from '../../../../../../lib/prisma'
 import { getSession }     from '../../../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse } from '../../../../../../lib/planLimits'
 import { encryptJSON, decryptJSON } from '../../../../../../lib/crypto'
-import { getMe, setWebhook, deleteWebhook } from '../../../../../../lib/channels/telegram'
+import { getMe } from '../../../../../../lib/channels/telegram'
+import { createChatwootInbox, deleteInbox as deleteChatwootInbox } from '../../../../../../lib/chatwoot'
 
 function safeConfig(cfg) {
   // Never expose raw credentials to the client
@@ -28,6 +29,12 @@ export default async function handler(req, res) {
   const chatbotId = parseInt(req.query.id, 10)
   const bot = await prisma.chatbot.findFirst({ where: { id: chatbotId, orgId: organizationId } })
   if (!bot) return res.status(404).json({ error: 'Chatbot no encontrado' })
+
+  // Load org for Chatwoot provisioning data
+  const org = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { id: true, name: true, chatwootAccountId: true, chatwootAgentBotId: true, chatwootAdminToken: true },
+  })
 
   if (!['admin', 'manager'].includes(role)) return res.status(403).json({ error: 'Sin permiso' })
 
@@ -52,11 +59,14 @@ export default async function handler(req, res) {
 
     // Channel-specific teardown
     if (channel === 'telegram') {
-      try {
-        const creds = decryptJSON(cfg.credentials)
-        await deleteWebhook(creds.botToken)
-      } catch (e) {
-        console.warn('[channels] Telegram deleteWebhook failed (continuing):', e.message)
+      // Delete Chatwoot inbox if managed via Chatwoot
+      if (cfg.chatwootInboxId && org?.chatwootAccountId && org?.chatwootAdminToken) {
+        try {
+          await deleteChatwootInbox(org.chatwootAccountId, cfg.chatwootInboxId, org.chatwootAdminToken)
+          console.log(`[channels] deleted Chatwoot inbox ${cfg.chatwootInboxId} for chatbot ${chatbotId}`)
+        } catch (e) {
+          console.warn('[channels] deleteChatwootInbox failed (continuing):', e.message)
+        }
       }
     }
 
@@ -82,7 +92,7 @@ export default async function handler(req, res) {
       const { botToken } = req.body
       if (!botToken?.trim()) return res.status(400).json({ error: 'Token de bot requerido' })
 
-      // Verify token
+      // Verify token via Telegram API
       let botInfo
       try {
         botInfo = await getMe(botToken.trim())
@@ -90,35 +100,42 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: `Token inválido: ${err.message}` })
       }
 
-      // Register webhook (only possible over HTTPS — skipped on local HTTP dev)
-      const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook/telegram/${bot.apiKey}`
-      const isHttps    = webhookUrl.startsWith('https://')
-      let webhookRegistered = false
-      if (isHttps) {
+      // Create Chatwoot Telegram inbox — Chatwoot handles webhook registration
+      let chatwootInboxId = null
+      if (org?.chatwootAccountId && org?.chatwootAdminToken) {
         try {
-          await setWebhook(botToken.trim(), webhookUrl)
-          webhookRegistered = true
+          const inbox = await createChatwootInbox(
+            org.chatwootAccountId,
+            `${botInfo.first_name || botInfo.username} (Telegram)`,
+            'telegram',
+            { bot_token: botToken.trim() },
+            org.chatwootAgentBotId,
+            org.chatwootAdminToken,
+          )
+          chatwootInboxId = inbox.id
+          console.log(`[channels] created Chatwoot Telegram inbox ${chatwootInboxId} for chatbot ${chatbotId}`)
         } catch (err) {
-          return res.status(500).json({ error: `Error registrando webhook: ${err.message}` })
+          return res.status(500).json({ error: `Error creando inbox en Chatwoot: ${err.message}` })
         }
+      } else {
+        return res.status(500).json({ error: 'Organización sin cuenta Chatwoot — contactar soporte' })
       }
 
       const cfg = await prisma.channelConfig.create({
         data: {
-          orgId:       organizationId,
+          orgId:           organizationId,
           chatbotId,
-          channel:     'telegram',
-          credentials: encryptJSON({ botToken: botToken.trim() }),
-          isActive:    isHttps,   // only active once webhook is registered (requires HTTPS)
-          botUsername: botInfo.username,
+          channel:         'telegram',
+          credentials:     encryptJSON({ botToken: botToken.trim() }),
+          isActive:        true,
+          botUsername:     botInfo.username,
+          chatwootInboxId,
         },
       })
       return res.status(201).json({
         channel: safeConfig(cfg),
         botInfo,
-        webhookRegistered,
-        webhookUrl,
-        warning: isHttps ? null : 'Token guardado. El webhook se registrará automáticamente al desplegar en producción (requiere HTTPS).',
+        chatwootInboxId,
       })
     }
 
