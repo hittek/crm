@@ -8,5 +8,5 @@
 - ✅ **M004: Channel Integrations — Roadmap** (`depends:[—]`)
 - ✅ **M005: Quote Generation — Roadmap** (`depends:[—]`)
 - ✅ **M006: CRM ↔ Chatbot Bridge — Roadmap** (`depends:[—]`)
-- 🔄 **M007: Infrastructure Migration \u2014 Vercel to RPi4 Docker** (`depends:[—]`)
+- ✅ **M007: Infrastructure Migration \u2014 Vercel to RPi4 Docker** (`depends:[—]`)
 - 🔄 **M008: Chatwoot Integration \u2014 Channel Layer Simplification** (`depends:[—]`)

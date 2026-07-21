@@ -1,0 +1,167 @@
+{
+  "runId": "uat:M007:S05:attempt-2",
+  "attempt": 2,
+  "milestoneId": "M007",
+  "sliceId": "S05",
+  "uatType": "mixed",
+  "verdict": "PASS",
+  "gateVerdict": "pass",
+  "evaluatedAt": "2026-07-21T17:49:36.253Z",
+  "worktreeRoot": "/srv/stacks/hittek-chatbot",
+  "browserToolsPresented": true,
+  "modePolicy": {
+    "browserTools": true,
+    "partialEligible": true,
+    "passWithHumanFollowUp": true,
+    "requiredAnyModes": []
+  },
+  "checks": [
+    {
+      "description": "Health endpoint returns {status:ok,db:ok}",
+      "evidence": [
+        {
+          "executionId": "5ef7c02d-20c9-4aff-982b-3b55174b03a6",
+          "kind": "gsd_uat_exec",
+          "note": "{status:ok,db:ok}",
+          "ref": "5ef7c02d-20c9-4aff-982b-3b55174b03a6"
+        }
+      ],
+      "id": "UAT-01",
+      "mode": "runtime",
+      "result": "PASS"
+    },
+    {
+      "description": "Login page returns HTTP 200",
+      "evidence": [
+        {
+          "executionId": "8ad76aa6-24df-483c-9fe3-e90e4455b8af",
+          "kind": "gsd_uat_exec",
+          "note": "HTTP 200",
+          "ref": "8ad76aa6-24df-483c-9fe3-e90e4455b8af"
+        }
+      ],
+      "id": "UAT-02",
+      "mode": "runtime",
+      "result": "PASS"
+    },
+    {
+      "description": "Login API authenticates admin@hittek.com as admin role",
+      "evidence": [
+        {
+          "executionId": "316f0f36-6b65-4f81-8cd9-3183f9463e5b",
+          "kind": "gsd_uat_exec",
+          "note": "LOGIN OK: admin@hittek.com admin",
+          "ref": "316f0f36-6b65-4f81-8cd9-3183f9463e5b"
+        }
+      ],
+      "id": "UAT-03",
+      "mode": "runtime",
+      "result": "PASS"
+    },
+    {
+      "description": "Contacts API returns seeded data with authenticated session (5 contacts)",
+      "evidence": [
+        {
+          "executionId": "726549cc-023f-47a1-9026-7c06f4807226",
+          "kind": "gsd_uat_exec",
+          "note": "contacts: 5",
+          "ref": "726549cc-023f-47a1-9026-7c06f4807226"
+        }
+      ],
+      "id": "UAT-04",
+      "mode": "runtime",
+      "result": "PASS"
+    },
+    {
+      "description": "Browser: login page renders, credentials accepted, redirects to /contacts",
+      "evidence": [
+        {
+          "executionId": "32c1effd-fffc-4be8-bc47-ed1d07b73e10",
+          "kind": "gsd_uat_exec",
+          "note": "LOGIN PAGE TITLE: Log In | Mi CRM | POST-LOGIN URL: crm.hittek.mx/contacts | RESULT: PASS",
+          "ref": "32c1effd-fffc-4be8-bc47-ed1d07b73e10"
+        }
+      ],
+      "id": "UAT-05",
+      "mode": "browser",
+      "result": "PASS"
+    }
+  ],
+  "presentation": {
+    "surface": "hybrid",
+    "presentedTools": [
+      "gsd_uat_exec",
+      "gsd_uat_result_save",
+      "gsd_resume",
+      "gsd_milestone_status",
+      "gsd_journal_query",
+      "find",
+      "glob",
+      "grep",
+      "ls",
+      "read",
+      "browser_navigate",
+      "browser_click",
+      "browser_type",
+      "browser_fill_form",
+      "browser_click_ref",
+      "browser_fill_ref",
+      "browser_wait_for",
+      "browser_assert",
+      "browser_verify",
+      "browser_screenshot",
+      "browser_snapshot_refs",
+      "browser_find",
+      "browser_get_console_logs",
+      "browser_get_network_logs",
+      "browser_evaluate",
+      "browser_reload",
+      "browser_batch",
+      "browser_act"
+    ],
+    "blockedTools": [
+      {
+        "name": "edit",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "write",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "gsd_exec",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "gsd_summary_save",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "gsd_save_gate_result",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "search-the-web",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "WebSearch",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "Bash",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "Write",
+        "reason": "forbidden during run-uat"
+      },
+      {
+        "name": "Edit",
+        "reason": "forbidden during run-uat"
+      }
+    ],
+    "toolPresentationPlanId": "run-uat/default-v1"
+  },
+  "notes": "All 5 UAT checks pass including Playwright browser login flow. Health, login, API auth, contacts data, and browser flow all verified on crm.hittek.mx."
+}

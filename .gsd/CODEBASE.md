@@ -1,29 +1,10 @@
 # Codebase Map
 
-Generated: 2026-07-17T18:36:04Z | Files: 194 | Described: 0/194
-<!-- gsd:codebase-meta {"generatedAt":"2026-07-17T18:36:04Z","fingerprint":"feffb89539b0badf02dbfeed74e8f1959cef09f5","fileCount":194,"truncated":false} -->
+Generated: 2026-07-21T17:42:15Z | Files: 195 | Described: 0/195
+<!-- gsd:codebase-meta {"generatedAt":"2026-07-21T17:42:15Z","fingerprint":"399545bfcc88cc9cdde2c79af3b9931b5acf6743","fileCount":195,"truncated":false} -->
 
 ### (root)/
-- `.dockerignore`
-- `.env.example`
-- `.gitignore`
-- `.nvmrc`
-- `docker-compose.yaml`
-- `docker-entrypoint.sh`
-- `Dockerfile`
-- `jest.config.js`
-- `jest.setup.js`
-- `LICENSE`
-- `middleware.js`
-- `next.config.js`
-- `package-lock.json`
-- `package.json`
-- `playwright.config.js`
-- `pnpm-lock.yaml`
-- `postcss.config.js`
-- `prisma.config.js`
-- `README.md`
-- `tailwind.config.js`
+- *(21 files: 8 .js, 5 (no ext), 3 .yaml, 2 .json, 1 .example, 1 .sh, 1 .md)*
 
 ### components/
 - `components/CustomerList.js`
