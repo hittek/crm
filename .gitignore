@@ -56,3 +56,7 @@ vendor/
 coverage/
 .cache/
 tmp/
+
+# DB migration dump (contains production data)
+neon_dump.sql
+neon_dump_err.txt

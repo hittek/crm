@@ -1,13 +1,16 @@
 # Codebase Map
 
-Generated: 2026-07-16T18:34:33Z | Files: 186 | Described: 0/186
-<!-- gsd:codebase-meta {"generatedAt":"2026-07-16T18:34:33Z","fingerprint":"738e311ea3862b8d85e56f7213b2ecd6597f8190","fileCount":186,"truncated":false} -->
+Generated: 2026-07-17T18:36:04Z | Files: 194 | Described: 0/194
+<!-- gsd:codebase-meta {"generatedAt":"2026-07-17T18:36:04Z","fingerprint":"feffb89539b0badf02dbfeed74e8f1959cef09f5","fileCount":194,"truncated":false} -->
 
 ### (root)/
+- `.dockerignore`
 - `.env.example`
 - `.gitignore`
 - `.nvmrc`
 - `docker-compose.yaml`
+- `docker-entrypoint.sh`
+- `Dockerfile`
 - `jest.config.js`
 - `jest.setup.js`
 - `LICENSE`
@@ -65,6 +68,9 @@ Generated: 2026-07-16T18:34:33Z | Files: 186 | Described: 0/186
 - `components/ui/Spinner.js`
 - `components/ui/UpgradeWall.js`
 
+### docker/postgres-init/
+- `docker/postgres-init/01-extensions.sql`
+
 ### lib/
 - `lib/api.js`
 - `lib/audit.js`
@@ -81,6 +87,7 @@ Generated: 2026-07-16T18:34:33Z | Files: 186 | Described: 0/186
 - `lib/prisma.js`
 - `lib/rag.js`
 - `lib/SettingsContext.js`
+- `lib/storage.js`
 - `lib/stripe.js`
 - `lib/summarize.js`
 - `lib/superAdmin.js`
@@ -123,6 +130,9 @@ Generated: 2026-07-16T18:34:33Z | Files: 186 | Described: 0/186
 - `pages/settings.js`
 - `pages/signup.js`
 - `pages/tasks.js`
+
+### pages/api/
+- `pages/api/health.js`
 
 ### pages/api/activities/
 - `pages/api/activities/index.js`
@@ -234,6 +244,9 @@ Generated: 2026-07-16T18:34:33Z | Files: 186 | Described: 0/186
 - `pages/api/tasks/[id].js`
 - `pages/api/tasks/index.js`
 
+### pages/api/uploads/
+- `pages/api/uploads/[...path].js`
+
 ### pages/api/users/
 - `pages/api/users/[id].js`
 - `pages/api/users/index.js`
@@ -277,6 +290,9 @@ Generated: 2026-07-16T18:34:33Z | Files: 186 | Described: 0/186
 
 ### prisma/migrations/20260518_add_contact_coordinates/
 - `prisma/migrations/20260518_add_contact_coordinates/migration.sql`
+
+### public/
+- `public/.gitkeep`
 
 ### scripts/
 - `scripts/check-dims.cjs`

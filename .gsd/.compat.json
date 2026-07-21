@@ -1,0 +1,428 @@
+{
+  "schema": 2,
+  "lastWriter": "gsd-pi",
+  "lastProjectedAt": "2026-07-21T17:40:42.104Z",
+  "projections": {
+    "phases/01-m001-ui-ux-validation-stabilization/01-ROADMAP.md": {
+      "sha": "7d79841e67173171",
+      "entities": [
+        "M001"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-01-ASSESSMENT.md": {
+      "sha": "d9bae7f4c51a37e1",
+      "entities": [
+        "M001",
+        "M001/S01"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-01-PLAN.md": {
+      "sha": "e03697be4da252f6",
+      "entities": [
+        "M001",
+        "M001/S01"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-01-RESEARCH.md": {
+      "sha": "e328c3c861ce7ef6",
+      "entities": [
+        "M001",
+        "M001/S01"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-01-SUMMARY.md": {
+      "sha": "ba8c6e34c17444a9",
+      "entities": [
+        "M001",
+        "M001/S01"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-01-UAT.md": {
+      "sha": "6db1dcc35bec076d",
+      "entities": [
+        "M001",
+        "M001/S01"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-02-ASSESSMENT.md": {
+      "sha": "fc6779374023408e",
+      "entities": [
+        "M001",
+        "M001/S02"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-02-PLAN.md": {
+      "sha": "fc03a4936299387c",
+      "entities": [
+        "M001",
+        "M001/S02"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-02-SUMMARY.md": {
+      "sha": "383f50d61b4a1977",
+      "entities": [
+        "M001",
+        "M001/S02"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-02-UAT.md": {
+      "sha": "66bcf0ecc6133a46",
+      "entities": [
+        "M001",
+        "M001/S02"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-03-PLAN.md": {
+      "sha": "a4fb1fbeac31e9dd",
+      "entities": [
+        "M001",
+        "M001/S03"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-03-SUMMARY.md": {
+      "sha": "967d8bff6173249b",
+      "entities": [
+        "M001",
+        "M001/S03"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-04-PLAN.md": {
+      "sha": "53a2b9ab1f1ccd2a",
+      "entities": [
+        "M001",
+        "M001/S04"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-05-PLAN.md": {
+      "sha": "de4c05bd94f3b5d6",
+      "entities": [
+        "M001",
+        "M001/S05"
+      ]
+    },
+    "phases/01-m001-ui-ux-validation-stabilization/01-05-SUMMARY.md": {
+      "sha": "fccf7af005e15fc9",
+      "entities": [
+        "M001",
+        "M001/S05"
+      ]
+    },
+    "phases/02-m002-saas-foundation-roadmap/02-ROADMAP.md": {
+      "sha": "b877ad5964a3304c",
+      "entities": [
+        "M002"
+      ]
+    },
+    "phases/02-m002-saas-foundation-roadmap/02-01-PLAN.md": {
+      "sha": "695ae2fa64c2ffbc",
+      "entities": [
+        "M002",
+        "M002/S01"
+      ]
+    },
+    "phases/02-m002-saas-foundation-roadmap/02-01-SUMMARY.md": {
+      "sha": "1c5c81ba3dbefb25",
+      "entities": [
+        "M002",
+        "M002/S01"
+      ]
+    },
+    "phases/02-m002-saas-foundation-roadmap/02-02-PLAN.md": {
+      "sha": "95387d099c00aee0",
+      "entities": [
+        "M002",
+        "M002/S02"
+      ]
+    },
+    "phases/02-m002-saas-foundation-roadmap/02-SUMMARY.md": {
+      "sha": "2c30ed3c6703e5b1",
+      "entities": [
+        "M002",
+        "M002/S02"
+      ]
+    },
+    "phases/02-m002-saas-foundation-roadmap/02-03-PLAN.md": {
+      "sha": "faebe7648741e931",
+      "entities": [
+        "M002",
+        "M002/S03"
+      ]
+    },
+    "phases/02-m002-saas-foundation-roadmap/02-03-SUMMARY.md": {
+      "sha": "528c46f3e59b4558",
+      "entities": [
+        "M002",
+        "M002/S03"
+      ]
+    },
+    "phases/02-m002-saas-foundation-roadmap/02-04-PLAN.md": {
+      "sha": "c4cdbc61387825e3",
+      "entities": [
+        "M002",
+        "M002/S04"
+      ]
+    },
+    "phases/02-m002-saas-foundation-roadmap/02-04-SUMMARY.md": {
+      "sha": "98f967d7290c2133",
+      "entities": [
+        "M002",
+        "M002/S04"
+      ]
+    },
+    "phases/02-m002-saas-foundation-roadmap/02-05-PLAN.md": {
+      "sha": "597adf120d9b93e5",
+      "entities": [
+        "M002",
+        "M002/S05"
+      ]
+    },
+    "phases/02-m002-saas-foundation-roadmap/02-05-SUMMARY.md": {
+      "sha": "b8d1edbf796ddbcc",
+      "entities": [
+        "M002",
+        "M002/S05"
+      ]
+    },
+    "phases/03-m003-chatbot-platform-core-roadmap/03-ROADMAP.md": {
+      "sha": "9bcd1e53c54d3413",
+      "entities": [
+        "M003"
+      ]
+    },
+    "phases/03-m003-chatbot-platform-core-roadmap/03-01-PLAN.md": {
+      "sha": "4ec148123bdbdac2",
+      "entities": [
+        "M003",
+        "M003/S01"
+      ]
+    },
+    "phases/03-m003-chatbot-platform-core-roadmap/03-01-SUMMARY.md": {
+      "sha": "7a2d3fe2f7d5a96d",
+      "entities": [
+        "M003",
+        "M003/S01"
+      ]
+    },
+    "phases/03-m003-chatbot-platform-core-roadmap/03-02-SUMMARY.md": {
+      "sha": "81f4b2bc5fa201ab",
+      "entities": [
+        "M003",
+        "M003/S02"
+      ]
+    },
+    "phases/03-m003-chatbot-platform-core-roadmap/03-03-PLAN.md": {
+      "sha": "1e32545c8cc5e796",
+      "entities": [
+        "M003",
+        "M003/S03"
+      ]
+    },
+    "phases/03-m003-chatbot-platform-core-roadmap/03-SUMMARY.md": {
+      "sha": "234dae4a000ec0f6",
+      "entities": [
+        "M003",
+        "M003/S03"
+      ]
+    },
+    "phases/03-m003-chatbot-platform-core-roadmap/03-04-SUMMARY.md": {
+      "sha": "f7d81bff0193359f",
+      "entities": [
+        "M003",
+        "M003/S04"
+      ]
+    },
+    "phases/04-m004-channel-integrations-roadmap/04-ROADMAP.md": {
+      "sha": "2f2ce6b8d371a1e1",
+      "entities": [
+        "M004"
+      ]
+    },
+    "phases/04-m004-channel-integrations-roadmap/04-01-PLAN.md": {
+      "sha": "d7d5583fc3f55e87",
+      "entities": [
+        "M004",
+        "M004/S01"
+      ]
+    },
+    "phases/04-m004-channel-integrations-roadmap/04-01-SUMMARY.md": {
+      "sha": "d8a757150b20bda8",
+      "entities": [
+        "M004",
+        "M004/S01"
+      ]
+    },
+    "phases/05-m005-quote-generation-roadmap/05-ROADMAP.md": {
+      "sha": "42131bfd497b2006",
+      "entities": [
+        "M005"
+      ]
+    },
+    "phases/05-m005-quote-generation-roadmap/05-01-PLAN.md": {
+      "sha": "b18711586b70d1b4",
+      "entities": [
+        "M005",
+        "M005/S01"
+      ]
+    },
+    "phases/06-m006-crm-chatbot-bridge-roadmap/06-ROADMAP.md": {
+      "sha": "a9f1391d529b6172",
+      "entities": [
+        "M006"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/07-ROADMAP.md": {
+      "sha": "b607e97b05a59ea1",
+      "entities": [
+        "M007"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/07-01-PLAN.md": {
+      "sha": "9472098e2aeb3bce",
+      "entities": [
+        "M007",
+        "M007/S01"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/07-01-SUMMARY.md": {
+      "sha": "f9ed2fdb6e9f3121",
+      "entities": [
+        "M007",
+        "M007/S01"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/07-01-UAT.md": {
+      "sha": "bb9e7577d24a9df0",
+      "entities": [
+        "M007",
+        "M007/S01"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/S01-T01-SUMMARY.md": {
+      "sha": "f49ed6c14d0e96de",
+      "entities": [
+        "M007",
+        "M007/S01",
+        "M007/S01/T01"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/S01-T02-SUMMARY.md": {
+      "sha": "dbd05ec281c64b71",
+      "entities": [
+        "M007",
+        "M007/S01",
+        "M007/S01/T02"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/S01-T03-SUMMARY.md": {
+      "sha": "b32910b3f73fd45b",
+      "entities": [
+        "M007",
+        "M007/S01",
+        "M007/S01/T03"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/S01-T04-SUMMARY.md": {
+      "sha": "171e715e06ee028b",
+      "entities": [
+        "M007",
+        "M007/S01",
+        "M007/S01/T04"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/S01-T05-SUMMARY.md": {
+      "sha": "20f9361c437e3b18",
+      "entities": [
+        "M007",
+        "M007/S01",
+        "M007/S01/T05"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/07-02-PLAN.md": {
+      "sha": "31cc4ccc81f25a1c",
+      "entities": [
+        "M007",
+        "M007/S02"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/07-02-SUMMARY.md": {
+      "sha": "67f67e0b618c4633",
+      "entities": [
+        "M007",
+        "M007/S02"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/07-02-UAT.md": {
+      "sha": "92f45b5857abe8b2",
+      "entities": [
+        "M007",
+        "M007/S02"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/S02-T01-SUMMARY.md": {
+      "sha": "c739efad50cda9c5",
+      "entities": [
+        "M007",
+        "M007/S02",
+        "M007/S02/T01"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/S02-T02-SUMMARY.md": {
+      "sha": "05d26e9a5661a928",
+      "entities": [
+        "M007",
+        "M007/S02",
+        "M007/S02/T02"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/S02-T03-SUMMARY.md": {
+      "sha": "593e52de5c1144a3",
+      "entities": [
+        "M007",
+        "M007/S02",
+        "M007/S02/T03"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/07-03-PLAN.md": {
+      "sha": "212056d2bf783ce2",
+      "entities": [
+        "M007",
+        "M007/S03"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/S03-T01-SUMMARY.md": {
+      "sha": "e1aff3e6745ecb39",
+      "entities": [
+        "M007",
+        "M007/S03",
+        "M007/S03/T01"
+      ]
+    },
+    "phases/08-chatwoot-integration-u2014-channel-layer/08-ROADMAP.md": {
+      "sha": "5385ed3174e54908",
+      "entities": [
+        "M008"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/07-04-PLAN.md": {
+      "sha": "4eeadcc8134061d9",
+      "entities": [
+        "M007",
+        "M007/S04"
+      ]
+    },
+    "phases/07-infrastructure-migration-u2014-vercel-to/07-05-PLAN.md": {
+      "sha": "f8d57eab46037c7f",
+      "entities": [
+        "M007",
+        "M007/S05"
+      ]
+    }
+  },
+  "planning": {
+    "active": false,
+    "layout": null,
+    "projections": {},
+    "passthrough": {}
+  },
+  "piVersion": ""
+}
