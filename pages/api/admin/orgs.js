@@ -19,7 +19,11 @@ export default async function handler(req, res) {
     return updateOrg(req, res)
   }
 
-  res.setHeader('Allow', ['GET', 'POST', 'PATCH'])
+  if (req.method === 'DELETE') {
+    return deleteOrg(req, res)
+  }
+
+  res.setHeader('Allow', ['GET', 'POST', 'PATCH', 'DELETE'])
   return res.status(405).end()
 }
 
@@ -91,7 +95,7 @@ async function listOrgs(res) {
       stripeCustomerId: true,
       stripeSubscriptionId: true,
       createdAt: true,
-      _count: { select: { users: true, contacts: true, chatbots: true, conversations: true } },
+      _count: { select: { users: true, contacts: true, chatbots: true } },
     },
   })
 
@@ -143,4 +147,22 @@ async function updateOrg(req, res) {
   })
 
   return res.status(200).json({ org: updated })
+}
+
+async function deleteOrg(req, res) {
+  const id = parseInt(req.query.id ?? req.body?.id, 10)
+  if (!id || isNaN(id)) return res.status(400).json({ error: 'Se requiere el ID de la organización' })
+
+  const org = await prisma.organization.findUnique({ where: { id } })
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada' })
+
+  // Delete Chatbots first to clear the FK on KnowledgeBase (Chatbot has no onDelete:Cascade from Org)
+  await prisma.chatbot.deleteMany({ where: { organizationId: id } })
+
+  // Now delete the org — cascades to KnowledgeBase, Contact, Deal, Task, Activity,
+  // User, SavedView, AuditLog, Notification, ChannelConfig, OrgSettings
+  await prisma.organization.delete({ where: { id } })
+
+  console.log(`[admin/orgs] org ${id} (${org.name}) deleted by super-admin`)
+  return res.status(200).json({ ok: true, id })
 }

@@ -89,16 +89,16 @@ export default async function handler(req, res) {
 
   const session = await getSession(req, res)
   if (!session?.user) return res.status(401).json({ error: 'No autenticado' })
-  const { organizationId: orgId, role } = session.user
+  const { organizationId: organizationId, role } = session.user
   if (role !== 'admin' && role !== 'manager') return res.status(403).json({ error: 'Sin permiso' })
 
   const id = parseInt(req.query.id)
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' })
 
-  const access = await checkOrgAccess(prisma, orgId)
+  const access = await checkOrgAccess(prisma, organizationId)
   if (access.blocked) return res.status(402).json({ error: access.reason })
 
-  const provider = await prisma.provider.findFirst({ where: { id, orgId } })
+  const provider = await prisma.provider.findFirst({ where: { id, organizationId } })
   if (!provider) return res.status(404).json({ error: 'Proveedor no encontrado' })
 
   // ── 1. Parse multipart upload ─────────────────────────────────────────────

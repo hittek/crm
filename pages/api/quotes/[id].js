@@ -4,11 +4,11 @@ import prisma from '../../../lib/prisma'
 export default async function handler(req, res) {
   const session = await getSession(req, res)
   if (!session?.user) return res.status(401).json({ error: 'No autenticado' })
-  const { organizationId: orgId, role } = session.user
+  const { organizationId: organizationId, role } = session.user
   const { id } = req.query
 
   const quote = await prisma.quote.findFirst({
-    where: { id: parseInt(id), orgId },
+    where: { id: parseInt(id), organizationId },
   })
   if (!quote) return res.status(404).json({ error: 'Cotización no encontrada' })
 

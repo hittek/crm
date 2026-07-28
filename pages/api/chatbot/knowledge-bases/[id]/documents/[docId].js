@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   if (isNaN(kbId) || isNaN(docId)) return res.status(400).json({ error: 'ID inválido' })
 
   // Verify KB belongs to org
-  const kb = await prisma.knowledgeBase.findFirst({ where: { id: kbId, orgId: organizationId } })
+  const kb = await prisma.knowledgeBase.findFirst({ where: { id: kbId, organizationId: organizationId } })
   if (!kb) return res.status(404).json({ error: 'Base de conocimiento no encontrada' })
 
   const doc = await prisma.knowledgeBaseDocument.findFirst({

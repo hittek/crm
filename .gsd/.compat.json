@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "lastWriter": "gsd-pi",
-  "lastProjectedAt": "2026-07-28T14:36:24.772Z",
+  "lastProjectedAt": "2026-07-28T19:14:11.543Z",
   "projections": {
     "phases/01-m001-ui-ux-validation-stabilization/01-ROADMAP.md": {
       "sha": "7d79841e67173171",
@@ -477,6 +477,54 @@
       "entities": [
         "M009-vhmh3b",
         "M009-vhmh3b/S02"
+      ]
+    },
+    "phases/10-sewkw9-scheduled-reports-and-daily-digest/10-ROADMAP.md": {
+      "sha": "05928b8a4ac8ad15",
+      "entities": [
+        "M010-sewkw9"
+      ]
+    },
+    "phases/10-sewkw9-scheduled-reports-and-daily-digest/10-01-PLAN.md": {
+      "sha": "7c59cee262c8729e",
+      "entities": [
+        "M010-sewkw9",
+        "M010-sewkw9/S01"
+      ]
+    },
+    "phases/10-sewkw9-scheduled-reports-and-daily-digest/10-02-PLAN.md": {
+      "sha": "546a3a5b7039e6fd",
+      "entities": [
+        "M010-sewkw9",
+        "M010-sewkw9/S02"
+      ]
+    },
+    "phases/10-sewkw9-scheduled-reports-and-daily-digest/10-03-PLAN.md": {
+      "sha": "8c9511d935841322",
+      "entities": [
+        "M010-sewkw9",
+        "M010-sewkw9/S03"
+      ]
+    },
+    "phases/10-sewkw9-scheduled-reports-and-daily-digest/10-04-PLAN.md": {
+      "sha": "c245a8a825b1f06a",
+      "entities": [
+        "M010-sewkw9",
+        "M010-sewkw9/S04"
+      ]
+    },
+    "phases/10-sewkw9-scheduled-reports-and-daily-digest/10-05-PLAN.md": {
+      "sha": "d8e3e3fbc15b5a34",
+      "entities": [
+        "M010-sewkw9",
+        "M010-sewkw9/S05"
+      ]
+    },
+    "phases/10-sewkw9-scheduled-reports-and-daily-digest/10-06-PLAN.md": {
+      "sha": "e86255b4c9d52465",
+      "entities": [
+        "M010-sewkw9",
+        "M010-sewkw9/S06"
       ]
     }
   },

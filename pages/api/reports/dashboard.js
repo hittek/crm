@@ -154,40 +154,40 @@ const methods = {
     ] = await Promise.all([
       // Total conversations this month
       prisma.conversation.count({
-        where: { orgId: organizationId, createdAt: { gte: startOfMonth } },
+        where: { organizationId: organizationId, createdAt: { gte: startOfMonth } },
       }),
       // Total conversations last month (for comparison)
       prisma.conversation.count({
-        where: { orgId: organizationId, createdAt: { gte: startOfLastMonth, lt: startOfMonth } },
+        where: { organizationId: organizationId, createdAt: { gte: startOfLastMonth, lt: startOfMonth } },
       }),
       // Breakdown by status (all time)
       prisma.conversation.groupBy({
         by: ['status'],
         _count: true,
-        where: { orgId: organizationId },
+        where: { organizationId: organizationId },
       }),
       // Breakdown by channel this month
       prisma.conversation.groupBy({
         by: ['channel'],
         _count: true,
-        where: { orgId: organizationId, createdAt: { gte: startOfMonth } },
+        where: { organizationId: organizationId, createdAt: { gte: startOfMonth } },
         orderBy: { _count: { channel: 'desc' } },
       }),
       // Top chatbots by conversation count (all time, top 5)
       prisma.conversation.groupBy({
         by: ['chatbotId'],
         _count: true,
-        where: { orgId: organizationId },
+        where: { organizationId: organizationId },
         orderBy: { _count: { chatbotId: 'desc' } },
         take: 5,
       }),
       // Total messages across all conversations (for avg calculation)
       prisma.conversationMessage.count({
-        where: { conversation: { orgId: organizationId } },
+        where: { conversation: { organizationId: organizationId } },
       }),
       // Conversations that have at least 1 message (for avg)
       prisma.conversation.count({
-        where: { orgId: organizationId, messages: { some: {} } },
+        where: { organizationId: organizationId, messages: { some: {} } },
       }),
     ])
 

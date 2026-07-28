@@ -114,9 +114,8 @@ export default function SettingsPage() {
   const [notifications, setNotifications] = useState({
     taskReminders: true,
     newContacts: true,
-    dealsWon: true,
-    emailEnabled: true,
     dealUpdates: true,
+    chatEscalated: true,
     dailyDigest: false,
   })
   
@@ -1261,10 +1260,10 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   {[
                     { key: 'taskReminders', label: t('settings.taskReminders'), description: t('settingsExt.taskRemindersDesc') },
-                    { key: 'newContacts', label: t('settingsExt.newContacts'), description: t('settingsExt.newContactsDesc') },
-                    { key: 'dealsWon', label: t('settingsExt.dealsWon'), description: t('settingsExt.dealsWonDesc') },
-                    { key: 'dealUpdates', label: t('settings.dealUpdates'), description: t('settingsExt.dealUpdatesDesc') },
-                    { key: 'dailyDigest', label: t('settingsExt.dailyDigest'), description: t('settingsExt.dailyDigestDesc') },
+                    { key: 'newContacts',   label: t('settingsExt.newContacts'), description: t('settingsExt.newContactsDesc') },
+                    { key: 'dealUpdates',  label: t('settingsExt.dealUpdates'), description: t('settingsExt.dealUpdatesDesc') },
+                    { key: 'chatEscalated',label: t('settingsExt.chatEscalated'), description: t('settingsExt.chatEscaladedDesc') },
+                    { key: 'dailyDigest',  label: t('settingsExt.dailyDigest'), description: t('settingsExt.dailyDigestDesc') },
                   ].map(({ key, label, description }) => (
                     <div key={key} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                       <div>

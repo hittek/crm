@@ -8,10 +8,10 @@ export default async function handler(req, res) {
 
   const session = await getSession(req, res)
   if (!session?.user) return res.status(401).json({ error: 'No autenticado' })
-  const { organizationId: orgId } = session.user
+  const { organizationId: organizationId } = session.user
   const { id } = req.query
 
-  const quote = await prisma.quote.findFirst({ where: { id: parseInt(id), orgId } })
+  const quote = await prisma.quote.findFirst({ where: { id: parseInt(id), organizationId } })
   if (!quote) return res.status(404).json({ error: 'Cotización no encontrada' })
 
   // Return existing token or generate a new one

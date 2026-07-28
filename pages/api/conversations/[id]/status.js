@@ -10,6 +10,7 @@ import { getSession } from '../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse } from '../../../../lib/planLimits'
 import { summarizeConversation } from '../../../../lib/summarize'
 import { logConversationActivity } from '../../../../lib/channelEngine'
+import { notifications, notificationService } from '../../../../lib/notifications'
 
 const VALID_STATUSES = ['open', 'resolved', 'escalated']
 
@@ -24,7 +25,10 @@ export default async function handler(req, res) {
   const convId = parseInt(req.query.id, 10)
   if (isNaN(convId)) return res.status(400).json({ error: 'ID inválido' })
 
-  const conv = await prisma.conversation.findFirst({ where: { id: convId, orgId: organizationId } })
+  const conv = await prisma.conversation.findFirst({
+    where: { id: convId, organizationId: organizationId },
+    select: { id: true, status: true, contactId: true, channel: true, chatbotId: true },
+  })
   if (!conv) return res.status(404).json({ error: 'Conversación no encontrada' })
 
   // ── PATCH — status change ─────────────────────────────────────────────────
@@ -70,12 +74,25 @@ export default async function handler(req, res) {
       )
       if (conv.contactId) {
         logConversationActivity(convId, {
-          orgId:     organizationId,
+          organizationId:     organizationId,
           contactId: conv.contactId,
           outcome:   'resolved',
           channel:   conv.channel,
         }).catch(() => {})
       }
+    }
+
+    // Fire escalation notification when an agent manually escalates a conversation
+    if (status === 'escalated' && conv.status !== 'escalated') {
+      // Look up the chatbot for context (optional — use fallback if not linked)
+      const chatbot = conv.chatbotId
+        ? await prisma.chatbot.findUnique({ where: { id: conv.chatbotId }, select: { name: true } })
+        : null
+      notifications.chatEscalated(
+        { id: convId },
+        chatbot || { name: 'CRM' },
+        organizationId
+      ).catch(err => console.error('[status] chatEscalated notification failed:', err.message))
     }
 
     return res.json({ conversation: updated })
@@ -114,6 +131,19 @@ export default async function handler(req, res) {
         },
       }),
     ])
+
+    // Notify the agent receiving the conversation (skip self-assign)
+    if (targetId !== agentId) {
+      notificationService.notify({
+        type: 'chat_escalated',
+        title: 'Conversación asignada',
+        message: `${session.user.name || 'Un agente'} te asignó una conversación`,
+        link: `/conversations?id=${convId}`,
+        metadata: { entityType: 'conversation', entityId: convId },
+        userId: targetId,
+        organizationId,
+      }).catch(() => {})
+    }
 
     return res.json({ conversation: updated, forwardedTo: targetUser })
   }

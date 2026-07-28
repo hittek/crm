@@ -191,13 +191,13 @@ function scrapeUrl(url) {
   })
 }
 
-async function persistChunks(chunks, documentId, kbId, orgId) {
+async function persistChunks(chunks, documentId, kbId, organizationId) {
   if (chunks.length === 0) return
   await prisma.knowledgeBaseChunk.createMany({
     data: chunks.map(c => ({
       documentId,
       kbId,
-      orgId,
+      organizationId,
       content:    c.content,
       chunkIndex: c.chunkIndex,
       tokenCount: c.tokenCount,
@@ -246,7 +246,7 @@ async function embedChunks(documentId) {
  * Runs after the HTTP response has been sent.
  * waitUntil() keeps the Vercel function alive until this resolves.
  */
-async function processDocument({ docId, kbId, orgId, type, fields, filePath, fileName, fileSize }) {
+async function processDocument({ docId, kbId, organizationId, type, fields, filePath, fileName, fileSize }) {
   const mem = () => `${Math.round(process.memoryUsage().heapUsed/1024/1024)}MB`
   console.log(`[chatbot] doc ${docId} start — heap ${mem()}`)
   try {
@@ -265,7 +265,7 @@ async function processDocument({ docId, kbId, orgId, type, fields, filePath, fil
 
       if (process.env.BLOB_READ_WRITE_TOKEN) {
         const { put } = await import('@vercel/blob')
-        const blob = await put(`kb/${orgId}/${kbId}/${docId}.pdf`, fs.readFileSync(filePath), {
+        const blob = await put(`kb/${organizationId}/${kbId}/${docId}.pdf`, fs.readFileSync(filePath), {
           access: 'public', contentType: 'application/pdf',
         })
         fileUrl = blob.url
@@ -297,7 +297,7 @@ async function processDocument({ docId, kbId, orgId, type, fields, filePath, fil
       chunks = chunkQA(question, answer)
     }
 
-    await persistChunks(chunks, docId, kbId, orgId)
+    await persistChunks(chunks, docId, kbId, organizationId)
     console.log(`[chatbot] doc ${docId} chunks persisted — heap ${mem()}`)
 
     // Embed chunks — 1 Voyage API call, result stored in DB
@@ -358,7 +358,7 @@ export default async function handler(req, res) {
   const kbId = parseInt(req.query.id)
   if (isNaN(kbId)) return res.status(400).json({ error: 'ID inválido' })
 
-  const kb = await prisma.knowledgeBase.findFirst({ where: { id: kbId, orgId: organizationId } })
+  const kb = await prisma.knowledgeBase.findFirst({ where: { id: kbId, organizationId: organizationId } })
   if (!kb) return res.status(404).json({ error: 'Base de conocimiento no encontrada' })
 
   // ── GET ──────────────────────────────────────────────────────────────────
@@ -422,7 +422,7 @@ export default async function handler(req, res) {
     const doc = await prisma.knowledgeBaseDocument.create({
       data: {
         knowledgeBaseId: kbId,
-        orgId: organizationId,
+        organizationId: organizationId,
         type,
         title: pendingTitle,
         status: 'processing',
@@ -438,7 +438,7 @@ export default async function handler(req, res) {
     processDocument({
       docId:    doc.id,
       kbId,
-      orgId:    organizationId,
+      organizationId:    organizationId,
       type,
       fields,
       filePath: file?.filepath         ?? null,

@@ -8,7 +8,7 @@ const nextConfig = {
       // when webpack tries to bundle them.
       const existing = config.externals ?? []
       const externalFn = ({ request }, callback) => {
-        if (['pdf-parse', 'formidable'].includes(request)) {
+        if (['pdf-parse', 'formidable', 'web-push'].includes(request)) {
           return callback(null, `commonjs ${request}`)
         }
         callback()

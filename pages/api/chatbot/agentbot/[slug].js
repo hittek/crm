@@ -33,7 +33,7 @@ import { sendChatwootMessage, handoffConversation } from '../../../../lib/chatwo
 export const config = { api: { bodyParser: true }, maxDuration: 60 }
 
 const CHATBOT_SELECT = {
-  id: true, orgId: true, kbId: true,
+  id: true, organizationId: true, kbId: true,
   name: true, greeting: true, escalationPhrase: true, isActive: true,
   enabledTools: true, autoCreateContact: true, autoCreateDeal: true,
   defaultDealStage: true, dealTitleTemplate: true, apiKey: true,
@@ -81,13 +81,13 @@ export default async function handler(req, res) {
   let chatbot = null
   if (botKey) {
     chatbot = await prisma.chatbot.findFirst({
-      where: { apiKey: botKey, orgId: org.id, isActive: true },
+      where: { apiKey: botKey, organizationId: org.id, isActive: true },
       select: CHATBOT_SELECT,
     })
   }
   if (!chatbot) {
     chatbot = await prisma.chatbot.findFirst({
-      where: { orgId: org.id, isActive: true },
+      where: { organizationId: org.id, isActive: true },
       orderBy: { createdAt: 'desc' },
       select: CHATBOT_SELECT,
     })

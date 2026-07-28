@@ -13,15 +13,15 @@ export default async function handler(req, res) {
   if (!session.user) return res.status(401).json({ error: 'No autenticado' })
 
   
-  const { organizationId: orgId, role } = session.user
+  const { organizationId: organizationId, role } = session.user
 
-  const access = await checkOrgAccess(prisma, orgId)
+  const access = await checkOrgAccess(prisma, organizationId)
   if (access.blocked) return res.status(402).json({ error: access.reason })
 
   // ── GET /api/providers ────────────────────────────────────────────────────
   if (req.method === 'GET') {
     const providers = await prisma.provider.findMany({
-      where: { orgId },
+      where: { organizationId },
       orderBy: { name: 'asc' },
       include: { _count: { select: { products: true } } },
     })
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     if (!name?.trim()) return res.status(400).json({ error: 'Nombre requerido' })
 
     const provider = await prisma.provider.create({
-      data: { orgId, name: name.trim(), contactName, email, phone, website, notes },
+      data: { organizationId, name: name.trim(), contactName, email, phone, website, notes },
     })
     return res.status(201).json(provider)
   }

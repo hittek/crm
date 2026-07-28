@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   // ── GET ──────────────────────────────────────────────────────────────────
   if (req.method === 'GET') {
     const bots = await prisma.chatbot.findMany({
-      where:   { orgId: organizationId },
+      where:   { organizationId: organizationId },
       include: { kb: { select: { id: true, name: true, status: true } } },
       orderBy: { createdAt: 'desc' },
     })
@@ -36,12 +36,12 @@ export default async function handler(req, res) {
     if (!kbId)             return res.status(400).json({ error: 'base de conocimiento requerida' })
 
     // Verify KB belongs to org
-    const kb = await prisma.knowledgeBase.findFirst({ where: { id: parseInt(kbId), orgId: organizationId } })
+    const kb = await prisma.knowledgeBase.findFirst({ where: { id: parseInt(kbId), organizationId: organizationId } })
     if (!kb) return res.status(404).json({ error: 'Base de conocimiento no encontrada' })
 
     const bot = await prisma.chatbot.create({
       data: {
-        orgId:           organizationId,
+        organizationId:           organizationId,
         kbId:            parseInt(kbId),
         name:            name.trim(),
         greeting:        greeting?.trim() || 'Hola, \u00bfen qu\u00e9 puedo ayudarte?',

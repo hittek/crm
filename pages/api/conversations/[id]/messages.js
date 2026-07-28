@@ -10,8 +10,8 @@ import { sendMessage as sendTelegram } from '../../../../lib/channels/telegram'
 import { sendChatwootMessage } from '../../../../lib/chatwoot'
 import { decryptJSON } from '../../../../lib/crypto'
 
-async function getConv(id, orgId) {
-  return prisma.conversation.findFirst({ where: { id, orgId } })
+async function getConv(id, organizationId) {
+  return prisma.conversation.findFirst({ where: { id, organizationId } })
 }
 
 function isAdminOrManager(role) {
@@ -33,7 +33,7 @@ async function forwardToChannel(conv, content) {
         const accountId = parseInt(parts[1], 10)
         const chatwootConvId = parseInt(parts[2], 10)
         const org = await prisma.organization.findUnique({
-          where: { id: conv.orgId },
+          where: { id: conv.organizationId },
           select: { chatwootAgentBotToken: true },
         })
         if (org?.chatwootAgentBotToken && accountId && chatwootConvId) {

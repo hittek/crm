@@ -13,16 +13,16 @@ export default async function handler(req, res) {
   if (!session.user) return res.status(401).json({ error: 'No autenticado' })
 
   
-  const { organizationId: orgId, role } = session.user
+  const { organizationId: organizationId, role } = session.user
 
-  const access = await checkOrgAccess(prisma, orgId)
+  const access = await checkOrgAccess(prisma, organizationId)
   if (access.blocked) return res.status(402).json({ error: access.reason })
 
   // ── GET /api/products ─────────────────────────────────────────────────────
   if (req.method === 'GET') {
     const { providerId, type, search, activeOnly } = req.query
     const where = {
-      orgId,
+      organizationId,
       ...(providerId && { providerId: parseInt(providerId) }),
       ...(type && { type }),
       ...(activeOnly === '1' && { isActive: true }),
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
 
     const product = await prisma.product.create({
       data: {
-        orgId,
+        organizationId,
         name: name.trim(),
         description: description || null,
         sku: sku || null,

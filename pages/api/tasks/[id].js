@@ -2,6 +2,7 @@ import prisma from '../../../lib/prisma'
 import { createHandler, success, notFound, noContent } from '../../../lib/api'
 import { logAudit, AuditActions, AuditEntities } from '../../../lib/audit'
 import { getSession, hasMinRole } from '../../../lib/auth'
+import { notifications } from '../../../lib/notifications'
 
 const methods = {
   GET: async (req, res) => {
@@ -129,6 +130,10 @@ const methods = {
           organizationId,
           req,
         })
+        // Notify the newly assigned user (skip if assigning to yourself)
+        if (assignedToId && parseInt(assignedToId) !== session?.user?.id) {
+          notifications.taskAssigned(task, parseInt(assignedToId), session?.user?.id, organizationId).catch(() => {})
+        }
       } else {
         // Log general update
         await logAudit({

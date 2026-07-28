@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   const page    = Math.max(1, parseInt(req.query.page  || '1', 10))
   const limit   = Math.min(50, Math.max(1, parseInt(req.query.limit || '20', 10)))
   const skip    = (page - 1) * limit
-  const where   = { orgId: organizationId }
+  const where   = { organizationId: organizationId }
 
   if (req.query.status)  where.status  = req.query.status
   if (req.query.channel) where.channel = req.query.channel

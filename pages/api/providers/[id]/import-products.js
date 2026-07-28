@@ -4,7 +4,7 @@
  * Accepts the confirmed rows from the extract-prices review UI and
  * upserts them as Product records linked to this provider.
  *
- * Upsert logic: match by (orgId + providerId + sku) when sku is present;
+ * Upsert logic: match by (organizationId + providerId + sku) when sku is present;
  * otherwise always create a new record.
  *
  * Body:  { rows: [{sku, name, description, unit, costPrice, currency}] }
@@ -20,16 +20,16 @@ export default async function handler(req, res) {
 
   const session = await getSession(req, res)
   if (!session?.user) return res.status(401).json({ error: 'No autenticado' })
-  const { organizationId: orgId, role } = session.user
+  const { organizationId: organizationId, role } = session.user
   if (role !== 'admin' && role !== 'manager') return res.status(403).json({ error: 'Sin permiso' })
 
   const id = parseInt(req.query.id)
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' })
 
-  const access = await checkOrgAccess(prisma, orgId)
+  const access = await checkOrgAccess(prisma, organizationId)
   if (access.blocked) return res.status(402).json({ error: access.reason })
 
-  const provider = await prisma.provider.findFirst({ where: { id, orgId } })
+  const provider = await prisma.provider.findFirst({ where: { id, organizationId } })
   if (!provider) return res.status(404).json({ error: 'Proveedor no encontrado' })
 
   const { rows } = req.body
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
   const skus = toImport.map(r => r.sku).filter(Boolean)
   const existing = skus.length > 0
     ? await prisma.product.findMany({
-        where: { orgId, providerId: id, sku: { in: skus } },
+        where: { organizationId, providerId: id, sku: { in: skus } },
         select: { id: true, sku: true },
       })
     : []
@@ -77,7 +77,7 @@ export default async function handler(req, res) {
       updates.push({ id: existingBySku[row.sku], ...base })
     } else {
       creates.push({
-        orgId,
+        organizationId,
         providerId: id,
         sku:          row.sku?.slice(0, 100) || null,
         type:         'product',

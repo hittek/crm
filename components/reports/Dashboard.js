@@ -69,7 +69,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+    <div className="">
       <h1 className="text-xl lg:text-2xl font-bold text-gray-900 mb-4 lg:mb-6">Reportes</h1>
 
       {/* KPI Cards */}

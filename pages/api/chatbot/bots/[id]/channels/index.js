@@ -28,7 +28,7 @@ export default async function handler(req, res) {
   if (access.blocked) return orgAccessResponse(res, access)
 
   const chatbotId = parseInt(req.query.id, 10)
-  const bot = await prisma.chatbot.findFirst({ where: { id: chatbotId, orgId: organizationId } })
+  const bot = await prisma.chatbot.findFirst({ where: { id: chatbotId, organizationId: organizationId } })
   if (!bot) return res.status(404).json({ error: 'Chatbot no encontrado' })
 
   // Load org for Chatwoot provisioning data
@@ -124,7 +124,7 @@ export default async function handler(req, res) {
 
       const cfg = await prisma.channelConfig.create({
         data: {
-          orgId:           organizationId,
+          organizationId:           organizationId,
           chatbotId,
           channel:         'telegram',
           credentials:     encryptJSON({ botToken: botToken.trim() }),
@@ -179,7 +179,7 @@ export default async function handler(req, res) {
 
       const cfg = await prisma.channelConfig.create({
         data: {
-          orgId:          organizationId,
+          organizationId:          organizationId,
           chatbotId,
           channel:        'whatsapp',
           credentials:    encryptJSON({ accessToken: accessToken.trim(), verifyToken: verifyToken?.trim() || '' }),
@@ -199,7 +199,7 @@ export default async function handler(req, res) {
       }
       const cfg = await prisma.channelConfig.create({
         data: {
-          orgId:       organizationId,
+          organizationId:       organizationId,
           chatbotId,
           channel:     'facebook',
           credentials: encryptJSON({ pageAccessToken, verifyToken: verifyToken || '', appSecret: appSecret || '' }),

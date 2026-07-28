@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   if (isNaN(kbId)) return res.status(400).json({ error: 'ID inválido' })
 
   const kb = await prisma.knowledgeBase.findFirst({
-    where: { id: kbId, orgId: organizationId },
+    where: { id: kbId, organizationId: organizationId },
     include: { _count: { select: { documents: true } } },
   })
   if (!kb) return res.status(404).json({ error: 'Base de conocimiento no encontrada' })

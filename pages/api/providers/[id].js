@@ -8,20 +8,20 @@ export default async function handler(req, res) {
   if (!session.user) return res.status(401).json({ error: 'No autenticado' })
 
   
-  const { organizationId: orgId, role } = session.user
+  const { organizationId: organizationId, role } = session.user
   const id = parseInt(req.query.id)
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' })
 
-  const access = await checkOrgAccess(prisma, orgId)
+  const access = await checkOrgAccess(prisma, organizationId)
   if (access.blocked) return res.status(402).json({ error: access.reason })
 
-  const provider = await prisma.provider.findFirst({ where: { id, orgId } })
+  const provider = await prisma.provider.findFirst({ where: { id, organizationId } })
   if (!provider) return res.status(404).json({ error: 'No encontrado' })
 
   // ── GET ───────────────────────────────────────────────────────────────────
   if (req.method === 'GET') {
     const full = await prisma.provider.findFirst({
-      where: { id, orgId },
+      where: { id, organizationId },
       include: { products: { where: { isActive: true }, orderBy: { name: 'asc' } } },
     })
     return res.status(200).json(full)

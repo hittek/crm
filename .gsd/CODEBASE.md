@@ -1,7 +1,7 @@
 # Codebase Map
 
-Generated: 2026-07-22T13:30:20Z | Files: 198 | Described: 0/198
-<!-- gsd:codebase-meta {"generatedAt":"2026-07-22T13:30:20Z","fingerprint":"c4915686b41c95fad31d657fcc48079a41595759","fileCount":198,"truncated":false} -->
+Generated: 2026-07-28T15:02:48Z | Files: 200 | Described: 0/200
+<!-- gsd:codebase-meta {"generatedAt":"2026-07-28T15:02:48Z","fingerprint":"11f7657e88b17e1478c9712160e93361c0b72857","fileCount":200,"truncated":false} -->
 
 ### (root)/
 - *(21 files: 8 .js, 5 (no ext), 3 .yaml, 2 .json, 1 .example, 1 .sh, 1 .md)*
@@ -130,6 +130,7 @@ Generated: 2026-07-22T13:30:20Z | Files: 198 | Described: 0/198
 
 ### pages/api/chatbot/bots/[id]/channels/
 - `pages/api/chatbot/bots/[id]/channels/index.js`
+- `pages/api/chatbot/bots/[id]/channels/whatsapp-embedded.js`
 
 ### pages/api/chatbot/knowledge-bases/
 - `pages/api/chatbot/knowledge-bases/index.js`
@@ -255,6 +256,9 @@ Generated: 2026-07-22T13:30:20Z | Files: 198 | Described: 0/198
 
 ### prisma/migrations/20260518_add_contact_coordinates/
 - `prisma/migrations/20260518_add_contact_coordinates/migration.sql`
+
+### prisma/migrations/20260727_add_consent_fields/
+- `prisma/migrations/20260727_add_consent_fields/migration.sql`
 
 ### public/
 - `public/.gitkeep`

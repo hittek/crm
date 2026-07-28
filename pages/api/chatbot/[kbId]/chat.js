@@ -29,7 +29,7 @@ export const config = { api: { bodyParser: true }, maxDuration: 60 }
 
 // Full chatbot field set — must stay in sync with webhook handlers
 const CHATBOT_SELECT = {
-  id: true, orgId: true, kbId: true,
+  id: true, organizationId: true, kbId: true,
   name: true, greeting: true, escalationPhrase: true, isActive: true,
   enabledTools: true, autoCreateContact: true, autoCreateDeal: true,
   defaultDealStage: true, dealTitleTemplate: true,
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
 
   // Validate KB belongs to this org
   const kb = await prisma.knowledgeBase.findFirst({
-    where:  { id: kbId, orgId: organizationId },
+    where:  { id: kbId, organizationId: organizationId },
     select: { id: true, status: true },
   })
   if (!kb)                   return res.status(404).json({ error: 'Base de conocimiento no encontrada' })
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
   let chatbot = null
   if (chatbotId) {
     chatbot = await prisma.chatbot.findFirst({
-      where:  { id: parseInt(chatbotId), orgId: organizationId, isActive: true },
+      where:  { id: parseInt(chatbotId), organizationId: organizationId, isActive: true },
       select: CHATBOT_SELECT,
     })
   }
@@ -74,7 +74,7 @@ export default async function handler(req, res) {
   // Fall back to a minimal synthetic chatbot using the KB directly
   if (!chatbot) {
     chatbot = {
-      id: null, orgId: organizationId, kbId,
+      id: null, organizationId: organizationId, kbId,
       name: kb.name ?? 'Asistente',
       greeting: null, escalationPhrase: null, isActive: true,
       enabledTools: null, autoCreateContact: false, autoCreateDeal: false,

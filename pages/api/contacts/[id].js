@@ -2,6 +2,7 @@ import prisma from '../../../lib/prisma'
 import { createHandler, success, notFound, noContent } from '../../../lib/api'
 import { logAudit, AuditActions, AuditEntities } from '../../../lib/audit'
 import { getSession, hasMinRole } from '../../../lib/auth'
+import { notifications } from '../../../lib/notifications'
 
 const methods = {
   GET: async (req, res) => {
@@ -98,6 +99,16 @@ const methods = {
         organizationId,
         req,
       })
+
+      // Notify new owner when contact is assigned
+      if (ownerId && parseInt(ownerId) !== existingContact.ownerId && parseInt(ownerId) !== session?.user?.id) {
+        notifications.contactAssigned(
+          contact,
+          parseInt(ownerId),
+          session?.user?.id,
+          organizationId
+        ).catch(() => {})
+      }
 
       success(res, contact)
     } catch (error) {

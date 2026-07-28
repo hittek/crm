@@ -20,12 +20,12 @@ export default async function handler(req, res) {
 
   // Fetch org info separately
   const org = await prisma.organization.findUnique({
-    where: { id: quote.orgId },
+    where: { id: quote.organizationId },
     select: { name: true, logo: true, primaryColor: true, currency: true },
   })
 
   // Parse items and return clean object (no internal org IDs)
-  const { orgId, shareToken, ...safe } = quote
+  const { organizationId, shareToken, ...safe } = quote
   return res.status(200).json({
     ...safe,
     items: JSON.parse(safe.items || '[]'),

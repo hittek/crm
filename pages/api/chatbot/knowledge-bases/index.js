@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   // ── GET: list knowledge bases ─────────────────────────────────────────────
   if (req.method === 'GET') {
     const kbs = await prisma.knowledgeBase.findMany({
-      where: { orgId: organizationId },
+      where: { organizationId: organizationId },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: { select: { documents: true } },
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
       data: {
         name: name.trim(),
         description: description?.trim() || null,
-        orgId: organizationId,
+        organizationId: organizationId,
         createdBy: session.user.email,
       },
     })

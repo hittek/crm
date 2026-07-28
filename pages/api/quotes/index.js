@@ -5,15 +5,15 @@ import { checkOrgAccess } from '../../../lib/planLimits'
 export default async function handler(req, res) {
   const session = await getSession(req, res)
   if (!session?.user) return res.status(401).json({ error: 'No autenticado' })
-  const { organizationId: orgId, role } = session.user
+  const { organizationId: organizationId, role } = session.user
 
-  const access = await checkOrgAccess(prisma, orgId)
+  const access = await checkOrgAccess(prisma, organizationId)
   if (access.blocked) return res.status(402).json({ error: access.reason })
 
   // ── GET /api/quotes ─────────────────────────────────────────────────────────
   if (req.method === 'GET') {
     const { dealId, contactId, status, limit = '50' } = req.query
-    const where = { orgId }
+    const where = { organizationId }
     if (dealId) where.dealId = parseInt(dealId)
     if (contactId) where.contactId = parseInt(contactId)
     if (status) where.status = status
@@ -52,7 +52,7 @@ export default async function handler(req, res) {
     // Sequential quote number scoped to org + year
     const year = new Date().getFullYear()
     const count = await prisma.quote.count({
-      where: { orgId, number: { startsWith: `Q-${year}-` } },
+      where: { organizationId, number: { startsWith: `Q-${year}-` } },
     })
     const number = `Q-${year}-${String(count + 1).padStart(3, '0')}`
 
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
 
     const quote = await prisma.quote.create({
       data: {
-        orgId,
+        organizationId,
         number,
         status: 'draft',
         dealId: dealId ? parseInt(dealId) : null,

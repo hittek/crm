@@ -87,7 +87,7 @@ export default async function handler(req, res) {
       // Look up ChannelConfig by phoneNumberId
       const config = await prisma.channelConfig.findFirst({
         where:   { phoneNumberId, channel: 'whatsapp', isActive: true },
-        include: { chatbot: { select: { id: true, orgId: true, kbId: true, name: true, greeting: true, escalationPhrase: true, isActive: true, enabledTools: true, autoCreateContact: true, autoCreateDeal: true, defaultDealStage: true, dealTitleTemplate: true } } },
+        include: { chatbot: { select: { id: true, organizationId: true, kbId: true, name: true, greeting: true, escalationPhrase: true, isActive: true, enabledTools: true, autoCreateContact: true, autoCreateDeal: true, defaultDealStage: true, dealTitleTemplate: true } } },
       })
       if (!config || !config.chatbot?.isActive) return
 
@@ -115,7 +115,7 @@ export default async function handler(req, res) {
         const customerSessionId = rawPhone ? `wa-${rawPhone}` : null
 
         const convWhere = {
-          orgId:   config.chatbot.orgId,
+          organizationId:   config.chatbot.organizationId,
           channel: 'whatsapp',
           status:  { in: ['open', 'escalated'] },
           ...(customerSessionId ? { sessionId: customerSessionId } : {}),

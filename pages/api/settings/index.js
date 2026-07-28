@@ -39,11 +39,10 @@ const DEFAULT_SETTINGS = {
     { id: 'meeting', label: 'Reunión',  emoji: '📅', color: 'purple', requiresContact: false, showMapsLink: false, builtIn: true },
   ],
   notifications: {
-    emailEnabled: true,
     taskReminders: true,
     newContacts: true,
-    dealsWon: true,
     dealUpdates: true,
+    chatEscalated: true,
     dailyDigest: false,
   },
 }

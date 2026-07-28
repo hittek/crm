@@ -5,6 +5,11 @@
  * Used by Docker health checks and monitoring.
  */
 import prisma from '../../lib/prisma'
+import { initScheduler } from '../../lib/scheduler'
+
+// Initialise the cron scheduler once per server process.
+// Health is polled on startup so this is a reliable init point.
+initScheduler()
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()

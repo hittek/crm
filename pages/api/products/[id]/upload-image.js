@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   if (isNaN(productId)) return res.status(400).json({ error: 'ID inválido' })
 
   const product = await prisma.product.findFirst({
-    where:  { id: productId, orgId: organizationId },
+    where:  { id: productId, organizationId: organizationId },
     select: { id: true },
   })
   if (!product) return res.status(404).json({ error: 'Producto no encontrado' })

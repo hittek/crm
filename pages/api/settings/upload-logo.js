@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   const session = await getSession(req, res)
   if (!session?.user) return res.status(401).json({ error: 'No autenticado' })
 
-  const orgId = session.user.organizationId
+  const organizationId = session.user.organizationId
   const filename = req.query.filename || 'logo'
 
   try {
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const buffer = Buffer.concat(chunks)
     const contentType = req.headers['content-type'] || 'image/png'
     const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'png'
-    const pathname = `logos/org-${orgId}/${filename}.${ext}`
+    const pathname = `logos/org-${organizationId}/${filename}.${ext}`
 
     const { url } = await uploadFile(pathname, buffer, { contentType, addRandomSuffix: false })
 

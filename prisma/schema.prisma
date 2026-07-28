@@ -55,6 +55,8 @@ model Organization {
   channelConfigs ChannelConfig[]
   providers     Provider[]
   products      Product[]
+  reportDefinitions ReportDefinition[]
+  reportRuns    ReportRun[]
 }
 
 // Contact model - the core entity in a contacts-first CRM
@@ -231,6 +233,8 @@ model User {
   ownedDeals            Deal[]          @relation("DealOwner")
   auditLogs             AuditLog[]
   notifications         Notification[]
+  pushSubscriptions     PushSubscription[]
+  createdReports        ReportDefinition[] @relation("ReportCreator")
   assignedConversations Conversation[]  @relation("ConversationAssignee")
   convEventActions      ConversationEvent[] @relation("ConversationEventActor")
   convEventTargets      ConversationEvent[] @relation("ConversationEventTarget")
@@ -290,8 +294,8 @@ model KnowledgeBase {
   name        String
   description String?
   status      String    @default("empty") // empty | indexing | ready | error
-  orgId       Int
-  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  organizationId       Int
+  org         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   createdBy   String?
@@ -299,7 +303,7 @@ model KnowledgeBase {
   documents   KnowledgeBaseDocument[]
   chatbots    Chatbot[]
 
-  @@index([orgId])
+  @@index([organizationId])
 }
 
 // A single source ingested into a knowledge base
@@ -307,7 +311,7 @@ model KnowledgeBaseDocument {
   id              Int            @id @default(autoincrement())
   knowledgeBaseId Int
   knowledgeBase   KnowledgeBase  @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
-  orgId           Int
+  organizationId           Int
   type            String         // pdf | url | qa
   title           String
   content         String?        // raw extracted text (plain)
@@ -326,7 +330,7 @@ model KnowledgeBaseDocument {
   chunks  KnowledgeBaseChunk[]
 
   @@index([knowledgeBaseId])
-  @@index([orgId])
+  @@index([organizationId])
 }
 
 // A chunk of text ready for embedding (vectors added in S02)
@@ -335,7 +339,7 @@ model KnowledgeBaseChunk {
   documentId  Int
   document    KnowledgeBaseDocument  @relation(fields: [documentId], references: [id], onDelete: Cascade)
   kbId        Int
-  orgId       Int
+  organizationId       Int
   content     String                 // chunk text
   chunkIndex  Int
   tokenCount  Int                    @default(0)
@@ -346,15 +350,15 @@ model KnowledgeBaseChunk {
 
   @@index([kbId])
   @@index([documentId])
-  @@index([orgId])
+  @@index([organizationId])
 }
 
 // ─── Chatbot models ──────────────────────────────────────────────────────────
 
 model Chatbot {
   id               Int       @id @default(autoincrement())
-  orgId            Int
-  org              Organization @relation(fields: [orgId], references: [id])
+  organizationId            Int
+  org              Organization @relation(fields: [organizationId], references: [id])
   kbId             Int
   kb               KnowledgeBase @relation(fields: [kbId], references: [id])
   name             String
@@ -384,7 +388,7 @@ model Chatbot {
   channelConfigs   ChannelConfig[]
   quotes           Quote[]
 
-  @@index([orgId])
+  @@index([organizationId])
   @@index([kbId])
 }
 
@@ -392,7 +396,7 @@ model Conversation {
   id           Int       @id @default(autoincrement())
   chatbotId    Int?
   chatbot      Chatbot?  @relation(fields: [chatbotId], references: [id], onDelete: SetNull)
-  orgId        Int
+  organizationId        Int
   sessionId    String    // client-generated UUID per browser/device session
   channel      String    @default("web") // web | sandbox | whatsapp | facebook
   status       String    @default("open") // open | resolved | escalated
@@ -412,7 +416,7 @@ model Conversation {
   quotes       Quote[]
 
   @@index([chatbotId])
-  @@index([orgId])
+  @@index([organizationId])
   @@index([sessionId])
   @@index([assignedToId])
 }
@@ -477,8 +481,8 @@ model Notification {
 
 model ChannelConfig {
   id            Int       @id @default(autoincrement())
-  orgId         Int
-  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  organizationId         Int
+  org           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   chatbotId     Int
   chatbot       Chatbot   @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
   channel       String    // telegram | whatsapp | facebook
@@ -493,7 +497,7 @@ model ChannelConfig {
   updatedAt     DateTime  @updatedAt
 
   @@unique([chatbotId, channel])
-  @@index([orgId])
+  @@index([organizationId])
   @@index([phoneNumberId])
   @@index([pageId])
 }
@@ -503,8 +507,8 @@ model ChannelConfig {
 // Optional — service-only orgs never need this.
 model Provider {
   id          Int          @id @default(autoincrement())
-  orgId       Int
-  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  organizationId       Int
+  org         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name        String
   contactName String?
   email       String?
@@ -516,7 +520,7 @@ model Provider {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  @@index([orgId])
+  @@index([organizationId])
 }
 
 // ── Products ──────────────────────────────────────────────────────────────────
@@ -525,8 +529,8 @@ model Provider {
 // type=product: sellingPrice = costPrice × (1 + feePercent/100) × (1 + marginPercent/100)
 model Product {
   id            Int          @id @default(autoincrement())
-  orgId         Int
-  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  organizationId         Int
+  org           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   providerId    Int?
   provider      Provider?    @relation(fields: [providerId], references: [id], onDelete: SetNull)
   name          String
@@ -545,7 +549,7 @@ model Product {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  @@index([orgId])
+  @@index([organizationId])
   @@index([providerId])
 }
 
@@ -555,7 +559,7 @@ model Product {
 // The number field uses an org-scoped sequential format: Q-{year}-{seq}
 model Quote {
   id             Int       @id @default(autoincrement())
-  orgId          Int
+  organizationId          Int
   number         String    // e.g. "Q-2024-001"
   status         String    @default("draft") // draft | sent | accepted | rejected | expired
 
@@ -585,8 +589,62 @@ model Quote {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  @@index([orgId])
+  @@index([organizationId])
   @@index([contactId])
   @@index([dealId])
   @@index([conversationId])
+}
+
+// ─── Reports ───────────────────────────────────────────────────────────────
+
+model ReportDefinition {
+  id           Int       @id @default(autoincrement())
+  organizationId        Int
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  prompt       String?   // original natural-language prompt
+  definition   String    // JSON: { widgets: WidgetDef[] }
+  schedule     String?   // JSON: { frequency, dayOfWeek?, hour, timezone }
+  recipients   String?   // JSON: number[] (user ids); null = org admins
+  isBuiltIn    Boolean   @default(false)
+  createdBy    Int?
+  creator      User?     @relation("ReportCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  runs         ReportRun[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([organizationId])
+}
+
+model ReportRun {
+  id           Int       @id @default(autoincrement())
+  reportId     Int
+  report       ReportDefinition @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  organizationId        Int
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  windowKey    String    // e.g. "2026-07-28" — idempotency key per report+org+day
+  status       String    @default("pending") // pending | running | delivered | failed
+  result       String?   // JSON: { widgetData, emailsSent, pushSent, deliveryErrors, durationMs }
+  error        String?
+  createdAt    DateTime  @default(now())
+  deliveredAt  DateTime?
+  deliveredVia String?   // JSON: { email: {...}, push: {...} }
+
+  @@unique([reportId, organizationId, windowKey])
+  @@index([organizationId])
+  @@index([reportId])
+}
+
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String   // ECDH public key
+  auth      String   // Auth secret
+  createdAt DateTime @default(now())
+  lastUsed  DateTime @default(now())
+
+  @@index([userId])
 }

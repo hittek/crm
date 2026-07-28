@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   const id = parseInt(req.query.id, 10)
   const bot = await prisma.chatbot.findFirst({
-    where:   { id, orgId: organizationId },
+    where:   { id, organizationId: organizationId },
     include: { kb: { select: { id: true, name: true, status: true } } },
   })
   if (!bot) return res.status(404).json({ error: 'Chatbot no encontrado' })
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
     if (dealTitleTemplate !== undefined) data.dealTitleTemplate = dealTitleTemplate?.trim() || null
     if (enabledTools !== undefined)      data.enabledTools      = enabledTools?.trim() || null
     if (kbId !== undefined) {
-      const kb = await prisma.knowledgeBase.findFirst({ where: { id: parseInt(kbId), orgId: organizationId } })
+      const kb = await prisma.knowledgeBase.findFirst({ where: { id: parseInt(kbId), organizationId: organizationId } })
       if (!kb) return res.status(404).json({ error: 'Base de conocimiento no encontrada' })
       data.kbId = parseInt(kbId)
     }

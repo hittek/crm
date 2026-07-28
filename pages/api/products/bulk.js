@@ -18,12 +18,12 @@ export default async function handler(req, res) {
   const session = await getSession(req, res)
   if (!session.user) return res.status(401).json({ error: 'No autenticado' })
 
-  const { organizationId: orgId, role } = session.user
+  const { organizationId: organizationId, role } = session.user
   if (role !== 'admin' && role !== 'manager') {
     return res.status(403).json({ error: 'Sin permiso' })
   }
 
-  const access = await checkOrgAccess(prisma, orgId)
+  const access = await checkOrgAccess(prisma, organizationId)
   if (access.blocked) return res.status(402).json({ error: access.reason })
 
   const { ids, patch } = req.body
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
   try {
     // Fetch only products that belong to this org
     const products = await prisma.product.findMany({
-      where: { id: { in: intIds }, orgId },
+      where: { id: { in: intIds }, organizationId },
       select: { id: true, costPrice: true, feePercent: true, marginPercent: true },
     })
 
