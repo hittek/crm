@@ -22,6 +22,16 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Build-time public env vars (injected via docker-compose build args)
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_BASE_URL
+ARG NEXT_PUBLIC_CHATWOOT_URL
+ARG NEXT_PUBLIC_META_APP_ID
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
+ENV NEXT_PUBLIC_CHATWOOT_URL=$NEXT_PUBLIC_CHATWOOT_URL
+ENV NEXT_PUBLIC_META_APP_ID=$NEXT_PUBLIC_META_APP_ID
+
 # Explicitly generate Prisma client (replaces the ignored postinstall hook)
 RUN pnpm exec prisma generate
 

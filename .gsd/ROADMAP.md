@@ -10,3 +10,4 @@
 - ✅ **M006: CRM ↔ Chatbot Bridge — Roadmap** (`depends:[—]`)
 - ✅ **M007: Infrastructure Migration \u2014 Vercel to RPi4 Docker** (`depends:[—]`)
 - ✅ **M008: Chatwoot Integration \u2014 Channel Layer Simplification** (`depends:[—]`)
+- ✅ **M009-vhmh3b: Admin Panel, Compliance, and Knowledge Base Hardening** (`depends:[—]`)

@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "lastWriter": "gsd-pi",
-  "lastProjectedAt": "2026-07-21T20:58:40.927Z",
+  "lastProjectedAt": "2026-07-28T14:36:24.772Z",
   "projections": {
     "phases/01-m001-ui-ux-validation-stabilization/01-ROADMAP.md": {
       "sha": "7d79841e67173171",
@@ -457,6 +457,26 @@
       "entities": [
         "M008",
         "M008/S05"
+      ]
+    },
+    "phases/09-vhmh3b-admin-panel-compliance-and-knowledge-bas/09-ROADMAP.md": {
+      "sha": "ec4ddad08c8c6c7e",
+      "entities": [
+        "M009-vhmh3b"
+      ]
+    },
+    "phases/09-vhmh3b-admin-panel-compliance-and-knowledge-bas/09-01-PLAN.md": {
+      "sha": "cf207ac94baaa0cc",
+      "entities": [
+        "M009-vhmh3b",
+        "M009-vhmh3b/S01"
+      ]
+    },
+    "phases/09-vhmh3b-admin-panel-compliance-and-knowledge-bas/09-02-PLAN.md": {
+      "sha": "7372ffce0f7ae311",
+      "entities": [
+        "M009-vhmh3b",
+        "M009-vhmh3b/S02"
       ]
     }
   },

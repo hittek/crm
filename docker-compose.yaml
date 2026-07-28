@@ -43,6 +43,11 @@ services:
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
+        NEXT_PUBLIC_CHATWOOT_URL: ${NEXT_PUBLIC_CHATWOOT_URL}
+        NEXT_PUBLIC_META_APP_ID: ${NEXT_PUBLIC_META_APP_ID}
     image: hittek-crm:latest
     container_name: hittek-crm-app
     restart: unless-stopped

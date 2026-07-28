@@ -1,7 +1,7 @@
 # Codebase Map
 
-Generated: 2026-07-21T17:42:15Z | Files: 195 | Described: 0/195
-<!-- gsd:codebase-meta {"generatedAt":"2026-07-21T17:42:15Z","fingerprint":"399545bfcc88cc9cdde2c79af3b9931b5acf6743","fileCount":195,"truncated":false} -->
+Generated: 2026-07-22T13:30:20Z | Files: 198 | Described: 0/198
+<!-- gsd:codebase-meta {"generatedAt":"2026-07-22T13:30:20Z","fingerprint":"c4915686b41c95fad31d657fcc48079a41595759","fileCount":198,"truncated":false} -->
 
 ### (root)/
 - *(21 files: 8 .js, 5 (no ext), 3 .yaml, 2 .json, 1 .example, 1 .sh, 1 .md)*
@@ -53,26 +53,7 @@ Generated: 2026-07-21T17:42:15Z | Files: 195 | Described: 0/195
 - `docker/postgres-init/01-extensions.sql`
 
 ### lib/
-- `lib/api.js`
-- `lib/audit.js`
-- `lib/auth.js`
-- `lib/AuthContext.js`
-- `lib/channelEngine.js`
-- `lib/chatbotTools.js`
-- `lib/chunker.js`
-- `lib/crypto.js`
-- `lib/embeddings.js`
-- `lib/escalation.js`
-- `lib/notifications.js`
-- `lib/planLimits.js`
-- `lib/prisma.js`
-- `lib/rag.js`
-- `lib/SettingsContext.js`
-- `lib/storage.js`
-- `lib/stripe.js`
-- `lib/summarize.js`
-- `lib/superAdmin.js`
-- `lib/utils.js`
+- *(21 files: 21 .js)*
 
 ### lib/channels/
 - `lib/channels/telegram.js`
@@ -139,6 +120,9 @@ Generated: 2026-07-21T17:42:15Z | Files: 195 | Described: 0/195
 
 ### pages/api/chatbot/[kbId]/
 - `pages/api/chatbot/[kbId]/chat.js`
+
+### pages/api/chatbot/agentbot/
+- `pages/api/chatbot/agentbot/[slug].js`
 
 ### pages/api/chatbot/bots/
 - `pages/api/chatbot/bots/[id].js`
@@ -276,6 +260,7 @@ Generated: 2026-07-21T17:42:15Z | Files: 195 | Described: 0/195
 - `public/.gitkeep`
 
 ### scripts/
+- `scripts/backfill-chatwoot.js`
 - `scripts/check-dims.cjs`
 - `scripts/dev.sh`
 - `scripts/reindex-embeddings.cjs`

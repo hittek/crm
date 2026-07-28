@@ -118,13 +118,28 @@ async function processAndReply({ org, chatbot, content, conversation, sender, ac
   const senderName = sender?.name || sender?.email || 'Usuario'
   const senderPhone = sender?.phone_number || null
 
-  console.log(`[agentbot] message from ${senderName} in conv ${convId} (chatbot ${chatbot.id}, org ${org.id})`)
+  // Map Chatwoot channel class → CRM channel name
+  // Chatwoot sends the Ruby class name e.g. "Channel::Whatsapp", "Channel::FacebookPages"
+  const rawChannel = (conversation?.channel || '').toLowerCase()
+  const crmChannel =
+    rawChannel.includes('whatsapp')      ? 'whatsapp'   :
+    rawChannel.includes('telegram')      ? 'telegram'   :
+    rawChannel.includes('facebook')      ? 'facebook'   :
+    rawChannel.includes('instagram')     ? 'instagram'  :
+    rawChannel.includes('twitter')       ? 'twitter'    :
+    rawChannel.includes('tiktok')        ? 'tiktok'     :
+    rawChannel.includes('sms')           ? 'sms'        :
+    rawChannel.includes('email')         ? 'email'      :
+    rawChannel.includes('webwidget') || rawChannel.includes('web_widget') ? 'web' :
+    'chatwoot'
+
+  console.log(`[agentbot] message from ${senderName} in conv ${convId} channel=${crmChannel} (chatbot ${chatbot.id}, org ${org.id})`)
 
   let reply, escalated, handedOff
   try {
     ({ reply, escalated, handedOff } = await processMessage({
       chatbot,
-      channel:     'chatwoot',
+      channel:     crmChannel,
       sessionId,
       userMessage: content.trim(),
       metadata: {

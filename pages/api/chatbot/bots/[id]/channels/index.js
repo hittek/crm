@@ -9,6 +9,7 @@ import prisma             from '../../../../../../lib/prisma'
 import { getSession }     from '../../../../../../lib/auth'
 import { checkOrgAccess, orgAccessResponse } from '../../../../../../lib/planLimits'
 import { encryptJSON, decryptJSON } from '../../../../../../lib/crypto'
+import { randomUUID } from 'crypto'
 import { getMe } from '../../../../../../lib/channels/telegram'
 import { createChatwootInbox, deleteInbox as deleteChatwootInbox } from '../../../../../../lib/chatwoot'
 
@@ -58,7 +59,7 @@ export default async function handler(req, res) {
     if (!cfg) return res.status(404).json({ error: 'Canal no conectado' })
 
     // Channel-specific teardown
-    if (channel === 'telegram') {
+    if (channel === 'telegram' || channel === 'whatsapp') {
       // Delete Chatwoot inbox if managed via Chatwoot
       if (cfg.chatwootInboxId && org?.chatwootAccountId && org?.chatwootAdminToken) {
         try {
@@ -141,21 +142,53 @@ export default async function handler(req, res) {
 
     // ── WhatsApp ────────────────────────────────────────────────────────────
     if (channel === 'whatsapp') {
-      const { phoneNumberId, accessToken, verifyToken } = req.body
-      if (!phoneNumberId || !accessToken) {
-        return res.status(400).json({ error: 'phoneNumberId y accessToken son requeridos' })
+      const { phoneNumberId, accessToken, verifyToken, businessAccountId } = req.body
+      if (!phoneNumberId || !accessToken || !businessAccountId) {
+        return res.status(400).json({ error: 'phoneNumberId, businessAccountId y accessToken son requeridos' })
       }
+      if (!org?.chatwootAccountId || !org?.chatwootAdminToken) {
+        return res.status(500).json({ error: 'Organización sin cuenta Chatwoot — contactar soporte' })
+      }
+
+      // Derive a phone number label from phoneNumberId for the inbox name
+      const inboxName = `WhatsApp ${phoneNumberId}`
+      let chatwootInboxId = null
+      try {
+        const inbox = await createChatwootInbox(
+          org.chatwootAccountId,
+          inboxName,
+          'whatsapp',
+          {
+            phone_number:    '+1',  // placeholder — Chatwoot derives from Meta
+            provider:        'whatsapp_cloud',
+            provider_config: {
+              api_key:              accessToken.trim(),
+              phone_number_id:      phoneNumberId.trim(),
+              business_account_id:  businessAccountId.trim(),
+              webhook_verify_token: verifyToken?.trim() || randomUUID().replace(/-/g, '').slice(0, 24),
+            },
+          },
+          org.chatwootAgentBotId,
+          org.chatwootAdminToken,
+        )
+        chatwootInboxId = inbox.id
+        console.log(`[channels] created Chatwoot WhatsApp inbox ${chatwootInboxId} for chatbot ${chatbotId}`)
+      } catch (err) {
+        return res.status(500).json({ error: `Error creando inbox WhatsApp en Chatwoot: ${err.message}` })
+      }
+
       const cfg = await prisma.channelConfig.create({
         data: {
-          orgId:        organizationId,
+          orgId:          organizationId,
           chatbotId,
-          channel:      'whatsapp',
-          credentials:  encryptJSON({ accessToken, verifyToken: verifyToken || '' }),
-          isActive:     true,
-          phoneNumberId,
+          channel:        'whatsapp',
+          credentials:    encryptJSON({ accessToken: accessToken.trim(), verifyToken: verifyToken?.trim() || '' }),
+          isActive:       true,
+          phoneNumberId:  phoneNumberId.trim(),
+          chatwootInboxId,
         },
       })
-      return res.status(201).json({ channel: safeConfig(cfg) })
+      return res.status(201).json({ channel: safeConfig(cfg), chatwootInboxId })
     }
 
     // ── Facebook Messenger ──────────────────────────────────────────────────

@@ -16,6 +16,11 @@ const CHANNEL_META = {
   facebook:  { color: 'bg-indigo-100 text-indigo-700' },
   telegram:  { color: 'bg-sky-100 text-sky-700' },
   chatwoot:  { color: 'bg-violet-100 text-violet-700' },
+  instagram: { color: 'bg-pink-100 text-pink-700' },
+  twitter:   { color: 'bg-sky-100 text-sky-700' },
+  tiktok:    { color: 'bg-gray-900 text-white' },
+  sms:       { color: 'bg-orange-100 text-orange-700' },
+  email:     { color: 'bg-blue-100 text-blue-700' },
 }
 
 const STATUS_META = {
@@ -327,15 +332,8 @@ function Thread({ conv, onStatusChange, currentUser }) {
     ...events.map(e   => ({ ...e, _kind: 'event'   })),
   ].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
 
-  // Derive Chatwoot conversation URL from sessionId if applicable
-  const chatwootConvUrl = (() => {
-    if (conv.channel !== 'chatwoot' || !conv.sessionId) return null
-    const parts = conv.sessionId.split('-')
-    if (parts.length === 3 && parts[0] === 'chatwoot') {
-      return `https://chatwoot.hittek.mx/app/accounts/${parts[1]}/conversations/${parts[2]}`
-    }
-    return null
-  })()
+  // Derive Chatwoot conversation URL — kept for potential future use but not shown in UI
+  // (Chatwoot UI is internal-only; all controls live in the CRM)
 
   return (
     <div className="flex flex-col h-full">
@@ -354,19 +352,6 @@ function Thread({ conv, onStatusChange, currentUser }) {
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Chatwoot link for chatwoot-channel conversations */}
-          {chatwootConvUrl && (
-            <a
-              href={chatwootConvUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg border border-violet-200 text-violet-700 hover:bg-violet-50 transition-colors"
-              title="Ver en Chatwoot"
-            >
-              <Icons.globe className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Chatwoot</span>
-            </a>
-          )}
           {/* Bot toggle — only relevant for WhatsApp/Telegram channels */}
           {conv.chatbotId && conv.channel !== 'sandbox' && conv.channel !== 'web' && conv.status !== 'resolved' && (
             <button
@@ -505,7 +490,7 @@ function Thread({ conv, onStatusChange, currentUser }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const CHANNELS = ['', 'sandbox', 'web', 'whatsapp', 'facebook', 'telegram']
+const CHANNELS = ['', 'sandbox', 'web', 'whatsapp', 'facebook', 'instagram', 'telegram', 'twitter', 'tiktok', 'sms', 'email', 'chatwoot']
 const STATUSES = ['', 'open', 'resolved', 'escalated']
 
 export default function ConversationsPage() {

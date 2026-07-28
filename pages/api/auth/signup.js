@@ -95,6 +95,10 @@ export default async function handler(req, res) {
 
       const hashedPassword = await hashPassword(password)
 
+      // Capture consent timestamp and IP for LFPDPPP auditability
+      const privacyConsentAt = new Date()
+      const consentIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || null
+
       const user = await tx.user.create({
         data: {
           email: normalizedEmail,
@@ -103,6 +107,8 @@ export default async function handler(req, res) {
           role: 'admin',
           isActive: true,
           organizationId: org.id,
+          privacyConsentAt,
+          consentIp,
         },
       })
 

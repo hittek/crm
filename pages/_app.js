@@ -6,6 +6,7 @@ import { I18nProvider } from '../lib/i18n'
 import { useRouter } from 'next/router'
 import { Spinner } from '../components/ui/Spinner'
 import UpgradeWall from '../components/ui/UpgradeWall'
+import Script from 'next/script'
 
 // Pages that don't require authentication
 const PUBLIC_PAGES = ['/login', '/signup', '/', '/privacidad']
@@ -64,6 +65,22 @@ export default function App({ Component, pageProps }) {
     <SettingsProvider>
       <AuthProvider>
         <I18nProvider>
+          {/* Meta SDK — loaded after page is interactive, init runs in onLoad */}
+          <Script
+            id="fb-sdk"
+            src="https://connect.facebook.net/en_US/sdk.js"
+            strategy="afterInteractive"
+            onLoad={() => {
+              window.FB.init({
+                appId:  process.env.NEXT_PUBLIC_META_APP_ID,
+                cookie: true,
+                xfbml:  false,
+                version: 'v21.0',
+              })
+              window._fbReady = true
+              window.dispatchEvent(new Event('fb:ready'))
+            }}
+          />
           <AuthenticatedApp Component={Component} pageProps={pageProps} />
         </I18nProvider>
       </AuthProvider>

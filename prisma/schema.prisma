@@ -215,7 +215,9 @@ model User {
   locale      String    @default("es-MX")
   isActive    Boolean   @default(true)
   preferences String?   // JSON for user preferences
-  lastLoginAt DateTime? // Track last login time
+  privacyConsentAt DateTime?
+  consentIp        String?
+  lastLoginAt      DateTime?
   isSuperAdmin Boolean  @default(false) // Hittek platform super-admins
   organizationId Int    // Organization this user belongs to
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)

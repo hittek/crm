@@ -278,6 +278,12 @@ function ChannelsModal({ bot, onClose }) {
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState(null)
   const [copied, setCopied]     = useState(false)
+
+  // WhatsApp Embedded Signup state
+  const [waPhones, setWaPhones]       = useState([])   // phone numbers returned after OAuth
+  const [waTokenBlob, setWaTokenBlob] = useState(null) // signed opaque blob from server
+  const [waStep, setWaStep]           = useState('idle') // idle | loading | pick | connecting
+
   useModalClose(onClose)
 
   useEffect(() => {
@@ -290,6 +296,82 @@ function ChannelsModal({ bot, onClose }) {
   const connectedMap = Object.fromEntries(channels.map(c => [c.channel, c]))
 
   const [warning, setWarning] = useState(null)
+
+  // ── WhatsApp Embedded Signup ──────────────────────────────────────────────
+  function loadMetaSDK() {
+    return new Promise((resolve, reject) => {
+      if (window._fbReady) { resolve(window.FB); return }
+      const onReady = () => resolve(window.FB)
+      window.addEventListener('fb:ready', onReady, { once: true })
+      // Safety timeout — if SDK blocked or fails to load
+      setTimeout(() => {
+        window.removeEventListener('fb:ready', onReady)
+        if (!window._fbReady) reject(new Error('Timeout cargando SDK de Meta (¿bloqueado por extensión?)'))
+      }, 10000)
+    })
+  }
+
+  async function launchWhatsAppSignup() {
+    setWaStep('loading'); setError(null)
+    let FB
+    try {
+      FB = await loadMetaSDK()
+    } catch (e) {
+      setError(e.message); setWaStep('idle'); return
+    }
+    FB.login(
+      (response) => {
+        // FB.login requires a plain function — run async logic separately
+        ;(async () => {
+
+        if (response.authResponse?.accessToken) {
+          try {
+            const r = await fetch(`/api/chatbot/bots/${bot.id}/channels/whatsapp-embedded`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({
+                step:        'get_phones',
+                accessToken: response.authResponse.accessToken,
+              }),
+            })
+            const data = await r.json()
+            if (!r.ok) { setError(data.error || 'Error obteniendo números'); setWaStep('idle'); return }
+            setWaPhones(data.phoneNumbers)
+            setWaTokenBlob(data.tokenBlob)
+            setWaStep('pick')
+          } catch (e) {
+            setError(`Error: ${e.message}`); setWaStep('idle')
+          }
+        } else {
+          setError('Login cancelado o sin permisos.')
+          setWaStep('idle')
+        }
+        })()
+      },
+      {
+        scope: 'whatsapp_business_management,whatsapp_business_messaging,business_management',
+      },
+    )
+  }
+
+  async function connectWhatsAppEmbedded(phone) {
+    setWaStep('connecting'); setError(null)
+    const r = await fetch(`/api/chatbot/bots/${bot.id}/channels/whatsapp-embedded`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        step:              'connect',
+        tokenBlob:         waTokenBlob,
+        phoneNumberId:     phone.id,
+        displayPhoneNumber: phone.displayPhoneNumber,
+        businessAccountId: phone.businessAccountId,
+      }),
+    })
+    const data = await r.json()
+    if (!r.ok) { setError(data.error || 'Error conectando'); setWaStep('pick'); return }
+    setChannels(prev => [...prev, data.channel])
+    setActive(null); setWaStep('idle'); setWaPhones([]); setWaTokenBlob(null)
+  }
 
   async function connect(channel) {
     setSaving(true); setError(null)
@@ -371,7 +453,7 @@ function ChannelsModal({ bot, onClose }) {
                     {connected ? (
                       <div className="flex items-center gap-1">
                         {/* Only show webhook URL button for non-Chatwoot channels */}
-                        {key !== 'telegram' && (
+                        {key !== 'telegram' && key !== 'whatsapp' && (
                           <button
                             onClick={() => copyWebhook(key)}
                             className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center gap-1"
@@ -390,7 +472,7 @@ function ChannelsModal({ bot, onClose }) {
                       </div>
                     ) : (
                       <button
-                        onClick={() => { setActive(isOpen ? null : key); setError(null); setForm({}) }}
+                        onClick={() => { setActive(isOpen ? null : key); setError(null); setForm({}); if (key === 'whatsapp') { setWaStep('idle'); setWaPhones([]); setWaTokenBlob(null) } }}
                         className="px-3 py-1.5 text-xs font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
                       >
                         Conectar
@@ -419,45 +501,56 @@ function ChannelsModal({ bot, onClose }) {
 
                       {key === 'whatsapp' && (
                         <>
-                          <div>
-                            <label className="text-xs font-medium text-gray-600 block mb-1">Phone Number ID</label>
-                            <input
-                              type="text" placeholder="123456789012345"
-                              value={form.phoneNumberId || ''} onChange={e => setForm(f => ({ ...f, phoneNumberId: e.target.value }))}
-                              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-gray-600 block mb-1">Access Token</label>
-                            <input
-                              type="password" placeholder="EAAxxxxxxxxxx..."
-                              value={form.accessToken || ''} onChange={e => setForm(f => ({ ...f, accessToken: e.target.value }))}
-                              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-gray-600 block mb-1">Verify Token <span className="text-gray-400 font-normal">(lo mismo que en Meta Dashboard)</span></label>
-                            <div className="flex gap-2">
-                              <input
-                                type="text" placeholder="mi_token_secreto"
-                                value={form.verifyToken || ''} onChange={e => setForm(f => ({ ...f, verifyToken: e.target.value }))}
-                                className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
-                              />
-                              <button type="button" onClick={() => { navigator.clipboard.writeText(form.verifyToken || ''); setCopied('verifyToken-wa'); setTimeout(() => setCopied(false), 2000) }}
-                                disabled={!form.verifyToken}
-                                className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors whitespace-nowrap disabled:opacity-40">
-                                {copied === 'verifyToken-wa' ? '✓ Copiado' : 'Copiar'}
+                          {waStep === 'idle' && (
+                            <div className="space-y-3">
+                              <button
+                                onClick={launchWhatsAppSignup}
+                                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-[#1877F2] hover:bg-[#166FE5] transition-colors"
+                              >
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                Conectar con Meta
                               </button>
-                              <button type="button" onClick={() => setForm(f => ({ ...f, verifyToken: crypto.randomUUID().replace(/-/g, '').slice(0, 24) }))}
-                                className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors whitespace-nowrap">
-                                Generar
-                              </button>
+                              <p className="text-xs text-gray-400 text-center">
+                                Abre el asistente de Meta para autorizar acceso a tu cuenta de WhatsApp Business.
+                              </p>
                             </div>
-                          </div>
-                          <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
-                            <p className="font-medium mb-1">URL del webhook para Meta Dashboard:</p>
-                            <code className="break-all">{typeof window !== 'undefined' ? window.location.origin : ''}/api/webhook/whatsapp</code>
-                          </div>
+                          )}
+
+                          {waStep === 'loading' && (
+                            <div className="flex flex-col items-center gap-2 py-4">
+                              <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                              <p className="text-xs text-gray-400">Esperando autorización de Meta…</p>
+                            </div>
+                          )}
+
+                          {waStep === 'pick' && waPhones.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-gray-600">Elige el número a conectar:</p>
+                              {waPhones.map(phone => (
+                                <button
+                                  key={phone.id}
+                                  onClick={() => connectWhatsAppEmbedded(phone)}
+                                  className="w-full flex items-start gap-3 p-3 rounded-xl border border-gray-200 hover:border-green-300 hover:bg-green-50/40 transition-colors text-left"
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                                    <Icons.messageSquare className="w-4 h-4 text-green-600" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">{phone.displayPhoneNumber}</p>
+                                    <p className="text-xs text-gray-400 truncate">{phone.verifiedName}</p>
+                                    <p className="text-xs text-gray-300 truncate">{phone.businessAccountName}</p>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {waStep === 'connecting' && (
+                            <div className="flex flex-col items-center gap-2 py-4">
+                              <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                              <p className="text-xs text-gray-400">Creando inbox en Chatwoot…</p>
+                            </div>
+                          )}
                         </>
                       )}
 
@@ -513,6 +606,7 @@ function ChannelsModal({ bot, onClose }) {
                         </>
                       )}
 
+                      {key !== 'whatsapp' && (
                       <div className="flex gap-2 pt-1">
                         <button onClick={() => { setActive(null); setForm({}) }} className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 hover:bg-gray-50">
                           {t('common.cancel')}
@@ -525,6 +619,7 @@ function ChannelsModal({ bot, onClose }) {
                           {saving ? t('common.saving') : t('common.save')}
                         </button>
                       </div>
+                      )}
                     </div>
                   )}
                 </div>

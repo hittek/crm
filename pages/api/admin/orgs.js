@@ -1,6 +1,7 @@
 import prisma from '../../../lib/prisma'
 import { requireSuperAdmin } from '../../../lib/superAdmin'
 import { ensureOrgProvisioned } from '../../../lib/chatwoot'
+import { hashPassword } from '../../../lib/auth'
 
 export default async function handler(req, res) {
   const admin = await requireSuperAdmin(req, res)
@@ -44,6 +45,26 @@ async function createOrg(req, res) {
     data: { name: name.trim(), slug, plan, planStatus: 'trialing', trialEndsAt, isActive: true },
   })
 
+  // Optionally create admin user
+  if (adminEmail?.trim() && adminPassword) {
+    try {
+      const hashedPassword = await hashPassword(adminPassword)
+      await prisma.user.create({
+        data: {
+          email: adminEmail.trim().toLowerCase(),
+          password: hashedPassword,
+          name: adminName?.trim() || adminEmail.trim(),
+          role: 'admin',
+          isActive: true,
+          organizationId: org.id,
+        },
+      })
+    } catch (err) {
+      console.warn(`[admin/orgs] admin user creation failed for org ${org.id}:`, err.message)
+      // non-fatal — org was created
+    }
+  }
+
   // Provision Chatwoot — non-blocking
   try {
     await ensureOrgProvisioned({ id: org.id, name: org.name, slug: org.slug, chatwootAccountId: null }, prisma)
@@ -70,7 +91,7 @@ async function listOrgs(res) {
       stripeCustomerId: true,
       stripeSubscriptionId: true,
       createdAt: true,
-      _count: { select: { users: true, contacts: true } },
+      _count: { select: { users: true, contacts: true, chatbots: true, conversations: true } },
     },
   })
 
