@@ -1,7 +1,7 @@
 # Codebase Map
 
-Generated: 2026-07-28T15:02:48Z | Files: 200 | Described: 0/200
-<!-- gsd:codebase-meta {"generatedAt":"2026-07-28T15:02:48Z","fingerprint":"11f7657e88b17e1478c9712160e93361c0b72857","fileCount":200,"truncated":false} -->
+Generated: 2026-07-28T19:17:06Z | Files: 226 | Described: 0/226
+<!-- gsd:codebase-meta {"generatedAt":"2026-07-28T19:17:06Z","fingerprint":"a5b6fd7a20f0a3caa7b67f96d712a5d97a71672c","fileCount":226,"truncated":false} -->
 
 ### (root)/
 - *(21 files: 8 .js, 5 (no ext), 3 .yaml, 2 .json, 1 .example, 1 .sh, 1 .md)*
@@ -33,6 +33,8 @@ Generated: 2026-07-28T15:02:48Z | Files: 200 | Described: 0/200
 
 ### components/reports/
 - `components/reports/Dashboard.js`
+- `components/reports/ReportBuilder.js`
+- `components/reports/ReportRunner.js`
 
 ### components/tasks/
 - `components/tasks/CalendarView.js`
@@ -53,10 +55,14 @@ Generated: 2026-07-28T15:02:48Z | Files: 200 | Described: 0/200
 - `docker/postgres-init/01-extensions.sql`
 
 ### lib/
-- *(21 files: 21 .js)*
+- *(23 files: 23 .js)*
 
 ### lib/channels/
 - `lib/channels/telegram.js`
+
+### lib/deliverers/
+- `lib/deliverers/email.js`
+- `lib/deliverers/push.js`
 
 ### lib/i18n/
 - `lib/i18n/index.js`
@@ -64,6 +70,15 @@ Generated: 2026-07-28T15:02:48Z | Files: 200 | Described: 0/200
 ### lib/i18n/translations/
 - `lib/i18n/translations/en.js`
 - `lib/i18n/translations/es.js`
+
+### lib/reports/
+- `lib/reports/base.js`
+- `lib/reports/builder.js`
+- `lib/reports/daily-digest.js`
+- `lib/reports/executor.js`
+- `lib/reports/index.js`
+- `lib/reports/registry.js`
+- `lib/reports/schema.js`
 
 ### migrations/
 - `migrations/migration_lock.toml`
@@ -165,10 +180,14 @@ Generated: 2026-07-28T15:02:48Z | Files: 200 | Described: 0/200
 ### pages/api/internal/
 - `pages/api/internal/apply-migration.js`
 - `pages/api/internal/register-webhooks.js`
+- `pages/api/internal/run-report.js`
+- `pages/api/internal/scheduler-tick.js`
 
 ### pages/api/notifications/
 - `pages/api/notifications/count.js`
 - `pages/api/notifications/index.js`
+- `pages/api/notifications/subscribe.js`
+- `pages/api/notifications/vapid-public-key.js`
 
 ### pages/api/products/
 - `pages/api/products/bulk.js`
@@ -197,7 +216,14 @@ Generated: 2026-07-28T15:02:48Z | Files: 200 | Described: 0/200
 - `pages/api/quotes/[id]/share.js`
 
 ### pages/api/reports/
+- `pages/api/reports/build.js`
 - `pages/api/reports/dashboard.js`
+- `pages/api/reports/index.js`
+
+### pages/api/reports/[id]/
+- `pages/api/reports/[id]/history.js`
+- `pages/api/reports/[id]/index.js`
+- `pages/api/reports/[id]/run.js`
 
 ### pages/api/search/
 - `pages/api/search/index.js`
@@ -260,8 +286,18 @@ Generated: 2026-07-28T15:02:48Z | Files: 200 | Described: 0/200
 ### prisma/migrations/20260727_add_consent_fields/
 - `prisma/migrations/20260727_add_consent_fields/migration.sql`
 
+### prisma/migrations/20260728_add_delivered_via/
+- `prisma/migrations/20260728_add_delivered_via/migration.sql`
+
+### prisma/migrations/20260728_add_report_models/
+- `prisma/migrations/20260728_add_report_models/migration.sql`
+
+### prisma/migrations/20260728_rename_orgid_to_organizationid/
+- `prisma/migrations/20260728_rename_orgid_to_organizationid/migration.sql`
+
 ### public/
 - `public/.gitkeep`
+- `public/sw.js`
 
 ### scripts/
 - `scripts/backfill-chatwoot.js`

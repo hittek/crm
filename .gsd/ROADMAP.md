@@ -12,3 +12,4 @@
 - ✅ **M008: Chatwoot Integration \u2014 Channel Layer Simplification** (`depends:[—]`)
 - ✅ **M009-vhmh3b: Admin Panel, Compliance, and Knowledge Base Hardening** (`depends:[—]`)
 - ✅ **M010-sewkw9: Scheduled Reports, AI Builder, and Live Dashboard** (`depends:[—]`)
+- 🔄 **M011-s2bgo9: Local Embeddings via Ollama Remove Voyage AI Dependency** (`depends:[—]`)

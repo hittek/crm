@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "lastWriter": "gsd-pi",
-  "lastProjectedAt": "2026-07-28T19:14:11.543Z",
+  "lastProjectedAt": "2026-07-28T19:20:15.960Z",
   "projections": {
     "phases/01-m001-ui-ux-validation-stabilization/01-ROADMAP.md": {
       "sha": "7d79841e67173171",
@@ -525,6 +525,19 @@
       "entities": [
         "M010-sewkw9",
         "M010-sewkw9/S06"
+      ]
+    },
+    "phases/11-s2bgo9-local-embeddings-via-ollama-remove-voyag/11-ROADMAP.md": {
+      "sha": "9e73738e5c68039a",
+      "entities": [
+        "M011-s2bgo9"
+      ]
+    },
+    "phases/11-s2bgo9-local-embeddings-via-ollama-remove-voyag/11-01-PLAN.md": {
+      "sha": "6122b95115f2d044",
+      "entities": [
+        "M011-s2bgo9",
+        "M011-s2bgo9/S01"
       ]
     }
   },
